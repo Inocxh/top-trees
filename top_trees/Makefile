@@ -4,6 +4,7 @@ OTHER=
 DIRECTORIES=obj
 
 OBJS=$(addprefix obj/,${OTHER} $(addsuffix .o,${CLASSES} ${PROG}))
+DEPS=$(OBJS:.o=.d)
 
 INC=-Isrc -Iinclude
 
@@ -13,18 +14,23 @@ CC=g++
 
 all: directories ${PROG}
 
+# Dependencies:
+-include $(DEPS)
+
 obj/%.o: src/%.cpp
-	${CC} ${CFLAGS} ${INC} -o $@ $<
+	${CC} ${CFLAGS} ${INC} -MMD -o $@ $<
 
 ${PROG}: ${OBJS}
 	${CC} ${LDFLAGS} ${INC} -o $@ $^
 
-clean:
-	rm -f ${PROG} ${OBJS}
+directories: ${DIRECTORIES}
 
-directories:
+${DIRECTORIES}:
 	mkdir -p ${DIRECTORIES}
 
-.PHONY: clean all directories
+clean:
+	rm -f ${PROG} ${OBJS} ${DEPS}
+
+.PHONY: clean all depend directories
 
 .SECONDARY:
