@@ -25,13 +25,16 @@ std::ostream& operator<<(std::ostream& o, const EdgeData& e);
 //------------------------------------------------------------------------------
 
 class BaseTree {
+friend class TopTree;
+friend class Cluster;
+friend class BaseCluster;
 public:
 	BaseTree();
 	~BaseTree();
 
 	// Adding basic objects
 	int AddVertex(std::shared_ptr<VertexData> v = NULL);
-	int AddEdge(int a, int b, std::shared_ptr<EdgeData> e = NULL);
+	int AddEdge(int from, int to, std::shared_ptr<EdgeData> e = NULL);
 
 	// Shortcut for AddVertex and AddEdge, returns index of the vertex
 	int AddLeaf(int parent, std::shared_ptr<EdgeData> e = NULL, std::shared_ptr<VertexData> v = NULL);
@@ -43,8 +46,8 @@ public:
 	// Testing functions
 	void PrintRooted(int root);
 private:
-	class BaseTreeData;
-	std::unique_ptr<BaseTreeData> data;
+	class Internal;
+	std::unique_ptr<Internal> internal;
 };
 
 //------------------------------------------------------------------------------

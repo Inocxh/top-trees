@@ -1,5 +1,5 @@
 PROG=top_trees_test
-CLASSES=BaseTree TopTree
+CLASSES=BaseTree TopTree Cluster
 OTHER=
 DIRECTORIES=obj
 
@@ -8,7 +8,7 @@ DEPS=$(OBJS:.o=.d)
 
 INC=-Isrc -Iinclude
 
-CFLAGS=-Wall -std=c++14 -c
+CFLAGS=-Wall -g -std=c++14 -c
 LDFLAGS=-Wall
 CC=g++
 
