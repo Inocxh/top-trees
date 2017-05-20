@@ -68,7 +68,7 @@ int main(int argc, char const *argv[]) {
 
 	// Example from article:
 	auto z = baseTree->AddVertex(std::make_shared<MyVertexData>("z"));
-	auto p = baseTree->AddLeaf(z, NULL, std::make_shared<MyVertexData>("p"));
+	auto p = baseTree->AddLeaf(z, std::make_shared<MyEdgeData>("z-p"), std::make_shared<MyVertexData>("p"));
 	auto w = baseTree->AddLeaf(p, NULL, std::make_shared<MyVertexData>("w"));
 	auto c = baseTree->AddLeaf(w, NULL, std::make_shared<MyVertexData>("c"));
 	auto b = baseTree->AddLeaf(c, NULL, std::make_shared<MyVertexData>("b"));
@@ -112,7 +112,14 @@ int main(int argc, char const *argv[]) {
 	////////////////
 
 	auto T = new TopTree::TopTree(baseTree);
-	std::cout << T << std::endl;
+
+	auto roots = T->GetTopTrees();
+	for (auto root : roots) {
+		T->PrintRooted(root);
+	}
+
+
+	delete T;
 
 	return 0;
 }

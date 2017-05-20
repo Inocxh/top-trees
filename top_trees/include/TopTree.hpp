@@ -1,29 +1,13 @@
 #include <memory>
-
-#include "BaseTree.hpp"
+#include <vector>
 
 #ifndef TOP_TREE_HPP
 #define TOP_TREE_HPP
 
+#include "BaseTree.hpp"
+#include "Cluster.hpp"
+
 namespace TopTree {
-
-struct ClusterData {
-	virtual ~ClusterData() {}
-};
-
-// USER DEFINED FUNCTIONS:
-// (abstract functions to be defined in custom Top Trees inherited from this class)
-
-// Joining and splitting of compress/rake clusters:
-extern void Join(std::shared_ptr<ClusterData> leftChild, std::shared_ptr<ClusterData> rightChild, std::shared_ptr<ClusterData> parent);
-extern void Split(std::shared_ptr<ClusterData> leftChild, std::shared_ptr<ClusterData> rightChild, std::shared_ptr<ClusterData> parent);
-
-// Creating and destroying Base clusters:
-extern void Create(std::shared_ptr<ClusterData> cluster, std::shared_ptr<EdgeData> edge);
-extern void Destroy(std::shared_ptr<ClusterData> cluster, std::shared_ptr<EdgeData> edge);
-
-extern std::shared_ptr<ClusterData> InitClusterData();
-// END OF USER DEFINED FUNCTIONS
 
 class TopTree {
 public:
@@ -31,7 +15,11 @@ public:
 	TopTree(std::shared_ptr<BaseTree> baseTree); // Construct from underlying tree
 	~TopTree();
 
-	// Functions that could be called on Top Tree:
+	// Return roots of the top trees
+	std::vector<std::shared_ptr<Cluster> > GetTopTrees();
+
+	// Testing functions
+	void PrintRooted(const std::shared_ptr<Cluster> root);
 private:
 	class Internal;
 	std::unique_ptr<Internal> internal;

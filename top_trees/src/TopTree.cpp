@@ -1,4 +1,5 @@
 #include <queue>
+#include <vector>
 
 #include "TopTree.hpp"
 #include "BaseTreeInternal.hpp"
@@ -9,8 +10,11 @@ namespace TopTree {
 // Hide data from .hpp file using PIMP idiom
 class TopTree::Internal {
 public:
+	std::vector<std::shared_ptr<Cluster> > root_clusters;
+
 	std::shared_ptr<Cluster> construct_cluster(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> e=NULL);
-	// TODO
+
+	void print_rooted_prefix(const std::shared_ptr<Cluster> cluster, const std::string prefix = "", bool last_child = true) const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -22,12 +26,40 @@ TopTree::TopTree(std::shared_ptr<BaseTree> baseTree) : TopTree() {
 
 	for (auto v : baseTree->internal->vertices) {
 		if (v->used || v->degree != 1) continue;
-		std::cout << "Pokus" << std::endl;
-		std::cout << internal->construct_cluster(v);
+		internal->root_clusters.push_back(internal->construct_cluster(v));
 	}
+}
 
+std::vector<std::shared_ptr<Cluster> > TopTree::GetTopTrees() {
+	return internal->root_clusters;
+}
 
-	// TODO - rozlozit na cesty a rekurzivne postavit clustery
+void TopTree::PrintRooted(const std::shared_ptr<Cluster> root) {
+	internal->print_rooted_prefix(root);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void TopTree::Internal::print_rooted_prefix(const std::shared_ptr<Cluster> cluster, const std::string prefix, bool last_child) const {
+	std::cout << *cluster << std::endl;
+	auto prefix_child = prefix + (last_child ? "   " : "|  ");
+
+	if (cluster->left_foster != NULL) {
+		std::cout << prefix_child << "|-Foster left: ";
+		print_rooted_prefix(cluster->left_foster, prefix_child, false);
+	}
+	if (cluster->left_child != NULL) {
+		std::cout << prefix_child << "|-Left: ";
+		print_rooted_prefix(cluster->left_child, prefix_child, false);
+	}
+	if (cluster->right_child != NULL) {
+		std::cout << prefix_child << "|-Right: ";
+		print_rooted_prefix(cluster->right_child, prefix_child, (cluster->right_foster == NULL));
+	}
+	if (cluster->right_foster != NULL) {
+		std::cout << prefix_child << "|-Foster right: ";
+		print_rooted_prefix(cluster->right_foster, prefix_child, true);
+	}
 }
 
 std::shared_ptr<Cluster> TopTree::Internal::construct_cluster(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> e) {
@@ -61,9 +93,11 @@ std::shared_ptr<Cluster> TopTree::Internal::construct_cluster(std::shared_ptr<Ba
 			}
 		}
 
-		// 3. Rake all top trees from rake list, rake them onto given edge
-		// and then add edge into path
+		// 3. Rake all top trees from rake list to rake tree,
+		// connect the rake tree as foster child to the path edge
+		// and add path edge into path
 		if (path_cluster != NULL) {
+			// 3.1 Rake all edges into rake tree
 			std::queue<std::shared_ptr<Cluster> > rake_list_new;
 			while (rake_list.size() > 1) {
 				while (rake_list.size() > 0) {
@@ -80,13 +114,15 @@ std::shared_ptr<Cluster> TopTree::Internal::construct_cluster(std::shared_ptr<Ba
 				}
 				rake_list.swap(rake_list_new);
 			}
-			// Rake onto given edge
+			// 3.2 Connect rake tree as foster child
 			if (!rake_list.empty()) {
 				auto rake_tree = rake_list.front();
+				rake_list.pop();
 
-				path_cluster = std::make_shared<RakeCluster>(rake_tree, path_cluster);
+				path_cluster->left_foster = rake_tree;
+				//path_cluster = std::make_shared<RakeCluster>(rake_tree, path_cluster);
 			}
-			// Push cluster with edge into path
+			// 3.3 Push cluster with edge into path
 			path.push(path_cluster);
 		}
 
