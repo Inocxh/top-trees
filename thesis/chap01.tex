@@ -1,7 +1,123 @@
 \chapter{Top Trees}
 
+Top Trees is data structure intended to maintain informations of underlying
+dynamically updated forest. They were introduced by Alstrup et al. in 2003 \cite{TopTrees}.
+
 \section{Definition}
 
-\section{Clusters structure}
+{\I Top Trees structure} is collection of individual {\I top trees}, each of them
+represents one tree from the underlying forest. These top trees are dynamically
+updates when there is some change (cut, join, update of the information in some
+edge or vertex) in the underlying forest. These updates
 
-\section{Examples of problems and user functions}
+Each {\I top tree \TT} is based on structure of a rooted binary tree -- most of
+the inner vertices has two children, but in some cases there may be useful to
+allow up to four children of some vertices (we will show later).
+
+Vertices of the top tree are called {\I clusters} and each of them represents
+some contraction of the underlying tree and holds informations about the
+contracted part of the underlying tree.
+
+Top Trees are capable of holding informations stored on edges of the underlying
+trees and to summarize them in clusters. They are capable of updating structure
+and answer queries in (amortized\footnote{If the time is amortized or no
+depends on an implementation}) time $\O(\log N)$.
+
+A special feature of the Top Trees is that users of them only defines format of
+the data stored in clusters and four basic operations {\sc Create}, {\sc
+Destroy}, {\sc Join} and {\sc Split} use to manipulate with clusters data. Then
+user control the Top Trees by operations $\hbox{\sc Cut}(u,v)$,
+$\hbox{\sc Link}(u,v)$ and $\hbox{\sc Expose}(u,v)$. Last of them brings cluster
+representing the path between vertices $u$ and $v$ to the root, because the root
+cluster is only cluster of the top tree, which could be accessed by user.
+
+\section{Clusters}
+
+There are three types of clusters in the top tree. As has been said, every of
+them represents (and hold informations) about some part of the underlying tree.
+Each cluster have two {\I boundary vertices}. Types of the clusters are:
+
+\begin{itemize}
+
+\item {\bf Base cluster} -- represents one edge of the underlying tree (and each
+edge of the underlying tree has exactly one base cluster, it is 1:1 mapping),
+boundary vertices are endpoints of the edge.
+
+This cluster could appear only as leaf of the top tree.
+
+\item {\bf Rake cluster} -- represents one way how to contract two clusters
+with one common boundary vertex. Lets have two clusters $C_1(u,v)$ and
+$C_2(v,w)$ next to each other around common boundary vertex $v$ and lets the
+$C_1$ be the left one of them (in some topological order given for example by
+indexes of the edges).
+
+Then we construct {\I rake cluster} by {\I raking} the left cluster ($C_1$) on
+the right one ($C_2$). The resulting cluster would have the same boundary
+vertices as the cluster $C_2$.
+
+\todo{Image of rake cluster}
+
+\item{\bf Compress cluster} -- represents other contraction of the two clusters
+with one common boundary vertex into one by attaching first cluster after the
+other. If there are other clusters attached to the same common boundary vertex
+they must be firstly {\I raked} onto one of the compressed clusters (in other words
+before constructing a compress cluster the common boundary vertex must have
+degree of exactly two).
+
+If boundary vertices of the cluster $C_1$ were $(u,v)$ and boundary vertices
+of the cluster $C_2$ were $(v,w)$, the cluster $C=compress(C_1,C_2)$ would have
+boundary vertices $(u,w)$.
+
+\todo{Image of compress cluster}
+
+\end{itemize}
+
+\subsection{Clusters model}
+
+Compress and rake clusters has each of them two children, base clusters are
+childless. Each cluster represent some part of the underlying tree and by
+combination of them we could represent whole underlying tree as one cluster
+(one top tree).
+
+Compress clusters are used to represent paths in the underlying tree -- each
+path could be compressed into one {\I compress tree} consisting only of compress
+clusters. If there are branched separating from this path, they are recursively
+represented as single clusters and then they are raked onto clusters in the path.
+
+Underlying trees could have (and usually have) many different divisions into
+paths and so the underlying trees have many different representations. Crucial
+part of the top trees structure is to maintain this representation in some nice
+form during updates.
+
+\subsection{Extended clusters model}
+
+Tarjan and Werneck in \cite{SelfAdjustingTT} suggested that in some cases it may
+be useful to modify structure of the clusters and they introduced
+{\I foster children} for {\I compress clusters}. In their suggestion a compress
+cluster could have up to four descendants -- two normal children and up to two
+foster children.
+
+Normal children of a compress cluster are clusters from the compressed path and
+foster children are clusters originating from the separating branches. In normal
+cluster model they would be raked onto clusters from path and the path would be
+compression of these rake clusters.
+
+In this extended model the clusters originating from the separating branches are
+firstly combined in so called {\I rake trees} -- they are maximally two rake
+trees around each path vertex, one of them is raked from branches on one side of
+the path and the second one is raked from branches on the other side of the
+path. And these rake trees are connected as left and right foster child of the
+compress cluster constructed from this part of the path.
+
+\todo{Image of rake trees around path}
+
+This extended model is used in the first implementation.
+
+\section{Top trees operation}
+
+\subsection{Expose}
+
+\subsection{Cut}
+
+\subsection{Link}
+
