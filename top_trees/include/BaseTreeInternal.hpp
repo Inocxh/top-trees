@@ -1,10 +1,11 @@
 #include <vector>
 #include <list>
 
+#include "BaseTree.hpp"
+#include "Cluster.hpp"
+
 #ifndef BASE_TREE_INTERNAL_HPP
 #define BASE_TREE_INTERNAL_HPP
-
-#include "BaseTree.hpp"
 
 namespace TopTree {
 
@@ -47,6 +48,8 @@ public:
 
 	// Used for building TopTree:
 	bool used;
+	std::shared_ptr<Cluster> rake_tree_left = NULL;
+	std::shared_ptr<Cluster> rake_tree_right = NULL;
 };
 
 class BaseTree::Internal::Edge {

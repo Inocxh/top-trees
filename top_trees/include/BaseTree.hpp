@@ -28,6 +28,8 @@ class BaseTree {
 friend class TopTree;
 friend class Cluster;
 friend class BaseCluster;
+friend class CompressCluster;
+friend class RakeCluster;
 public:
 	BaseTree();
 	~BaseTree();

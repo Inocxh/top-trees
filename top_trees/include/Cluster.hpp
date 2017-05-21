@@ -7,6 +7,8 @@ namespace TopTree {
 struct ClusterData {
 	virtual ~ClusterData() {}
 };
+
+class Cluster;
 }
 
 #include "BaseTreeInternal.hpp"
@@ -38,6 +40,8 @@ public:
 
 class CompressCluster : public Cluster {
 public:
+	std::shared_ptr<BaseTree::Internal::Vertex> common_vertex;
+
 	CompressCluster(std::shared_ptr<Cluster> left, std::shared_ptr<Cluster> right);
 	virtual std::ostream& ToString(std::ostream& o) const;
 };

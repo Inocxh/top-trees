@@ -15,21 +15,22 @@ std::ostream& BaseCluster::ToString(std::ostream& o) const {
 }
 
 CompressCluster::CompressCluster(std::shared_ptr<Cluster> left, std::shared_ptr<Cluster> right) {
-	boundary_a = (left->boundary_a == right->boundary_a || left->boundary_a == right->boundary_b
-		? left->boundary_b // because boundary_a is bounded to the second one
-		: left->boundary_a // boundary_a is free
-	);
-	boundary_b = (right->boundary_a == left->boundary_a || right->boundary_a == left->boundary_b
-		? right->boundary_b // because boundary_a is bounded to the second one
-		: right->boundary_a // boundary_a is free
-	);
+	if (left->boundary_a == right->boundary_a || left->boundary_a == right->boundary_b)
+		common_vertex = left->boundary_a;
+	else common_vertex = left->boundary_b;
+
+	boundary_a = (left->boundary_a == common_vertex) ? left->boundary_b : left->boundary_a;
+	boundary_b = (right->boundary_a == common_vertex) ? right->boundary_b : right->boundary_a;
+
+	left_foster = common_vertex->rake_tree_left;
+	right_foster = common_vertex->rake_tree_right;
 
 	left_child = left;
 	right_child = right;
 	Join(left->data, right->data, data);
 }
 std::ostream& CompressCluster::ToString(std::ostream& o) const {
-	return o << "CompressCluster - endpoints " << *boundary_a->data << ", " << *boundary_b->data;
+	return o << "CompressCluster - endpoints " << *boundary_a->data << " [" << *common_vertex->data << "] " << *boundary_b->data;
 }
 
 RakeCluster::RakeCluster(std::shared_ptr<Cluster> rake_from, std::shared_ptr<Cluster> rake_to) {

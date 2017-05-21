@@ -76,6 +76,7 @@ std::shared_ptr<Cluster> TopTree::Internal::construct_cluster(std::shared_ptr<Ba
 		next_v = NULL;
 
 		// 1. Construct BaseCluster if there was edge given
+		// and push it into the path
 		std::shared_ptr<Cluster> path_cluster = (e != NULL ? std::make_shared<BaseCluster>(e) : NULL);
 
 		// 2. Select continuation and recursive construct top trees on subtrees
@@ -114,12 +115,13 @@ std::shared_ptr<Cluster> TopTree::Internal::construct_cluster(std::shared_ptr<Ba
 				}
 				rake_list.swap(rake_list_new);
 			}
-			// 3.2 Connect rake tree as foster child
+			// 3.2 Prepare rake tree and save it into the vertex
 			if (!rake_list.empty()) {
 				auto rake_tree = rake_list.front();
 				rake_list.pop();
 
-				path_cluster->left_foster = rake_tree;
+				// Only use one side (left)
+				v->rake_tree_left = rake_tree;
 				//path_cluster = std::make_shared<RakeCluster>(rake_tree, path_cluster);
 			}
 			// 3.3 Push cluster with edge into path
