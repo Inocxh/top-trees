@@ -11,6 +11,7 @@ namespace TopTree {
 class TopTree::Internal {
 public:
 	std::vector<std::shared_ptr<Cluster> > root_clusters;
+	std::shared_ptr<BaseTree> base_tree;
 
 	std::shared_ptr<Cluster> construct_cluster(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> e=NULL);
 
@@ -21,10 +22,12 @@ public:
 
 TopTree::TopTree() : internal{std::make_unique<Internal>()} {}
 
-TopTree::TopTree(std::shared_ptr<BaseTree> baseTree) : TopTree() {
-	for (auto v : baseTree->internal->vertices) v->used = false;
+TopTree::TopTree(std::shared_ptr<BaseTree> from_base_tree) : TopTree() {
+	internal->base_tree = from_base_tree;
 
-	for (auto v : baseTree->internal->vertices) {
+	for (auto v : internal->base_tree->internal->vertices) v->used = false;
+
+	for (auto v : internal->base_tree->internal->vertices) {
 		if (v->used || v->degree != 1) continue;
 		internal->root_clusters.push_back(internal->construct_cluster(v));
 	}
@@ -36,6 +39,12 @@ std::vector<std::shared_ptr<Cluster> > TopTree::GetTopTrees() {
 
 void TopTree::PrintRooted(const std::shared_ptr<Cluster> root) {
 	internal->print_rooted_prefix(root);
+
+	for (auto v: internal->base_tree->internal->vertices) {
+		if (v->handle != NULL)
+			std::cout << *v->data << ": " << *v->handle << std::endl;
+		else std::cout << *v->data << ": NONE" << std::endl;
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -76,8 +85,7 @@ std::shared_ptr<Cluster> TopTree::Internal::construct_cluster(std::shared_ptr<Ba
 		next_v = NULL;
 
 		// 1. Construct BaseCluster if there was edge given
-		// and push it into the path
-		std::shared_ptr<Cluster> path_cluster = (e != NULL ? std::make_shared<BaseCluster>(e) : NULL);
+		std::shared_ptr<Cluster> path_cluster = (e != NULL ? BaseCluster::construct(e) : NULL);
 
 		// 2. Select continuation and recursive construct top trees on subtrees
 		for (auto n : v->neighbours) {
@@ -110,7 +118,7 @@ std::shared_ptr<Cluster> TopTree::Internal::construct_cluster(std::shared_ptr<Ba
 						rake_list.pop();
 						auto second = rake_list.front();
 						rake_list.pop();
-						rake_list_new.push(std::make_shared<RakeCluster>(first, second));
+						rake_list_new.push(RakeCluster::construct(first, second));
 					}
 				}
 				rake_list.swap(rake_list_new);
@@ -122,7 +130,6 @@ std::shared_ptr<Cluster> TopTree::Internal::construct_cluster(std::shared_ptr<Ba
 
 				// Only use one side (left)
 				v->rake_tree_left = rake_tree;
-				//path_cluster = std::make_shared<RakeCluster>(rake_tree, path_cluster);
 			}
 			// 3.3 Push cluster with edge into path
 			path.push(path_cluster);
@@ -145,7 +152,9 @@ std::shared_ptr<Cluster> TopTree::Internal::construct_cluster(std::shared_ptr<Ba
 				path.pop();
 				auto right = path.front();
 				path.pop();
-				path_new.push(std::make_shared<CompressCluster>(left, right));
+
+				// Construct compress cluster and push it into the path
+				path_new.push(CompressCluster::construct(left, right));
 			}
 		}
 		path.swap(path_new);

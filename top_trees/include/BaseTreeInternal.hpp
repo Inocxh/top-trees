@@ -46,6 +46,11 @@ public:
 	// Linkage to the other objects
 	std::list<neighbour> neighbours;
 
+	// Handle
+	// - if degree at least 2: handle is comprees node around this middle vertex
+	// - if leaf: handle is the top most non-rake (base or compress) node having this vertex as one of its endpoints
+	std::shared_ptr<Cluster> handle = NULL;
+
 	// Used for building TopTree:
 	bool used;
 	std::shared_ptr<Cluster> rake_tree_left = NULL;

@@ -21,6 +21,7 @@ public:
 	std::shared_ptr<BaseTree::Internal::Vertex> boundary_a;
 	std::shared_ptr<BaseTree::Internal::Vertex> boundary_b;
 
+	std::shared_ptr<Cluster> parent = NULL;
 	std::shared_ptr<Cluster> left_child = NULL;
 	std::shared_ptr<Cluster> right_child = NULL;
 	std::shared_ptr<Cluster> left_foster = NULL;
@@ -34,21 +35,24 @@ std::ostream& operator<<(std::ostream& o, const Cluster& v);
 
 class BaseCluster : public Cluster {
 public:
-	BaseCluster(std::shared_ptr<BaseTree::Internal::Edge> edge);
+	static std::shared_ptr<BaseCluster> construct(std::shared_ptr<BaseTree::Internal::Edge> edge);
+
 	virtual std::ostream& ToString(std::ostream& o) const;
 };
 
 class CompressCluster : public Cluster {
 public:
+	static std::shared_ptr<CompressCluster> construct(std::shared_ptr<Cluster> left, std::shared_ptr<Cluster> right);
+
 	std::shared_ptr<BaseTree::Internal::Vertex> common_vertex;
 
-	CompressCluster(std::shared_ptr<Cluster> left, std::shared_ptr<Cluster> right);
 	virtual std::ostream& ToString(std::ostream& o) const;
 };
 
 class RakeCluster : public Cluster {
 public:
-	RakeCluster(std::shared_ptr<Cluster> rake_from, std::shared_ptr<Cluster> rake_to);
+	static std::shared_ptr<RakeCluster> construct(std::shared_ptr<Cluster> rake_from, std::shared_ptr<Cluster> rake_to);
+
 	virtual std::ostream& ToString(std::ostream& o) const;
 };
 
