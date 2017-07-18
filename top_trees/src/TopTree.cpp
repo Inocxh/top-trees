@@ -16,6 +16,8 @@ public:
 	std::shared_ptr<Cluster> construct_cluster(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> e=NULL);
 
 	void print_rooted_prefix(const std::shared_ptr<Cluster> cluster, const std::string prefix = "", bool last_child = true) const;
+
+	void guarded_splay(std::shared_ptr<Cluster> node, std::shared_ptr<Cluster> guard = NULL);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -70,6 +72,69 @@ void TopTree::Internal::print_rooted_prefix(const std::shared_ptr<Cluster> clust
 		print_rooted_prefix(cluster->right_foster, prefix_child, true);
 	}
 }
+
+//     x               y
+//   A   y    ->    x    C
+//      B C        A B
+void rotate_left(std::shared_ptr<Cluster> x) {
+	auto parent = x->parent;
+	auto y = x->right_child;
+
+	if (parent != NULL) {
+		if (parent->left_child == x) parent->left_child = y;
+		else parent->right_child = y;
+	}
+
+	// Adjust x:
+	x->right_child = y->left_child;
+	x->parent = y;
+
+	// Adjust y:
+	y->left_child = x;
+	y->parent = parent;
+}
+
+//     x               y
+//   y   C    ->    A    x
+//  A B                 B C
+void rotate_right(std::shared_ptr<Cluster> x) {
+	auto parent = x->parent;
+	auto y = x->left_child;
+
+	if (parent != NULL) {
+		if (parent->left_child == x) parent->left_child = y;
+		else parent->right_child = y;
+	}
+
+	// Adjust x:
+	x->left_child = y->right_child;
+	x->parent = y;
+
+	// Adjust y:
+	y->right_child = x;
+	y->parent = parent;
+}
+
+void TopTree::Internal::guarded_splay(std::shared_ptr<Cluster> node, std::shared_ptr<Cluster> guard) {
+	while (true) {
+		if (node->parent == guard) return;
+		if (node->parent->parent == guard) {
+			// Zig rotate (last under guard)
+			if (node == node->parent->left_child) rotate_right(node->parent);
+			else rotate_left(node->parent);
+			return;
+		}
+		// Zig-Zag rotate or Zig-Zig rotate
+		// 1. step
+		if (node->parent->left_child) rotate_right(node->parent);
+		else rotate_left(node->parent);
+		// 2. step
+		if (node->parent->left_child) rotate_right(node->parent);
+		else rotate_left(node->parent);
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////
 
 std::shared_ptr<Cluster> TopTree::Internal::construct_cluster(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> e) {
 	std::queue<std::shared_ptr<Cluster> > path;
