@@ -1,41 +1,44 @@
 \chapter{Top Trees}
 
-Top Trees is data structure intended to maintain informations of underlying
+Top Trees are data structure intended to maintain informations of underlying
 dynamically updated forest. They were introduced by Alstrup et al. in 2003 \cite{TopTrees}.
 
 \section{Definition}
 
-{\I Top Trees structure} is collection of individual {\I top trees}, each of them
-represents one tree from the underlying forest. These top trees are dynamically
-updates when there is some change (cut, join, update of the information in some
-edge or vertex) in the underlying forest. These updates
+{\I Top Trees structure} acts as driver for underlying forest. It represents
+underlying trees as collection of generalized edges called {\I clusters}. {\I
+Clusters} are generalized edges and each of them represents some continuous
+subtree in the underlying forest. Only some of them called {\I root clusters}
+(which represents whole trees of the underlying forest) could be accessed by the
+user.
 
-Each {\I top tree \TT} is based on structure of a rooted binary tree -- most of
-the inner vertices has two children, but in some cases there may be useful to
-allow up to four children of some vertices (we will show later).
+User defines format of the data stored in these clusters and four basic
+operations {\sc Create}, {\sc Destroy}, {\sc Join} and {\sc Split} used to
+manipulate with clusters data.
 
-Vertices of the top tree are called {\I clusters} and each of them represents
-some contraction of the underlying tree and holds informations about the
-contracted part of the underlying tree.
+Then user controls the Top Trees structure by using operations $\cut{u,v}$,
+$\link{u,v}$ and $\expose{u,v}$. Last of them
+makes cluster representing the path between vertices $u$ and $v$ a root cluster
+(because root clusters are the only clusters of the top tree, whose could be
+accessed by the user). The Top Trees structure dynamically updates stored data
+in clusters by using user defined functions.
 
-Top Trees are capable of holding informations stored on edges of the underlying
-trees and to summarize them in clusters. They are capable of updating structure
-and answer queries in (amortized\footnote{If the time is amortized or no
-depends on an implementation}) time $\O(\log N)$.
 
-A special feature of the Top Trees is that users of them only defines format of
-the data stored in clusters and four basic operations {\sc Create}, {\sc
-Destroy}, {\sc Join} and {\sc Split} use to manipulate with clusters data. Then
-user control the Top Trees by operations $\hbox{\sc Cut}(u,v)$,
-$\hbox{\sc Link}(u,v)$ and $\hbox{\sc Expose}(u,v)$. Last of them brings cluster
-representing the path between vertices $u$ and $v$ to the root, because the root
-cluster is only cluster of the top tree, which could be accessed by user.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 \section{Clusters}
 
-There are three types of clusters in the top tree. As has been said, every of
-them represents (and hold informations) about some part of the underlying tree.
-Each cluster have two {\I boundary vertices}. Types of the clusters are:
+As has been said {\I Clusters} are generalized edges. Each cluster has two
+{\I boundary vertices} and represents part of the underlying forest between
+these vertices.
+
+Clusters in the Top Tree structure are connected into binary trees where each
+leaf represents one edge of the underlying tree and each inner vertex represents
+contraction of its children. More about this structure will be discussed
+later in {\I Cluster model} subsection.
+
+There are three types of clusters:
 
 \begin{itemize}
 
@@ -47,26 +50,30 @@ This cluster could appear only as leaf of the top tree.
 
 \item {\bf Rake cluster} -- represents one way how to contract two clusters
 with one common boundary vertex. Lets have two clusters $C_1(u,v)$ and
-$C_2(v,w)$ next to each other around common boundary vertex $v$ and lets the
-$C_1$ be the left one of them (in some topological order given for example by
+$C_2(v,w)$ next to each other around common boundary vertex $v$ (and lets the
+$C_1$ be the left one of them in some topological order given for example by
 indexes of the edges).
 
-Then we construct {\I rake cluster} by {\I raking} the left cluster ($C_1$) on
-the right one ($C_2$). The resulting cluster would have the same boundary
+Then we construct {\I left rake cluster} by {\I raking} the left cluster ($C_1$)
+on the right one ($C_2$). The resulting cluster would have the same boundary
 vertices as the cluster $C_2$.
+
+Or we can construct {\I right rake cluster} in the same way -- by {\I raking}
+the right cluster ($C_2$) on the left one ($C_1$). The resulting cluster would
+have the same boundary vertices as the cluster $C_1$.
 
 \todo{Image of rake cluster}
 
 \item{\bf Compress cluster} -- represents other contraction of the two clusters
-with one common boundary vertex into one by attaching first cluster after the
-other. If there are other clusters attached to the same common boundary vertex
-they must be firstly {\I raked} onto one of the compressed clusters (in other words
-before constructing a compress cluster the common boundary vertex must have
-degree of exactly two).
+with one common boundary vertex into one cluster by attaching first cluster
+after the other. If there are other clusters attached to the same common
+boundary vertex they must be firstly {\I raked} onto one of the compressed
+clusters.
 
 If boundary vertices of the cluster $C_1$ were $(u,v)$ and boundary vertices
 of the cluster $C_2$ were $(v,w)$, the cluster $C=compress(C_1,C_2)$ would have
-boundary vertices $(u,w)$.
+boundary vertices $(u,w)$ (and we will call it sometime {\I compress cluster
+of vertex $v$} or {\I handle of vertex $v$}).
 
 \todo{Image of compress cluster}
 
@@ -74,18 +81,28 @@ boundary vertices $(u,w)$.
 
 \subsection{Clusters model}
 
-Compress and rake clusters has each of them two children, base clusters are
-childless. Each cluster represent some part of the underlying tree and by
-combination of them we could represent whole underlying tree as one cluster
-(one top tree).
+Clusters in the Top Trees structure are organised into binary trees. Leaves of
+these trees (Base clusters) represents edges of the underlying trees and inner
+each inner vertex represents contraction of two adjacent clusters into one.
+
+Compress and rake clusters have each of them two children, base clusters are
+childless. Each cluster represent continuous subtree of the underlying forest.
+By combination of clusters we could represent each underlying tree as one {\I
+root cluster} (we will sometime refer to the representation of one continuous
+underlying tree as one {\I top tree}).
 
 Compress clusters are used to represent paths in the underlying tree -- each
 path could be compressed into one {\I compress tree} consisting only of compress
-clusters. If there are branched separating from this path, they are recursively
-represented as single clusters and then they are raked onto clusters in the path.
+clusters. If there are branches separating from this path, they are recursively
+represented as single clusters ({\I rake trees}) and then they are
+{\I raked onto} clusters in the path.
 
-Underlying trees could have (and usually have) many different divisions into
-paths and so the underlying trees have many different representations. Crucial
+Because there are $N$ base clusters for an underlying tree with $N$ edges and
+each inner vertex of the corresponding top tree joins two adjacent clusters into
+one, there will be $N-1$ inner clusters for representing this underlying tree.
+
+Underlying tree could have (and usually have) many different divisions into
+paths and so the underlying tree have many different representations. Crucial
 part of the top trees structure is to maintain this representation in some nice
 form during updates.
 
@@ -103,7 +120,7 @@ cluster model they would be raked onto clusters from path and the path would be
 compression of these rake clusters.
 
 In this extended model the clusters originating from the separating branches are
-firstly combined in so called {\I rake trees} -- they are maximally two rake
+firstly combined in so called {\I rake trees} -- there are maximally two rake
 trees around each path vertex, one of them is raked from branches on one side of
 the path and the second one is raked from branches on the other side of the
 path. And these rake trees are connected as left and right foster child of the
@@ -113,11 +130,141 @@ compress cluster constructed from this part of the path.
 
 This extended model is used in the first implementation.
 
-\section{Top trees operation}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{User defined functions}
+
+There are four basic function to manipulate with the clusters data which have to
+be implemented by users of the Top Trees structure. They are called internally
+by the public Top Trees operations when constructing, destroying or reorganizing
+clusters.
+
+If user want to use the {\I Search} operation, he has to implement fifth user
+function {\I Choose} to traverse around the path by choosing children.
+
+Examples of the functions and related problems are given in the Chapter 2.
+
+\subsection{Create}
+
+This function is called when new base cluster is created. It gets reference to
+the underlying edge and to the newly created base cluster, populates base
+clusters data based on the underlying edge and runs others user defined
+operations according to logic of given problem.
+
+\subsection{Destroy}
+
+Opposite of the Create function. This function is called just before deleting
+base cluster. It gets reference to the underlying edge and to the base cluster
+which would be destroyed and it could perform some end-of-life operations (like
+saving computed data from the cluster).
+
+\subsection{Join}
+
+This function is called when connecting two clusters into one (compress or rake)
+cluster. It gets references to both of the connecting clusters and to the parent
+cluster and it should aggregate data from child to the parent or perform other
+join-related operations according to logic of given problem.
+
+\subsection{Split}
+
+Opposite of the Join function. It is called just before removing connection
+between parent cluster and its children. This function gets reference to the
+parent cluster and both of its children and it should distribute data from the
+parent into children.
+
+The Join and Split operations are frequently called during reorganization of the
+top tree structure -- common pattern is to Split everything around changed path
+in the top-down manner, reorganize the structure and then Join everything in the
+bottom-up manner.
+
+\subsection{Choose}
+
+This operation for given cluster selects one of its child clusters. It is used
+by the {\I Search} operation.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Top Trees operations}
+
+These are the only operations which could user use to manipulate with the Top
+Trees structure. In addition to that user could access root clusters and read
+information from them.
+
+\subsubsection{Handles}
+
+Following operations are defined for vertices of the underlying forest, but the
+Top Trees structure operates on (generalized) edges. To accomplish translation
+of vertices onto edges we define {\I handle} for each vertex of the underlying
+forest.
+
+Isolated vertex has no handle. If the vertex is leaf of the underlying tree the
+handle for this vertex is the topmost compress (or base) cluster having this
+vertex as one of its endpoints. And finally if the vertex has degree at least
+two the compress cluster of this vertex (compress cluster having this vertex
+as the common boundary vertex) is the handle of this vertex.
 
 \subsection{Expose}
 
+This is the most basic operation (which is used internally by others
+operations). Calling $\expose{u,v}$ will result into several changes in the Top
+Trees structure depending on the positions of vertices $u$ and $v$.
+
+Implementation of the expose slightly differ in the first and the second
+implementation (first implementation uses splays and splices), but the basic
+principle is common.
+
+\subsubsection{Soft expose}
+
+If they are in different components (they are not connected by path) both the
+handles of $u$ and $v$ are brought to the roots of corresponding top trees
+(similarly if $u=v$).
+
+When they are in the same component (they are connected by path) firstly the
+handle of $u$ is brought to the root of corresponding top tree. If the same
+cluster is also the handle of $v$ we are done, otherwise the handle of $v$ is
+brought as close to the root as possible (but not replacing the handle of $u$ as
+root).
+
+\subsubsection{Hard expose}
+
+Ideal situation is when $u$ and $v$ are endpoints of the root cluster, it is
+possible when both of them have degree one. But in general root cluster could
+represent some path $(x,y)$ with path $(u,v)$ as subpath. In this case we need
+to temporarily convert ends of this path (paths $(x,u)$ and $(v,y)$) into rake
+clusters so the compress tree would represent the path $(u,v)$ with these ends
+raked onto this path.
+
 \subsection{Cut}
+
+Operation $\cut{u,v}$ deletes edge between vertices $u$ and $v$ and reorganizes
+the Top Trees structure to reflect this change. We assume that $u\ne v$ and
+there is edge $(u,v)$.
+
+Firstly the structure internally performs {\I soft expose} on $u,v$ to bring
+theirs handles to the top of corresponding top tree. In this situation the
+handle of $u$ will be the root cluster and the handle of $v$ will be child of
+the root cluster.
+
+We have to destroy the base node representing $(u,v)$ and remove connection
+between these two handles, some reorganization of child clusters is needed (it
+is implementation specific). This operation results in two top trees, one with
+handle of~$u$ as root cluster and second with handle of~$v$ as root cluster.
 
 \subsection{Link}
 
+Calling $\link{u,v}$ on two disjoint vertices joins them by new edge $(u,v)$.
+This is similar to the cut operation but in the opposite way. Firstly we start
+by {\I exposing} (bringing to root) handles of $u$ and $v$.
+
+Then we create new base cluster representing edge $(u,v)$, connect it on the
+right place into one of the top trees, connect this tree as child of the root
+cluster of the second tree and reorganize clusters (it is implementation
+specific).
+
+\subsection{Search}
+
+When defined the {\I Choose} user function this operation could be used to find
+and return specific cluster.

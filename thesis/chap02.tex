@@ -5,6 +5,10 @@ Top Trees with small time complexity.
 
 \section{Finding distance between two vertices}
 
+This problem was originally solved in {\I A Data Structure for Dynamic Trees}
+\cite{DSforDynamicTrees} by Sleator and Tarjan in 1983 and then it was adapted
+for Top Trees by Alstrup, Holm, Lichtenberg and Thorup in \cite{TopTrees}.
+
 {\bf Theorem:} Lets have dynamic collection of weighted trees with link and cut
 operations. We could find length of the path between any two vertices (or find
 that they are not connected) in $\O(\log N)$ time.
@@ -32,6 +36,10 @@ operations, we could answer on any such question in $\O(\log N)$ time.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Maximum edge weight between given vertices with interval update}
+
+Similarly to the previous problem this problem was originally solved in
+\cite{DSforDynamicTrees} and then it was adapted for Top Trees  in
+\cite{TopTrees}.
 
 {\bf Theorem:} Lets have dynamic collection of weighted trees with operation of linking,
 cutting, updating edge weight and updating edge weight on given path. We could
