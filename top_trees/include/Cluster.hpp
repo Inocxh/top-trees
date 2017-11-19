@@ -42,7 +42,7 @@ protected:
 	virtual bool isRake() { return false; }
 
 	virtual void do_join() = 0;
-	virtual void do_split() = 0;
+	virtual void do_split(std::vector<std::shared_ptr<Cluster>>* splitted_clusters = NULL) = 0;
 	virtual void flip() = 0;
 	virtual void normalize() = 0;
 
@@ -61,7 +61,7 @@ protected:
 
 	virtual bool isBase() { return true; }
 	virtual void do_join();
-	virtual void do_split();
+	virtual void do_split(std::vector<std::shared_ptr<Cluster>>* splitted_clusters = NULL);
 	virtual void flip();
 	virtual void normalize();
 
@@ -77,7 +77,7 @@ protected:
 
 	virtual bool isCompress() { return true; }
 	virtual void do_join();
-	virtual void do_split();
+	virtual void do_split(std::vector<std::shared_ptr<Cluster>>* splitted_clusters = NULL);
 	virtual void flip();
 	virtual void normalize();
 
@@ -95,7 +95,7 @@ protected:
 
 	virtual bool isRake() { return true; }
 	virtual void do_join();
-	virtual void do_split();
+	virtual void do_split(std::vector<std::shared_ptr<Cluster>>* splitted_clusters = NULL);
 	virtual void flip();
 	virtual void normalize();
 

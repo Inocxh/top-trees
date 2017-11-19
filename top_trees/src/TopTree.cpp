@@ -29,6 +29,7 @@ private:
 
 	void splice(std::shared_ptr<Cluster> node);
 
+	std::vector<std::shared_ptr<Cluster>> splitted_clusters;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -136,6 +137,10 @@ void TopTree::Expose(int v, int w) {
 
 // A. Splaying
 void TopTree::Internal::adjust_parent(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> old_child, std::shared_ptr<Cluster> new_child) {
+	// Ensure that both childs are splitted before any action
+	new_child->do_split(&splitted_clusters);
+	old_child->do_split(&splitted_clusters);
+
 	if (parent != NULL) {
 		if (parent->left_child == old_child) parent->left_child = new_child;
 		else if (parent->right_child == old_child) parent->right_child = new_child;
@@ -215,6 +220,9 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 
 // C. Soft expose itself
 void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w) {
+	// Init array for clusters restoration
+	splitted_clusters = std::vector<std::shared_ptr<Cluster>>();
+
 	// A. Making handle of w root node of its top tree
 
 	auto Nw = w->handle;
@@ -248,6 +256,9 @@ void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> 
 
 	// 2. Perform a series of splices from N_w to the root, making N_w part of the topmost compress subtree
 
+
+	// Restore all clusters
+	for (auto c: splitted_clusters) c->do_join();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

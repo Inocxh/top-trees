@@ -30,13 +30,16 @@ void BaseCluster::do_join() {
 
 	is_splitted = false;
 }
-void BaseCluster::do_split() {
+void BaseCluster::do_split(std::vector<std::shared_ptr<Cluster>>* splitted_clusters) {
 	if (is_splitted) return;
 
-	// 1. Ensure that parent is splitted:
-	if (parent != NULL) parent->do_split();
+	// 1. Log that this cluster will be splitted
+	if (splitted_clusters != NULL) splitted_clusters->push_back(shared_from_this());
 
-	// 2. Call user defined method:
+	// 2. Ensure that parent is splitted:
+	if (parent != NULL) parent->do_split(splitted_clusters);
+
+	// 3. Call user defined method:
 	Destroy(data, edge->data);
 
 	is_splitted = true;
@@ -104,13 +107,16 @@ void CompressCluster::do_join() {
 
 	is_splitted = false;
 }
-void CompressCluster::do_split() {
+void CompressCluster::do_split(std::vector<std::shared_ptr<Cluster>>* splitted_clusters) {
 	if (is_splitted) return;
 
-	// 1. Ensure that parent is splitted:
-	if (parent != NULL) parent->do_split();
+	// 1. Log that this cluster will be splitted
+	if (splitted_clusters != NULL) splitted_clusters->push_back(shared_from_this());
 
-	// 2. Call user defined method:
+	// 2. Ensure that parent is splitted:
+	if (parent != NULL) parent->do_split(splitted_clusters);
+
+	// 3. Call user defined method:
 	Split(left_child->data, right_child->data, data);
 
 	is_splitted = true;
@@ -182,13 +188,16 @@ void RakeCluster::do_join() {
 
 	is_splitted = false;
 }
-void RakeCluster::do_split() {
+void RakeCluster::do_split(std::vector<std::shared_ptr<Cluster>>* splitted_clusters) {
 	if (is_splitted) return;
 
-	// 1. Ensure that parent is splitted:
-	if (parent != NULL) parent->do_split();
+	// 1. Log that this cluster will be splitted
+	if (splitted_clusters != NULL) splitted_clusters->push_back(shared_from_this());
 
-	// 2. Call user defined method:
+	// 2. Ensure that parent is splitted:
+	if (parent != NULL) parent->do_split(splitted_clusters);
+
+	// 3. Call user defined method:
 	Split(left_child->data, right_child->data, data);
 
 	is_splitted = true;
