@@ -65,15 +65,18 @@ have the same boundary vertices as the cluster $C_1$.
 \todo{Image of rake cluster}
 
 \item{\bf Compress cluster} -- represents other contraction of the two clusters
-with one common boundary vertex into one cluster by attaching first cluster
-after the other. If there are other clusters attached to the same common
-boundary vertex they must be firstly {\I raked} onto one of the compressed
-clusters.
+with one common boundary vertex $v$ into one cluster by attaching first cluster
+after the other. Right before compressing the common vertex $v$ must have degree
+(number of incident clusters) exactly two. If there are other clusters attached
+to the same common boundary vertex they must be firstly {\I raked} onto one of
+the compressed clusters.
 
 If boundary vertices of the cluster $C_1$ were $(u,v)$ and boundary vertices
 of the cluster $C_2$ were $(v,w)$, the cluster $C=compress(C_1,C_2)$ would have
 boundary vertices $(u,w)$ (and we will call it sometime {\I compress cluster
-of vertex $v$} or {\I handle of vertex $v$}).
+of vertex $v$} and the operation as {\I compressing around vertex $v$}).
+This cluster also in some way represents the vertex $v$ and we will use it as
+{\I handle} of this vertex.
 
 \todo{Image of compress cluster}
 
@@ -82,8 +85,8 @@ of vertex $v$} or {\I handle of vertex $v$}).
 \subsection{Clusters model}
 
 Clusters in the Top Trees structure are organised into binary trees. Leaves of
-these trees (Base clusters) represents edges of the underlying trees and inner
-each inner vertex represents contraction of two adjacent clusters into one.
+these trees (Base clusters) represents edges of the underlying trees and each
+inner vertex represents contraction of two adjacent clusters into one.
 
 Compress and rake clusters have each of them two children, base clusters are
 childless. Each cluster represent continuous subtree of the underlying forest.
@@ -137,9 +140,9 @@ This extended model is used in the first implementation.
 \section{User defined functions}
 
 There are four basic function to manipulate with the clusters data which have to
-be implemented by users of the Top Trees structure. They are called internally
-by the public Top Trees operations when constructing, destroying or reorganizing
-clusters.
+be implemented by users of the Top Trees structure. Then user uses public Top
+Trees structure operation and these user functions are used internally when
+constructing, destroying or reorganizing clusters.
 
 If user want to use the {\I Search} operation, he has to implement fifth user
 function {\I Choose} to traverse around the path by choosing children.
@@ -162,9 +165,9 @@ saving computed data from the cluster).
 
 \subsection{Join}
 
-This function is called when connecting two clusters into one (compress or rake)
+This function is called during connecting two clusters into one (compress or rake)
 cluster. It gets references to both of the connecting clusters and to the parent
-cluster and it should aggregate data from child to the parent or perform other
+cluster and it should aggregate data from children to the parent or perform other
 join-related operations according to logic of given problem.
 
 \subsection{Split}
@@ -237,6 +240,8 @@ to temporarily convert ends of this path (paths $(x,u)$ and $(v,y)$) into rake
 clusters so the compress tree would represent the path $(u,v)$ with these ends
 raked onto this path.
 
+\todo{More detailed info about hard expose.}
+
 \subsection{Cut}
 
 Operation $\cut{u,v}$ deletes edge between vertices $u$ and $v$ and reorganizes
@@ -253,6 +258,8 @@ between these two handles, some reorganization of child clusters is needed (it
 is implementation specific). This operation results in two top trees, one with
 handle of~$u$ as root cluster and second with handle of~$v$ as root cluster.
 
+\todo{More detailed info about cut.}
+
 \subsection{Link}
 
 Calling $\link{u,v}$ on two disjoint vertices joins them by new edge $(u,v)$.
@@ -264,7 +271,11 @@ right place into one of the top trees, connect this tree as child of the root
 cluster of the second tree and reorganize clusters (it is implementation
 specific).
 
+\todo{More detailed info about link.}
+
 \subsection{Search}
 
 When defined the {\I Choose} user function this operation could be used to find
 and return specific cluster.
+
+\todo{Example of search.}
