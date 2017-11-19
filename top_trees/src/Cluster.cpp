@@ -32,7 +32,9 @@ void BaseCluster::normalize() {
 std::ostream& BaseCluster::ToString(std::ostream& o) const {
 	return o << "BaseCluster - endpoints " << *boundary_left->data << ", " << *boundary_right->data;
 }
-
+std::ostream& BaseCluster::_short_name(std::ostream& o) const {
+	return o << *boundary_left->data << "," << *boundary_right->data;
+}
 
 std::shared_ptr<CompressCluster> CompressCluster::construct(std::shared_ptr<Cluster> left, std::shared_ptr<Cluster> right) {
 	auto cluster = std::make_shared<CompressCluster>();
@@ -95,6 +97,9 @@ void CompressCluster::normalize() {
 std::ostream& CompressCluster::ToString(std::ostream& o) const {
 	return o << "CompressCluster - endpoints " << *boundary_left->data << " [" << *common_vertex->data << "] " << *boundary_right->data;
 }
+std::ostream& CompressCluster::_short_name(std::ostream& o) const {
+	return o << "N" << *common_vertex->data << "\\n" << *boundary_left->data << "," << *boundary_right->data;;
+}
 
 
 std::shared_ptr<RakeCluster> RakeCluster::construct(std::shared_ptr<Cluster> rake_from, std::shared_ptr<Cluster> rake_to) {
@@ -125,6 +130,9 @@ void RakeCluster::normalize() {
 }
 std::ostream& RakeCluster::ToString(std::ostream& o) const {
 	return o << "RakeCluster - endpoints " << *boundary_left->data << ", " << *boundary_right->data;
+}
+std::ostream& RakeCluster::_short_name(std::ostream& o) const {
+	return o << *boundary_left->data << "," << *boundary_right->data;
 }
 
 }

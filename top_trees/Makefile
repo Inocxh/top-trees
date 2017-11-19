@@ -28,6 +28,14 @@ directories: ${DIRECTORIES}
 ${DIRECTORIES}:
 	mkdir -p ${DIRECTORIES}
 
+# Visualize dot
+
+%.pdf: %.dot
+	dot -Tps2 $< -o $*.ps
+	ps2ps $*.ps $*-fixed.ps
+	ps2pdf $*-fixed.ps $@
+	rm -f $**.ps
+
 clean:
 	rm -f ${PROG} ${OBJS} ${DEPS}
 

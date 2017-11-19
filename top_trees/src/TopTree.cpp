@@ -17,6 +17,11 @@ public:
 
 	void print_rooted_prefix(const std::shared_ptr<Cluster> cluster, const std::string prefix = "", bool last_child = true) const;
 
+	// Debug methods:
+	void print_rooted_prefix(const std::shared_ptr<Cluster> cluster, const std::string prefix = "", bool last_child = true) const;
+	void print_graphviz_recursive(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> node) const;
+	void print_graphviz_child(std::shared_ptr<Cluster> from, std::shared_ptr<Cluster> to) const;
+private:
 	void guarded_splay(std::shared_ptr<Cluster> node, std::shared_ptr<Cluster> guard = NULL);
 };
 
@@ -39,17 +44,8 @@ std::vector<std::shared_ptr<Cluster> > TopTree::GetTopTrees() {
 	return internal->root_clusters;
 }
 
-void TopTree::PrintRooted(const std::shared_ptr<Cluster> root) {
-	internal->print_rooted_prefix(root);
-
-	for (auto v: internal->base_tree->internal->vertices) {
-		if (v->handle != NULL)
-			std::cout << *v->data << ": " << *v->handle << std::endl;
-		else std::cout << *v->data << ": NONE" << std::endl;
-	}
-}
-
 ////////////////////////////////////////////////////////////////////////////////
+// Debug output - console
 
 void TopTree::Internal::print_rooted_prefix(const std::shared_ptr<Cluster> cluster, const std::string prefix, bool last_child) const {
 	std::cout << *cluster << std::endl;
@@ -71,6 +67,48 @@ void TopTree::Internal::print_rooted_prefix(const std::shared_ptr<Cluster> clust
 		std::cout << prefix_child << "|-Foster right: ";
 		print_rooted_prefix(cluster->right_foster, prefix_child, true);
 	}
+}
+
+void TopTree::PrintRooted(const std::shared_ptr<Cluster> root) const {
+	internal->print_rooted_prefix(root);
+
+	for (auto v: internal->base_tree->internal->vertices) {
+		if (v->handle != NULL)
+			std::cout << *v->data << ": " << *v->handle << std::endl;
+		else std::cout << *v->data << ": NONE" << std::endl;
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Debug outpu - Graphviz
+
+void TopTree::Internal::print_graphviz_child(std::shared_ptr<Cluster> from, std::shared_ptr<Cluster> to) const {
+	to->_short_name(std::cout << "\t\"" << to << "\" [label=\"") << "\",shape=";
+	if (to->isCompress()) std::cout << "box";
+	else if (to->isRake()) std::cout << "diamond";
+	else std::cout << "circle";
+	std::cout << "]" << std::endl;
+
+	if (from == NULL) return;
+	std::cout << "\t\"" << from << "\" -> \"" << to << "\"";
+	if (to == from->left_foster || to == from->right_foster) std::cout << " [style=dashed]";
+	std::cout << std::endl;
+}
+
+void TopTree::Internal::print_graphviz_recursive(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> node) const {
+	if (node == NULL) return;
+	print_graphviz_child(parent, node);
+
+	print_graphviz_recursive(node, node->left_foster);
+	print_graphviz_recursive(node, node->left_child);
+	print_graphviz_recursive(node, node->right_child);
+	print_graphviz_recursive(node, node->right_foster);
+}
+
+void TopTree::PrintGraphviz(const std::shared_ptr<Cluster> root) const {
+	std::cout << "digraph \"" << root << "\" {" << std::endl;
+	internal->print_graphviz_recursive(NULL, root);
+	std::cout << "}" << std::endl;
 }
 
 //     x               y
@@ -230,6 +268,4 @@ std::shared_ptr<Cluster> TopTree::Internal::construct_cluster(std::shared_ptr<Ba
 
 
 TopTree::~TopTree() {}
-
-
 }

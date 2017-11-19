@@ -18,8 +18,9 @@ public:
 	// Return roots of the top trees
 	std::vector<std::shared_ptr<Cluster> > GetTopTrees();
 
-	// Testing functions
-	void PrintRooted(const std::shared_ptr<Cluster> root);
+	// Debug methods
+	void PrintGraphviz(const std::shared_ptr<Cluster> root) const;
+	void PrintRooted(const std::shared_ptr<Cluster> root) const;
 private:
 	class Internal;
 	std::unique_ptr<Internal> internal;

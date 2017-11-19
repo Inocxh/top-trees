@@ -13,7 +13,8 @@ public:
 	std::string label;
 
 	virtual std::ostream& ToString(std::ostream& o) const {
-		return o << "Vertex " << label;
+		//return o << "Vertex " << label;
+		return o << label;
 	}
 };
 
@@ -25,7 +26,8 @@ public:
 	int weight;
 
 	virtual std::ostream& ToString(std::ostream& o) const {
-		return o << "Edge " << label;
+		//return o << "Edge " << label;
+		return o << label;
 	}
 };
 
@@ -82,7 +84,7 @@ int main(int argc, char const *argv[]) {
 	auto e = baseTree->AddLeaf(c, NULL, std::make_shared<MyVertexData>("e"));
 	baseTree->AddLeaf(e, NULL, std::make_shared<MyVertexData>("q"));
 
-	baseTree->AddLeaf(e, NULL, std::make_shared<MyVertexData>("s"));
+	auto s = baseTree->AddLeaf(e, NULL, std::make_shared<MyVertexData>("s"));
 
 	baseTree->AddLeaf(c, NULL, std::make_shared<MyVertexData>("f"));
 
@@ -107,7 +109,7 @@ int main(int argc, char const *argv[]) {
 
 	baseTree->AddLeaf(p, NULL, std::make_shared<MyVertexData>("x"));
 
-	baseTree->PrintRooted(z);
+	// baseTree->PrintRooted(z);
 
 	////////////////
 
@@ -115,9 +117,16 @@ int main(int argc, char const *argv[]) {
 
 	auto roots = T->GetTopTrees();
 	for (auto root : roots) {
-		T->PrintRooted(root);
+		// T->PrintRooted(root);
+		T->PrintGraphviz(root);
 	}
 
+	T->Expose(s, d);
+	roots = T->GetTopTrees();
+	for (auto root : roots) {
+		// T->PrintRooted(root);
+		T->PrintGraphviz(root);
+	}
 
 	delete T;
 
