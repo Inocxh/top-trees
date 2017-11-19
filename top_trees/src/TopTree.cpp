@@ -111,17 +111,28 @@ void TopTree::PrintGraphviz(const std::shared_ptr<Cluster> root) const {
 	std::cout << "}" << std::endl;
 }
 
+void TopTree::Internal::adjust_parent(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> old_child, std::shared_ptr<Cluster> new_child) {
+	if (parent != NULL) {
+		if (parent->left_child == old_child) parent->left_child = new_child;
+		else if (parent->right_child == old_child) parent->right_child = new_child;
+		else if (parent->left_foster == old_child) parent->left_foster = new_child;
+		else if (parent->right_foster == old_child) parent->right_foster = new_child;
+		else exit(1); // Something bad happens
+	} else {
+		// x was one of the roots, replace it in place in the vector
+		new_child->root_vector_index = old_child->root_vector_index;
+		root_clusters[old_child->root_vector_index] = new_child;
+	}
+}
+
 //     x               y
 //   A   y    ->    x    C
 //      B C        A B
-void rotate_left(std::shared_ptr<Cluster> x) {
+void TopTree::Internal::rotate_left(std::shared_ptr<Cluster> x) {
 	auto parent = x->parent;
 	auto y = x->right_child;
 
-	if (parent != NULL) {
-		if (parent->left_child == x) parent->left_child = y;
-		else parent->right_child = y;
-	}
+	adjust_parent(parent, x, y);
 
 	// Adjust x:
 	x->right_child = y->left_child;
@@ -135,14 +146,11 @@ void rotate_left(std::shared_ptr<Cluster> x) {
 //     x               y
 //   y   C    ->    A    x
 //  A B                 B C
-void rotate_right(std::shared_ptr<Cluster> x) {
+void TopTree::Internal::rotate_right(std::shared_ptr<Cluster> x) {
 	auto parent = x->parent;
 	auto y = x->left_child;
 
-	if (parent != NULL) {
-		if (parent->left_child == x) parent->left_child = y;
-		else parent->right_child = y;
-	}
+	adjust_parent(parent, x, y);
 
 	// Adjust x:
 	x->left_child = y->right_child;
