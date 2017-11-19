@@ -15,7 +15,7 @@ public:
 
 	std::shared_ptr<Cluster> construct_cluster(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> e=NULL);
 
-	void print_rooted_prefix(const std::shared_ptr<Cluster> cluster, const std::string prefix = "", bool last_child = true) const;
+	void soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w);
 
 	// Debug methods:
 	void print_rooted_prefix(const std::shared_ptr<Cluster> cluster, const std::string prefix = "", bool last_child = true) const;
@@ -23,6 +23,12 @@ public:
 	void print_graphviz_child(std::shared_ptr<Cluster> from, std::shared_ptr<Cluster> to) const;
 private:
 	void guarded_splay(std::shared_ptr<Cluster> node, std::shared_ptr<Cluster> guard = NULL);
+	void adjust_parent(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> old_child, std::shared_ptr<Cluster> new_child);
+	void rotate_left(std::shared_ptr<Cluster> x);
+	void rotate_right(std::shared_ptr<Cluster> x);
+
+	void splice(std::shared_ptr<Cluster> node);
+
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -34,9 +40,12 @@ TopTree::TopTree(std::shared_ptr<BaseTree> from_base_tree) : TopTree() {
 
 	for (auto v : internal->base_tree->internal->vertices) v->used = false;
 
+	int i = 0;
 	for (auto v : internal->base_tree->internal->vertices) {
 		if (v->used || v->degree != 1) continue;
 		internal->root_clusters.push_back(internal->construct_cluster(v));
+		internal->root_clusters[i]->root_vector_index = i;
+		i++;
 	}
 }
 
@@ -111,6 +120,21 @@ void TopTree::PrintGraphviz(const std::shared_ptr<Cluster> root) const {
 	std::cout << "}" << std::endl;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Soft expose related functions
+
+void TopTree::Expose(int v, int w) {
+	auto vertexV = internal->base_tree->internal->vertices[v];
+	auto vertexW = internal->base_tree->internal->vertices[w];
+
+	internal->soft_expose(vertexV, vertexW);
+}
+
+// void TopTree::Internal::fix_endpoints(std::shared_ptr<Cluster> node) {
+//
+// }
+
+// A. Splaying
 void TopTree::Internal::adjust_parent(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> old_child, std::shared_ptr<Cluster> new_child) {
 	if (parent != NULL) {
 		if (parent->left_child == old_child) parent->left_child = new_child;
@@ -163,8 +187,8 @@ void TopTree::Internal::rotate_right(std::shared_ptr<Cluster> x) {
 
 void TopTree::Internal::guarded_splay(std::shared_ptr<Cluster> node, std::shared_ptr<Cluster> guard) {
 	while (true) {
-		if (node->parent == guard) return;
-		if (node->parent->parent == guard) {
+		if (node->parent == guard || node->parent == NULL) return;
+		if (node->parent->parent == guard || node->parent->parent == NULL) {
 			// Zig rotate (last under guard)
 			if (node == node->parent->left_child) rotate_right(node->parent);
 			else rotate_left(node->parent);
@@ -172,12 +196,58 @@ void TopTree::Internal::guarded_splay(std::shared_ptr<Cluster> node, std::shared
 		}
 		// Zig-Zag rotate or Zig-Zig rotate
 		// 1. step
-		if (node->parent->left_child) rotate_right(node->parent);
+		if (node == node->parent->left_child) rotate_right(node->parent);
 		else rotate_left(node->parent);
 		// 2. step
-		if (node->parent->left_child) rotate_right(node->parent);
+		if (node == node->parent->left_child) rotate_right(node->parent);
 		else rotate_left(node->parent);
 	}
+}
+
+// B. Splicing
+// Splicing occur only after splaying -> at most two rake nodes to the root of some compress tree
+void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
+	// Get root of above compress tree
+	if (node->parent->isRake() && node->parent->parent->isRake()) {
+		auto root = node->parent->parent->parent;
+	}
+}
+
+// C. Soft expose itself
+void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w) {
+	// A. Making handle of w root node of its top tree
+
+	auto Nw = w->handle;
+	Nw->normalize();
+
+	// 1. Splay within each compress and rake subtree in the path from N_w to the root
+	auto node = Nw;
+	while (node != NULL) {
+		// 1.1 Make node N root of its compress tree (and leaf of a rake tree)
+		// Get guard
+		auto guard = node->parent;
+		while (guard != NULL && !guard->isRake()) guard = guard->parent;
+		// Splay within this compress tree
+		guarded_splay(node, guard);
+
+		if (node->parent == NULL) break;
+		// 1.2 Splay on N's parent (which is a rake cluster) within rake tree
+		auto orig_parent = node->parent;
+		if (orig_parent->isRake()) {
+			guard = orig_parent->parent;
+			while (guard != NULL && guard->isRake()) guard = guard->parent;
+			guarded_splay(orig_parent, guard);
+		}
+
+		// 1.3 If N_w have different parent than orig_parent:
+		if (node->parent != orig_parent) guarded_splay(node->parent, orig_parent);
+
+		// For next run - node in above compress tree under which Nw is
+		node = orig_parent -> parent;
+	}
+
+	// 2. Perform a series of splices from N_w to the root, making N_w part of the topmost compress subtree
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
