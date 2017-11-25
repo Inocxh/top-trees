@@ -212,10 +212,91 @@ void TopTree::Internal::guarded_splay(std::shared_ptr<Cluster> node, std::shared
 // B. Splicing
 // Splicing occur only after splaying -> at most two rake nodes to the root of some compress tree
 void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
-	// Get root of above compress tree
-	if (node->parent->isRake() && node->parent->parent->isRake()) {
-		auto root = node->parent->parent->parent;
+	auto left_nodes = std::vector<std::shared_ptr<Cluster>>();
+	auto right_nodes = std::vector<std::shared_ptr<Cluster>>();
+
+	// 1. Go up to the root of a compress tree and split other nodes to left
+	// and right siblings
+	auto root = node->parent;
+	auto current = node;
+	while (root->isRake()) {
+		// The most generic variant is when there are two rake nodes to the nearest
+		// root of a compress tree
+		if (current == root->left_child) right_nodes.push_back(root->right_child);
+		else left_nodes.push_back(root->left_child);
+
+		// Inner clusters will be deleted by garbage collection after
+		current = root;
+		root = root->parent;
 	}
+
+	// 2. Now root is root of some compress tree -> add (foster)childs
+	// in preparation that given node will be new left child of the given root
+	if (current == root->left_foster) {
+		right_nodes.push_back(root->left_child);
+		if (root->right_foster != NULL) right_nodes.push_back(root->right_foster);
+	} else {
+		left_nodes.push_back(root->left_child);
+		if (root->left_foster != NULL) left_nodes.push_back(root->left_foster);
+	}
+
+	// 3. construct new left and right foster trees
+	std::shared_ptr<Cluster> new_left_foster = NULL;
+	if (!left_nodes.empty()) {
+		new_left_foster = left_nodes.back();
+		left_nodes.pop_back();
+
+		while (!left_nodes.empty()) {
+			auto right = left_nodes.back();
+			left_nodes.pop_back();
+
+			auto temp = std::make_shared<RakeCluster>();
+
+			temp->left_child = new_left_foster;
+			new_left_foster->parent = temp;
+			temp->right_child = right;
+			right->parent = temp;
+
+			// This cluster will need joining:
+			splitted_clusters.push_back(temp);
+
+			new_left_foster = temp;
+		}
+	}
+	// The same for right nodes
+	std::shared_ptr<Cluster> new_right_foster = NULL;
+	if (!right_nodes.empty()) {
+		new_right_foster = right_nodes.back();
+		right_nodes.pop_back();
+
+		while (!right_nodes.empty()) {
+			auto left = right_nodes.back();
+			right_nodes.pop_back();
+
+			auto temp = std::make_shared<RakeCluster>();
+
+			if (new_right_foster == NULL) std::cerr << "What?" << std::endl;
+
+			temp->right_child = new_right_foster;
+			new_right_foster->parent = temp;
+			temp->left_child = left;
+			left->parent = temp;
+
+			// This cluster will need joining:
+			splitted_clusters.push_back(temp);
+
+			new_right_foster = temp;
+		}
+	}
+
+
+	// 4. Connect everything in place
+	root->left_child = node;
+	node->parent = root;
+	root->left_foster = new_left_foster;
+	if (new_left_foster != NULL) new_left_foster->parent = root;
+	root->right_foster = new_right_foster;
+	if (new_right_foster != NULL) new_right_foster->parent = root;
 }
 
 // C. Soft expose itself
@@ -254,10 +335,23 @@ void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> 
 		node = orig_parent -> parent;
 	}
 
+	for (auto root : root_clusters) {
+		std::cout << "digraph \"" << root << "\" {" << std::endl;
+		print_graphviz_recursive(NULL, root);
+		std::cout << "}" << std::endl;
+	}
+
 	// 2. Perform a series of splices from N_w to the root, making N_w part of the topmost compress subtree
+	node = Nw;
+	while (node->parent != NULL) {
+		splice(node);
+		node = node->parent;
+	}
 
+	// 3. Splay Nw and making it the root of the entire tree
+	guarded_splay(Nw);
 
-	// Restore all clusters
+	// 4. Restore all clusters
 	for (auto c: splitted_clusters) c->do_join();
 }
 
