@@ -1,0 +1,147 @@
+\chapter{Amortized implementation of Top Trees}
+
+This implementation is based on article Self-Adjusting Top Trees
+\cite{SelfAdjustingTT} by Tarjan and Werneck and uses the extended clusters
+model with foster children discussed in the previous chapter.
+
+\section{Construction}
+
+Tarjan and Werneck in \cite{SelfAdjustingTT} suggested this construction:
+\begin{enumerate}
+\item Choose root $r$ as a vertex with degree one.
+\item Orient all edges in the tree containing vertex $r$ towards the $r$.
+\item Divide tree into paths starting in some leaf and continuing along the
+direction of the edges -- the first path will end in the root $r$ and became the
+{\I root path}, other paths ends in some other path.
+\item Recursively compute clusters to represent each path incident to the
+root path and create {\I rake trees} from these incident paths.
+\item Create binary tree of compress clusters to represent the root path and
+connect rake trees as foster children.
+\item If there are some unused vertices of degree one start the process again
+from any of these vertices to construct another top tree.
+\end{enumerate}
+
+In my implementation I choose equivalent construction but in more recursive
+manner. I started the same way by choosing the root $r$ as vertex with degree
+one, but I don't divide the tree into paths.
+
+Starting from the second vertex we choose one neighbour as continuation of the
+path and recursively called the same function on all other neighbours. Recursion
+returns cluster representing for each of the subtrees and then they could be
+raked into left and right rake trees and saved into this vertex for future use.
+
+When compressing the path into compress clusters we just look into the common
+vertex of compressed clusters and if there are saved rake trees we connect them
+as left and right foster children.
+
+This construction is easier to implement and gives us ability to better control
+the shape of the resulting top tree. By choosing neighbors instead of directing
+paths from leafs we could prefer longer paths by choosing deepest neighbors
+(we firstly run \gls{dfs} to obtain depths). Longer paths are better contracted
+in binary tree structure of compress clusters to obtain lower top tree.
+
+\section{Expose -- splaying and splicing}
+
+Expose in this implementation is based on splaying and splicing whose are used
+to bring handles of given vertices to the top of theirs top trees.
+
+Because of extended clusters model each top tree consist from independent
+{\I compress trees} (only compress clusters as internal nodes) and
+{\I rake trees} (only rake clusters as internal nodes).
+
+Whole top tree is one compress tree (which represents the {\I root path}). It
+has base clusters as leafs and root of rake trees as foster children (these
+foster children are other paths connected to the root path). These rake trees
+have rake clusters as theirs internal nodes and base or compress clusters as
+theirs leaf. And so on.
+
+This division of the top tree into smaller blocks could be used to expose given
+pair of vertices in the root of the top tree. We will use operations of
+{\I splay} and {\I splice} introduced by Sleator and Tarjan in
+\cite{SelfAdjustingBST}.
+
+\subsection{Split and Join operations}
+
+Before doing any operation that changes shape of a top tree all nodes involved
+in this operation must be splitted (and all theirs parent on the way to the root
+of this tree too). This is crucial because after changing shape of the top tree
+a data stored in these nodes may be changed (for example depth of subtree bellow
+this node).
+
+Split operations has to be done in top-down manner (starting from the root). The
+easiest way how to accomplish this is to have flag in each node if it is
+splitted and recursively split parent before splitting current node. All
+splitted nodes should be logged into some list to easily join all of them after
+completing current operation.
+
+Joining is done in opposite direction, in bottom-up manner (ending in the root).
+We will assume that before doing anything with any node during splaying and
+splicing operations we firstly split this node and after completing the entire
+expose operation we will call join on all splitted nodes.
+
+\subsection{Splaying}
+
+Splaying is originally a heuristic for balancing binary trees which uses an idea
+that often used nodes should be near the root of the tree. Each operation (find,
+delete, \dots) on a vertex in splay tree is preceded by splaying this vertex
+which moves this vertex to the root of the tree.
+
+Splaying is done by rotations or double rotations (which are called {\I zig-zig}
+or {\I zig-zag} rotations). That moves target vertex up by one or two levels
+leaving all vertices in the right order.
+
+Although some not so often used vertices may be in $\O(n)$ distance from the
+root, Sleator and Tarjan in \cite{SelfAdjustingBST} proved that all operations
+works in amortized time $\O(\log n)$ per operation.
+
+In the Top Trees structure We will use {\I guarded splays} that works exactly
+the same way as normal splays, but it stops splaying when reaching a guard (some
+node). Normal splay has as guard root of the whole tree, but we want to do
+splays limited only inside compress or rake tree (to not mixing compress and
+rake clusters).
+
+Implementation of the splay is straightforward. Only noticeable detail (which
+Tarjan and Werneck mentioned in the \cite{SelfAdjustingTT}) is that foster
+children are not affected by any rotations, they always keeps the same parents.
+
+\subsection{Splicing}
+
+Only by splaying we are not able to expose a path containing both given
+vertices. And we are not even able to carry compress clusters over rake trees
+(because rake trees are connected as foster children under compress trees). For
+that we need to change partitioning of the top tree into paths.
+
+Lets take some vertex $v$ which is internal to some path $a,b$ (so there is
+compress cluster around this vertex) and which has node representing path $c,v$
+in its connected rake tree. We may change partitioning into paths by removing
+one half of the original path (for example $a,v$), connect it into rake tree,
+removing node representing path $c,v$ from the rake tree and changing the
+compress cluster that it now represents path $c,b$.
+
+\todo{Picture of splice}
+
+Splicing is used after splaying and its task is to move cluster, which is leaf
+of some rake tree, to the compress tree above it.
+
+Tarjan and Werneck in the \cite{SelfAdjustingTT} only described the main idea in
+the general case, but implementations details had to be worked out.
+
+My implementation does splicing in this way:
+\begin{enumerate}
+\item Prepare empty lists of left and right neighbors.
+\item Starting from given node $N$ go up until reaching node $N_c$ in compress
+tree. During that add left and right neighbors into neighbors lists and destroy
+old internal nodes of these rake trees.
+\item Add left child of the $N_c$ to the appropriate list of neighbors and
+connect $N$ as the new left child of the $N_c$ (that makes $N$ part of the above
+compress tree).
+\item Construct new left and right foster children (rake trees) from left and
+right neighbors lists with respecting their order. New internal rake nodes have
+to be constructed (and added into list of nodes for joining).
+\end{enumerate}
+
+\subsection{Soft expose}
+
+\subsection{Hard expose}
+
+\todo{More about first implementation}
