@@ -22,7 +22,7 @@ public:
 	std::vector<std::shared_ptr<Cluster> > GetTopTrees();
 
 	// Debug methods
-	void PrintGraphviz(const std::shared_ptr<Cluster> root) const;
+	void PrintGraphviz(const std::shared_ptr<Cluster> root, const char* title = "Top Tree") const;
 	void PrintRooted(const std::shared_ptr<Cluster> root) const;
 private:
 	class Internal;

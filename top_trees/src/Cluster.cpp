@@ -139,13 +139,18 @@ void CompressCluster::normalize() {
 	// Recursive call in top-down direction
 	if (parent != NULL) parent->normalize();
 
+	// If child is too the compress cluster check that common boundary vertex is in the right child of this child
+	//if (left_child->isCompress() && (left_child->left_child->boundary_left == common_vertex || left_child->left_child->boundary_right == common_vertex)) left_child->flip();
+	//if (right_child->isCompress() && (right_child->left_child->boundary_left == common_vertex || right_child->left_child->boundary_right == common_vertex)) right_child->flip();
+
 	// Check endpoints
-	if (left_child->boundary_left != boundary_left) left_child->flip();
-	if (right_child->boundary_right != boundary_right) right_child->flip();
+	//if (left_child->boundary_left != boundary_left) left_child->flip();
+	//if (right_child->boundary_right != boundary_right) right_child->flip();
 
 	// Check fosters connection
 	if (left_foster != NULL && left_foster->boundary_right != common_vertex) left_foster->flip();
-	if (right_foster != NULL && left_foster->boundary_right != common_vertex) left_foster->flip();
+	if (right_foster != NULL && right_foster->boundary_right != common_vertex) right_foster->flip();
+
 }
 std::ostream& CompressCluster::ToString(std::ostream& o) const {
 	return o << "CompressCluster - endpoints " << *boundary_left->data << " [" << *common_vertex->data << "] " << *boundary_right->data;
@@ -203,10 +208,21 @@ void RakeCluster::do_split(std::vector<std::shared_ptr<Cluster>>* splitted_clust
 	is_splitted = true;
 }
 
-void RakeCluster::flip() {} // Nothing to do
+void RakeCluster::flip() {
+	auto temp = boundary_left;
+	boundary_left = boundary_right;
+	boundary_right = temp;
+
+	auto temp_child = left_child;
+	left_child = right_child;
+	right_child = temp_child;
+}
 void RakeCluster::normalize() {
 	// Recursive call in top-down direction
 	if (parent != NULL) parent->normalize();
+
+	//if (left_child->isCompress() && (left_child->left_child->boundary_left == boundary_right || left_child->left_child->boundary_right == boundary_right)) left_child->flip();
+	//if (right_child->isCompress() && (right_child->left_child->boundary_left == boundary_right || right_child->left_child->boundary_right == boundary_right)) right_child->flip();
 
 	// Joined by the right boundary
 	if (left_child->boundary_right != boundary_right) left_child->flip();

@@ -27,6 +27,7 @@ public:
 protected:
 	std::shared_ptr<BaseTree::Internal::Vertex> boundary_left;
 	std::shared_ptr<BaseTree::Internal::Vertex> boundary_right;
+	std::shared_ptr<BaseTree::Internal::Vertex> common_vertex;
 
 	std::shared_ptr<Cluster> parent = NULL;
 	std::shared_ptr<Cluster> left_child = NULL;
@@ -82,8 +83,6 @@ protected:
 	virtual void normalize();
 
 	virtual std::ostream& _short_name(std::ostream& o) const; // Used only for debugging
-
-	std::shared_ptr<BaseTree::Internal::Vertex> common_vertex;
 };
 
 class RakeCluster : public Cluster, public std::enable_shared_from_this<RakeCluster> {

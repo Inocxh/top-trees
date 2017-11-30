@@ -19,8 +19,8 @@ public:
 
 	// Debug methods:
 	void print_rooted_prefix(const std::shared_ptr<Cluster> cluster, const std::string prefix = "", bool last_child = true) const;
-	void print_graphviz_recursive(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> node) const;
-	void print_graphviz_child(std::shared_ptr<Cluster> from, std::shared_ptr<Cluster> to) const;
+	void print_graphviz_recursive(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> node, const char* edge_label="") const;
+	void print_graphviz_child(std::shared_ptr<Cluster> from, std::shared_ptr<Cluster> to, const char* edge_label="") const;
 private:
 	void guarded_splay(std::shared_ptr<Cluster> node, std::shared_ptr<Cluster> guard = NULL);
 	void adjust_parent(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> old_child, std::shared_ptr<Cluster> new_child);
@@ -28,6 +28,8 @@ private:
 	void rotate_right(std::shared_ptr<Cluster> x);
 
 	void splice(std::shared_ptr<Cluster> node);
+
+	void soft_expose_handle(std::shared_ptr<Cluster> handle, std::shared_ptr<Cluster> splay_guard = NULL);
 
 	std::vector<std::shared_ptr<Cluster>> splitted_clusters;
 };
@@ -92,31 +94,33 @@ void TopTree::PrintRooted(const std::shared_ptr<Cluster> root) const {
 ////////////////////////////////////////////////////////////////////////////////
 // Debug outpu - Graphviz
 
-void TopTree::Internal::print_graphviz_child(std::shared_ptr<Cluster> from, std::shared_ptr<Cluster> to) const {
+void TopTree::Internal::print_graphviz_child(std::shared_ptr<Cluster> from, std::shared_ptr<Cluster> to, const char* edge_label) const {
 	to->_short_name(std::cout << "\t\"" << to << "\" [label=\"") << "\",shape=";
 	if (to->isCompress()) std::cout << "box";
 	else if (to->isRake()) std::cout << "diamond";
 	else std::cout << "circle";
 	std::cout << "]" << std::endl;
 
+	// Edge
 	if (from == NULL) return;
-	std::cout << "\t\"" << from << "\" -> \"" << to << "\"";
-	if (to == from->left_foster || to == from->right_foster) std::cout << " [style=dashed]";
-	std::cout << std::endl;
+	std::cout << "\t\"" << from << "\" -> \"" << to << "\" [label=\"" << edge_label << "\"";
+	if (to == from->left_foster || to == from->right_foster) std::cout << ", style=dashed";
+	std::cout << "]" << std::endl;
 }
 
-void TopTree::Internal::print_graphviz_recursive(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> node) const {
+void TopTree::Internal::print_graphviz_recursive(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> node, const char* edge_label) const {
 	if (node == NULL) return;
-	print_graphviz_child(parent, node);
+	print_graphviz_child(parent, node, edge_label);
 
-	print_graphviz_recursive(node, node->left_foster);
-	print_graphviz_recursive(node, node->left_child);
-	print_graphviz_recursive(node, node->right_child);
-	print_graphviz_recursive(node, node->right_foster);
+	print_graphviz_recursive(node, node->left_foster, "LF");
+	print_graphviz_recursive(node, node->left_child, "L");
+	print_graphviz_recursive(node, node->right_child, "R");
+	print_graphviz_recursive(node, node->right_foster, "RF");
 }
 
-void TopTree::PrintGraphviz(const std::shared_ptr<Cluster> root) const {
+void TopTree::PrintGraphviz(const std::shared_ptr<Cluster> root, const char* title) const {
 	std::cout << "digraph \"" << root << "\" {" << std::endl;
+	std::cout << "labelloc=\"t\"" << std::endl << "label=\"" << title << "\"" << std::endl;
 	internal->print_graphviz_recursive(NULL, root);
 	std::cout << "}" << std::endl;
 }
@@ -165,6 +169,7 @@ void TopTree::Internal::rotate_left(std::shared_ptr<Cluster> x) {
 
 	// Adjust x:
 	x->right_child = y->left_child;
+	if (x->right_child != NULL) x->right_child->parent = x;
 	x->parent = y;
 
 	// Adjust y:
@@ -183,6 +188,7 @@ void TopTree::Internal::rotate_right(std::shared_ptr<Cluster> x) {
 
 	// Adjust x:
 	x->left_child = y->right_child;
+	if (x->left_child != NULL) x->left_child->parent = x;
 	x->parent = y;
 
 	// Adjust y:
@@ -191,6 +197,11 @@ void TopTree::Internal::rotate_right(std::shared_ptr<Cluster> x) {
 }
 
 void TopTree::Internal::guarded_splay(std::shared_ptr<Cluster> node, std::shared_ptr<Cluster> guard) {
+	if (node->isBase()) {
+		// Not splay base clusters
+		if (node->parent != NULL && node->parent != guard && node->parent->isCompress()) guarded_splay(node->parent, guard);
+		return;
+	}
 	while (true) {
 		if (node->parent == guard || node->parent == NULL) return;
 		if (node->parent->parent == guard || node->parent->parent == NULL) {
@@ -218,6 +229,7 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 	// 1. Go up to the root of a compress tree and split other nodes to left
 	// and right siblings
 	auto root = node->parent;
+	if (root->isCompress() && (root->left_child == node || root->right_child == node)) return;
 	auto current = node;
 	while (root->isRake()) {
 		// The most generic variant is when there are two rake nodes to the nearest
@@ -225,9 +237,24 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 		if (current == root->left_child) right_nodes.push_back(root->right_child);
 		else left_nodes.push_back(root->left_child);
 
-		// Inner clusters will be deleted by garbage collection after
+		// Inner clusters will be deleted by garbage collection after, we only
+		// need to not joining them so mark them as joined
+		root->is_splitted = false;
+
 		current = root;
 		root = root->parent;
+	}
+	if (!root->is_splitted) root->do_split(&splitted_clusters);
+
+	if (root->parent != NULL) {
+		// When there is cluster above we must ensure that the left child
+		// is not connector with this upper compress cluster
+
+		// When above cluster is compress: left child must not have boundary that is used as connector
+		if (root->parent->isCompress() && (root->left_child->boundary_left == root->parent->common_vertex || root->left_child->boundary_right == root->parent->common_vertex)) root->flip();
+
+		// When above cluster is rake: left child must not have boundary that is used as rake node
+		if (root->parent->isRake() && (root->left_child->boundary_left == root->parent->boundary_right || root->left_child->boundary_right == root->parent->boundary_right)) root->flip();
 	}
 
 	// 2. Now root is root of some compress tree -> add (foster)childs
@@ -239,6 +266,10 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 		left_nodes.push_back(root->left_child);
 		if (root->left_foster != NULL) left_nodes.push_back(root->left_foster);
 	}
+	// After removing left child (and removing old boundary) check handle of that boundary:
+	auto check_boundary = root->left_child->boundary_left;
+	if (check_boundary == root->common_vertex) check_boundary = root->left_child->boundary_right;
+	if (check_boundary->handle == root) check_boundary->handle = root->left_child;
 
 	// 3. construct new left and right foster trees
 	std::shared_ptr<Cluster> new_left_foster = NULL;
@@ -258,11 +289,13 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 			right->parent = temp;
 
 			// This cluster will need joining:
+			temp->is_splitted = true;
 			splitted_clusters.push_back(temp);
 
 			new_left_foster = temp;
 		}
 	}
+
 	// The same for right nodes
 	std::shared_ptr<Cluster> new_right_foster = NULL;
 	if (!right_nodes.empty()) {
@@ -275,14 +308,13 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 
 			auto temp = std::make_shared<RakeCluster>();
 
-			if (new_right_foster == NULL) std::cerr << "What?" << std::endl;
-
 			temp->right_child = new_right_foster;
 			new_right_foster->parent = temp;
 			temp->left_child = left;
 			left->parent = temp;
 
 			// This cluster will need joining:
+			temp->is_splitted = true;
 			splitted_clusters.push_back(temp);
 
 			new_right_foster = temp;
@@ -299,60 +331,84 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 	if (new_right_foster != NULL) new_right_foster->parent = root;
 }
 
+void TopTree::Internal::soft_expose_handle(std::shared_ptr<Cluster> N, std::shared_ptr<Cluster> extern_splay_guard) {
+	// 0. Normalize from given node
+	N->normalize();
+	for (auto root : root_clusters) {
+		std::cout << "digraph \"" << root << "\" {" << std::endl;
+		std::cout << "label=\"after normalization from " << *N << "\"" << std::endl;
+		print_graphviz_recursive(NULL, root);
+		std::cout << "}" << std::endl;
+	}
+
+	// 1. Splay within each compress and rake subtree in the path from N_w to the root
+	auto node = N;
+	while (node != NULL) {
+		// 1.1 Make node the root of its compress tree (and leaf of a rake tree)
+		// Get guard
+		auto guard = node->parent;
+		while (guard != extern_splay_guard && guard != NULL
+			&& !guard->isRake()
+			&& node != guard->left_foster && node != guard->right_foster
+		) guard = guard->parent;
+		// Splay within this compress tree
+		guarded_splay(node, guard);
+
+		if (node->parent == NULL) break;
+		// 1.2 Splay on node's parent (which is a rake cluster) within rake tree
+		auto orig_parent = node->parent;
+		if (orig_parent->isRake()) {
+			guard = orig_parent->parent;
+			while (guard != extern_splay_guard && guard != NULL && guard->isRake()) guard = guard->parent;
+			guarded_splay(orig_parent, guard);
+		}
+
+		// 1.3 If N have different parent than orig_parent:
+		if (node->parent != orig_parent && node->parent != extern_splay_guard) guarded_splay(node->parent, orig_parent);
+
+		// For next run - node in above compress tree under which N is
+		node = orig_parent -> parent;
+	}
+
+	// 2. Perform a series of splices from N to the root, making N part of the topmost compress subtree
+	node = N;
+	while (node->parent != NULL && node->parent != extern_splay_guard) {
+		splice(node);
+		node = node->parent;
+	}
+
+	// 3. Splay N and making it the root of the entire tree
+	N->normalize();
+	guarded_splay(N, extern_splay_guard);
+
+	// 4. Restore all clusters
+	for (auto c: splitted_clusters) c->do_join();
+}
+
 // C. Soft expose itself
 void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w) {
 	// Init array for clusters restoration
 	splitted_clusters = std::vector<std::shared_ptr<Cluster>>();
 
 	// A. Making handle of w root node of its top tree
-
 	auto Nw = w->handle;
-	Nw->normalize();
 
-	// 1. Splay within each compress and rake subtree in the path from N_w to the root
-	auto node = Nw;
-	while (node != NULL) {
-		// 1.1 Make node N root of its compress tree (and leaf of a rake tree)
-		// Get guard
-		auto guard = node->parent;
-		while (guard != NULL && !guard->isRake()) guard = guard->parent;
-		// Splay within this compress tree
-		guarded_splay(node, guard);
+	soft_expose_handle(Nw);
 
-		if (node->parent == NULL) break;
-		// 1.2 Splay on N's parent (which is a rake cluster) within rake tree
-		auto orig_parent = node->parent;
-		if (orig_parent->isRake()) {
-			guard = orig_parent->parent;
-			while (guard != NULL && guard->isRake()) guard = guard->parent;
-			guarded_splay(orig_parent, guard);
-		}
-
-		// 1.3 If N_w have different parent than orig_parent:
-		if (node->parent != orig_parent) guarded_splay(node->parent, orig_parent);
-
-		// For next run - node in above compress tree under which Nw is
-		node = orig_parent -> parent;
+	if (w->degree == 1) {
+		if (Nw->isBase() && Nw->parent != NULL && Nw == Nw->parent->left_child) Nw->parent->flip();
+		if (Nw->isCompress() && (Nw->left_child->boundary_left == w || Nw->left_child->boundary_right == w)) Nw->flip();
 	}
 
-	for (auto root : root_clusters) {
-		std::cout << "digraph \"" << root << "\" {" << std::endl;
-		print_graphviz_recursive(NULL, root);
-		std::cout << "}" << std::endl;
-	}
+	// B. Moving handle of v near the handle of w
+	splitted_clusters.clear();
+	auto Nv = v->handle;
+	if (Nv == Nw || v == Nw->boundary_left || v == Nw->boundary_right) return; // We are done is such situation
 
-	// 2. Perform a series of splices from N_w to the root, making N_w part of the topmost compress subtree
-	node = Nw;
-	while (node->parent != NULL) {
-		splice(node);
-		node = node->parent;
-	}
+	if (w->degree == 1) soft_expose_handle(Nv);
+	else if (w->degree >= 2) soft_expose_handle(Nv, Nw); // Nw as guard
 
-	// 3. Splay Nw and making it the root of the entire tree
-	guarded_splay(Nw);
-
-	// 4. Restore all clusters
-	for (auto c: splitted_clusters) c->do_join();
+	// C. Flipping children?
 }
 
 ////////////////////////////////////////////////////////////////////////////////

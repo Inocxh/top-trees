@@ -118,14 +118,13 @@ int main(int argc, char const *argv[]) {
 	auto roots = T->GetTopTrees();
 	for (auto root : roots) {
 		// T->PrintRooted(root);
-		T->PrintGraphviz(root);
+		T->PrintGraphviz(root, "Initial Top Tree");
 	}
-
-	T->Expose(s, d);
+	T->Expose(v, d);
 	roots = T->GetTopTrees();
 	for (auto root : roots) {
 		// T->PrintRooted(root);
-		T->PrintGraphviz(root);
+		T->PrintGraphviz(root, "Final Top Tree");
 	}
 
 	delete T;
