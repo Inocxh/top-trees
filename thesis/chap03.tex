@@ -124,7 +124,10 @@ Splicing is used after splaying and its task is to move cluster, which is leaf
 of some rake tree, to the compress tree above it.
 
 Tarjan and Werneck in the \cite{SelfAdjustingTT} only described the main idea in
-the general case, but implementations details had to be worked out.
+the general case, but implementations details had to be worked out. I decided
+to do {\I left splice} (replacing left child of the compress cluster) which was
+original choose of Tarjan and Werneck, but the procedure would work the same
+way if we choose to replace the right child.
 
 My implementation does splicing in this way:
 \begin{enumerate}
@@ -140,8 +143,70 @@ right neighbors lists with respecting their order. New internal rake nodes have
 to be constructed (and added into list of nodes for joining).
 \end{enumerate}
 
+To assure that we not broke connectivity of $N_c$ with above clusters by
+replacing left child we need to check children of the $N_c$. If the above
+cluster (parent) is compress cluster, one of boundary vertices is common vertex
+of the parent. And if the parent is rake cluster, one of boundary vertices is
+the vertex around which is the parent raked. If this connection is in the left
+child we need to flip children (otherwise child with the connection would be
+moved into rake tree and connection would broke).
+
+This detail was not discussed by Tarjan and Werneck -- they only suggested
+transforming top trees into some normalized forms whose would work for both
+splaying and splicing. But they not mentioned some corner cases where such
+checking and flipping is needed.
+
 \subsection{Soft expose}
+
+Soft expose is the first part of the expose operation. It is called as
+{\I soft\_expose(u,v)} and its target is to bring path $u,v$ as subpath into
+the root cluster of corresponding top tree (so after soft expose there should
+be some path $a\dots u\dots v\dots b$ in the root cluster). Truncating the root
+cluster to contain only $u,v$ path is quest for hard expose.
+
+Soft expose takes handles of both vertices and brings them to the top of theirs
+top tree. Procedure for one vertex (as described by Tarjan and Werneck in
+\cite{SelfAdjustingTT}) is following:
+
+\begin{enumerate}
+\item Local Splays -- Starting from the handle of given vertex:
+  \begin{enumerate}
+  \item Splay current node inside compress tree (that makes it root of that compress tree)
+  \item If reaching root clusters (there is no parent) $\rightarrow$ stop the cycle.
+  \item Splay parent inside rake tree (parent of a root of a compress tree is always rake cluster).
+  \item Take parent of that node (it is compress cluster having this rake tree as foster child)
+  and repeat the cycle.
+  \end{enumerate}
+\item Splices -- Starting from the handle of given vertex splice current vertex and
+moving to its parent. That in every step moves handle of the given vertex across
+one rake tree to the above compress tree. Finally it moves this handle into the
+root compress tree.
+\item Global Splay -- Perform splay on the handle of given vertex (now in the
+root compress tree) to make it root of this top tree.
+\end{enumerate}
+
+When exposing the second handle (handle of the second vertex) only difference
+is that all splays are guarded by the first handle (to assure that it remains
+at the top).
+
+Tarjan and Werneck discussed when one of the vertices has degree one (and its
+handle is not a compress cluster around this vertex), in this case they realized
+that upper procedure leads to exposing handle of the second vertex with first
+vertex as one of its endpoints. They not discussed situation when both vertices
+have degree one -- in that case before starting procedure for the second vertex
+we have to ensure that base cluster of the first vertex is not the left child
+of root cluster (otherwise it would be moved to rake tree when splicing the
+handle of the second vertex).
+
+And what are results of this procedure? When both vertices are in different top
+trees this procedure brings both handles to the top of corresponding top trees.
+When they are in the same top tree this procedure leads to exposing cluster
+which contains
 
 \subsection{Hard expose}
 
-\todo{More about first implementation}
+Hard expose is the second part of the expose procedure, it follows the soft
+expose and its job is to truncate the path in the root cluster that it contains
+only the exposed subpath.
+
+\todo{Hard expose procedure}
