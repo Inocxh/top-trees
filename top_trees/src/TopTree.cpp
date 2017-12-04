@@ -5,6 +5,8 @@
 #include "BaseTreeInternal.hpp"
 #include "Cluster.hpp"
 
+//#define DEBUG
+
 namespace TopTree {
 
 // Hide data from .hpp file using PIMP idiom
@@ -165,6 +167,10 @@ void TopTree::Internal::rotate_left(std::shared_ptr<Cluster> x) {
 	auto parent = x->parent;
 	auto y = x->right_child;
 
+	#ifdef DEBUG
+		std::cerr << "Rotating left around " << *x << std::endl;
+	#endif
+
 	adjust_parent(parent, x, y);
 
 	// Adjust x:
@@ -175,6 +181,9 @@ void TopTree::Internal::rotate_left(std::shared_ptr<Cluster> x) {
 	// Adjust y:
 	y->left_child = x;
 	y->parent = parent;
+
+	x->correct_endpoints();
+	y->correct_endpoints();
 }
 
 //     x               y
@@ -183,6 +192,10 @@ void TopTree::Internal::rotate_left(std::shared_ptr<Cluster> x) {
 void TopTree::Internal::rotate_right(std::shared_ptr<Cluster> x) {
 	auto parent = x->parent;
 	auto y = x->left_child;
+
+	#ifdef DEBUG
+		std::cerr << "Rotating right around " << *x << std::endl;
+	#endif
 
 	adjust_parent(parent, x, y);
 
@@ -194,6 +207,9 @@ void TopTree::Internal::rotate_right(std::shared_ptr<Cluster> x) {
 	// Adjust y:
 	y->right_child = x;
 	y->parent = parent;
+
+	x->correct_endpoints();
+	y->correct_endpoints();
 }
 
 void TopTree::Internal::guarded_splay(std::shared_ptr<Cluster> node, std::shared_ptr<Cluster> guard) {
@@ -226,6 +242,10 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 	auto left_nodes = std::vector<std::shared_ptr<Cluster>>();
 	auto right_nodes = std::vector<std::shared_ptr<Cluster>>();
 
+	#ifdef DEBUG
+		std::cerr << "Splicing " << *node << std::endl;
+	#endif
+
 	// 1. Go up to the root of a compress tree and split other nodes to left
 	// and right siblings
 	auto root = node->parent;
@@ -245,6 +265,10 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 		root = root->parent;
 	}
 	if (!root->is_splitted) root->do_split(&splitted_clusters);
+
+	#ifdef DEBUG
+		std::cerr << "Splice root is " << *root << std::endl;
+	#endif
 
 	if (root->parent != NULL) {
 		// When there is cluster above we must ensure that the left child
@@ -277,9 +301,17 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 		new_left_foster = left_nodes.back();
 		left_nodes.pop_back();
 
+		#ifdef DEBUG
+			std::cerr << "L- First left rake is " << *new_left_foster << std::endl;
+		#endif
+
 		while (!left_nodes.empty()) {
 			auto right = left_nodes.back();
 			left_nodes.pop_back();
+
+			#ifdef DEBUG
+				std::cerr << " - next left rake is " << *right << std::endl;
+			#endif
 
 			auto temp = std::make_shared<RakeCluster>();
 
@@ -289,6 +321,7 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 			right->parent = temp;
 
 			// This cluster will need joining:
+			temp->correct_endpoints();
 			temp->is_splitted = true;
 			splitted_clusters.push_back(temp);
 
@@ -302,9 +335,17 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 		new_right_foster = right_nodes.back();
 		right_nodes.pop_back();
 
+		#ifdef DEBUG
+			std::cerr << "R- First right rake is " << *new_right_foster << std::endl;
+		#endif
+
 		while (!right_nodes.empty()) {
 			auto left = right_nodes.back();
 			right_nodes.pop_back();
+
+			#ifdef DEBUG
+				std::cerr << " - next right rake is " << *left << std::endl;
+			#endif
 
 			auto temp = std::make_shared<RakeCluster>();
 
@@ -314,6 +355,7 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 			left->parent = temp;
 
 			// This cluster will need joining:
+			temp->correct_endpoints();
 			temp->is_splitted = true;
 			splitted_clusters.push_back(temp);
 
@@ -329,11 +371,13 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 	if (new_left_foster != NULL) new_left_foster->parent = root;
 	root->right_foster = new_right_foster;
 	if (new_right_foster != NULL) new_right_foster->parent = root;
+	root->correct_endpoints();
 }
 
+// C. Soft expose itself
 void TopTree::Internal::soft_expose_handle(std::shared_ptr<Cluster> N, std::shared_ptr<Cluster> extern_splay_guard) {
 	// 0. Normalize from given node
-	N->normalize();
+	N->normalize_for_splay();
 	for (auto root : root_clusters) {
 		std::cout << "digraph \"" << root << "\" {" << std::endl;
 		std::cout << "label=\"after normalization from " << *N << "\"" << std::endl;
@@ -370,6 +414,13 @@ void TopTree::Internal::soft_expose_handle(std::shared_ptr<Cluster> N, std::shar
 		node = orig_parent -> parent;
 	}
 
+	for (auto root : root_clusters) {
+		std::cout << "digraph \"" << root << "\" {" << std::endl;
+		std::cout << "label=\"after splaying from " << *N << "\"" << std::endl;
+		print_graphviz_recursive(NULL, root);
+		std::cout << "}" << std::endl;
+	}
+
 	// 2. Perform a series of splices from N to the root, making N part of the topmost compress subtree
 	node = N;
 	while (node->parent != NULL && node->parent != extern_splay_guard) {
@@ -377,15 +428,21 @@ void TopTree::Internal::soft_expose_handle(std::shared_ptr<Cluster> N, std::shar
 		node = node->parent;
 	}
 
+	for (auto root : root_clusters) {
+		std::cout << "digraph \"" << root << "\" {" << std::endl;
+		std::cout << "label=\"after splicing from " << *N << "\"" << std::endl;
+		print_graphviz_recursive(NULL, root);
+		std::cout << "}" << std::endl;
+	}
+
 	// 3. Splay N and making it the root of the entire tree
-	N->normalize();
+	N->normalize_for_splay();
 	guarded_splay(N, extern_splay_guard);
 
 	// 4. Restore all clusters
 	for (auto c: splitted_clusters) c->do_join();
 }
 
-// C. Soft expose itself
 void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w) {
 	// Init array for clusters restoration
 	splitted_clusters = std::vector<std::shared_ptr<Cluster>>();
@@ -408,7 +465,11 @@ void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> 
 	if (w->degree == 1) soft_expose_handle(Nv);
 	else if (w->degree >= 2) soft_expose_handle(Nv, Nw); // Nw as guard
 
-	// C. Flipping children?
+	// C. Flipping children
+	if (Nv == Nw->left_child) {
+		std::cerr << "FIRST FLIP DONE" << std::endl;
+		Nw->flip();
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////

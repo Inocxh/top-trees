@@ -44,8 +44,9 @@ protected:
 
 	virtual void do_join() = 0;
 	virtual void do_split(std::vector<std::shared_ptr<Cluster>>* splitted_clusters = NULL) = 0;
+	virtual void correct_endpoints() = 0;
 	virtual void flip() = 0;
-	virtual void normalize() = 0;
+	virtual void normalize_for_splay() = 0;
 
 	virtual std::ostream& _short_name(std::ostream& o) const = 0; // Used only for debugging
 };
@@ -63,8 +64,9 @@ protected:
 	virtual bool isBase() { return true; }
 	virtual void do_join();
 	virtual void do_split(std::vector<std::shared_ptr<Cluster>>* splitted_clusters = NULL);
+	virtual void correct_endpoints() {};
 	virtual void flip();
-	virtual void normalize();
+	virtual void normalize_for_splay();
 
 	virtual std::ostream& _short_name(std::ostream& o) const; // Used only for debugging
 };
@@ -79,8 +81,9 @@ protected:
 	virtual bool isCompress() { return true; }
 	virtual void do_join();
 	virtual void do_split(std::vector<std::shared_ptr<Cluster>>* splitted_clusters = NULL);
+	virtual void correct_endpoints();
 	virtual void flip();
-	virtual void normalize();
+	virtual void normalize_for_splay();
 
 	virtual std::ostream& _short_name(std::ostream& o) const; // Used only for debugging
 };
@@ -95,8 +98,9 @@ protected:
 	virtual bool isRake() { return true; }
 	virtual void do_join();
 	virtual void do_split(std::vector<std::shared_ptr<Cluster>>* splitted_clusters = NULL);
+	virtual void correct_endpoints();
 	virtual void flip();
-	virtual void normalize();
+	virtual void normalize_for_splay();
 
 	virtual std::ostream& _short_name(std::ostream& o) const; // Used only for debugging
 };

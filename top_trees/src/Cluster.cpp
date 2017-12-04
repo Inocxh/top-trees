@@ -50,9 +50,9 @@ void BaseCluster::flip() {
 	boundary_left = boundary_right;
 	boundary_right = temp;
 }
-void BaseCluster::normalize() {
+void BaseCluster::normalize_for_splay() {
 	// Recursive call in top-down direction
-	if (parent != NULL) parent->normalize();
+	if (parent != NULL) parent->normalize_for_splay();
 }
 std::ostream& BaseCluster::ToString(std::ostream& o) const {
 	return o << "BaseCluster - endpoints " << *boundary_left->data << ", " << *boundary_right->data;
@@ -88,12 +88,7 @@ void CompressCluster::do_join() {
 	right_child->do_join();
 
 	// 2. Compute boundary and common vertices:
-	if (left_child->boundary_left == right_child->boundary_left || left_child->boundary_left == right_child->boundary_right)
-		common_vertex = left_child->boundary_left;
-	else common_vertex = left_child->boundary_right;
-
-	boundary_left = (left_child->boundary_left == common_vertex) ? left_child->boundary_right : left_child->boundary_left;
-	boundary_right = (right_child->boundary_left == common_vertex) ? right_child->boundary_right : right_child->boundary_left;
+	correct_endpoints();
 
 	// 3. Compute handles:
 	// - if degree at least 2: handle is comprees node around this middle vertex
@@ -121,6 +116,14 @@ void CompressCluster::do_split(std::vector<std::shared_ptr<Cluster>>* splitted_c
 
 	is_splitted = true;
 }
+void CompressCluster::correct_endpoints() {
+	if (left_child->boundary_left == right_child->boundary_left || left_child->boundary_left == right_child->boundary_right)
+		common_vertex = left_child->boundary_left;
+	else common_vertex = left_child->boundary_right;
+
+	boundary_left = (left_child->boundary_left == common_vertex) ? left_child->boundary_right : left_child->boundary_left;
+	boundary_right = (right_child->boundary_left == common_vertex) ? right_child->boundary_right : right_child->boundary_left;
+}
 
 void CompressCluster::flip() {
 	auto temp = boundary_left;
@@ -135,19 +138,15 @@ void CompressCluster::flip() {
 	left_foster = right_foster;
 	right_foster = temp_child;
 }
-void CompressCluster::normalize() {
+void CompressCluster::normalize_for_splay() {
 	// Recursive call in top-down direction
-	if (parent != NULL) parent->normalize();
-
-	// If child is too the compress cluster check that common boundary vertex is in the right child of this child
-	//if (left_child->isCompress() && (left_child->left_child->boundary_left == common_vertex || left_child->left_child->boundary_right == common_vertex)) left_child->flip();
-	//if (right_child->isCompress() && (right_child->left_child->boundary_left == common_vertex || right_child->left_child->boundary_right == common_vertex)) right_child->flip();
+	if (parent != NULL) parent->normalize_for_splay();
 
 	// Check endpoints
-	//if (left_child->boundary_left != boundary_left) left_child->flip();
-	//if (right_child->boundary_right != boundary_right) right_child->flip();
+	if (left_child->boundary_left != boundary_left) left_child->flip();
+	if (right_child->boundary_right != boundary_right) right_child->flip();
 
-	// Check fosters connection
+	// Check fosters connection (by their right boundary)
 	if (left_foster != NULL && left_foster->boundary_right != common_vertex) left_foster->flip();
 	if (right_foster != NULL && right_foster->boundary_right != common_vertex) right_foster->flip();
 
@@ -185,8 +184,7 @@ void RakeCluster::do_join() {
 	rake_to->do_join();
 
 	// 2. Set boundary vertices:
-	boundary_left = rake_to->boundary_left;
-	boundary_right = rake_to->boundary_right;
+	correct_endpoints();
 
 	// 3. Call user defined method:
 	Join(rake_from->data, rake_to->data, data);
@@ -207,6 +205,14 @@ void RakeCluster::do_split(std::vector<std::shared_ptr<Cluster>>* splitted_clust
 
 	is_splitted = true;
 }
+void RakeCluster::correct_endpoints() {
+	// nicknames
+	auto rake_from = left_child;
+	auto rake_to = right_child;
+
+	boundary_left = rake_to->boundary_left;
+	boundary_right = rake_to->boundary_right;
+}
 
 void RakeCluster::flip() {
 	auto temp = boundary_left;
@@ -217,12 +223,9 @@ void RakeCluster::flip() {
 	left_child = right_child;
 	right_child = temp_child;
 }
-void RakeCluster::normalize() {
+void RakeCluster::normalize_for_splay() {
 	// Recursive call in top-down direction
-	if (parent != NULL) parent->normalize();
-
-	//if (left_child->isCompress() && (left_child->left_child->boundary_left == boundary_right || left_child->left_child->boundary_right == boundary_right)) left_child->flip();
-	//if (right_child->isCompress() && (right_child->left_child->boundary_left == boundary_right || right_child->left_child->boundary_right == boundary_right)) right_child->flip();
+	if (parent != NULL) parent->normalize_for_splay();
 
 	// Joined by the right boundary
 	if (left_child->boundary_right != boundary_right) left_child->flip();

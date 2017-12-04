@@ -14,6 +14,10 @@ CC=g++
 
 all: directories ${PROG}
 
+test: ${PROG}
+	./${PROG} > test.dot
+	make test.pdf
+
 # Dependencies:
 -include $(DEPS)
 
@@ -39,6 +43,6 @@ ${DIRECTORIES}:
 clean:
 	rm -f ${PROG} ${OBJS} ${DEPS}
 
-.PHONY: clean all depend directories
+.PHONY: clean all depend directories test
 
 .SECONDARY:
