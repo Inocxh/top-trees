@@ -476,6 +476,20 @@ void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> 
 		if (Nv == Nw->left_child) Nw->flip();
 		if ((Nw->left_child->boundary_left == v && Nw->left_child->boundary_right == w)
 		|| (Nw->left_child->boundary_left == w && Nw->left_child->boundary_right == v)) Nw->flip();
+
+		// Edge case for foster children
+		// 1. If left -> move to right foster
+		if (Nw->left_foster != NULL && ((Nw->left_foster->boundary_left == v && Nw->left_foster->boundary_right)
+		|| (Nw->left_foster->boundary_left == w && Nw->left_foster->boundary_right == v))) Nw->flip();
+		// 2. Swap foster and normal children
+		if (Nw->right_foster != NULL && ((Nw->right_foster->boundary_left == v && Nw->right_foster->boundary_right)
+		|| (Nw->right_foster->boundary_left == w && Nw->right_foster->boundary_right == v))) {
+			Nw->do_split();
+			auto temp = Nw->right_foster;
+			Nw->right_foster = Nw->right_child;
+			Nw->right_child = temp;
+			Nw->do_join();
+		}
 	}
 	if (Nv->isCompress()) {
 		if ((Nv->left_child->boundary_left == v && Nv->left_child->boundary_right == w)
