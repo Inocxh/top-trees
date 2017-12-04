@@ -7,8 +7,8 @@ namespace TopTree {
 // USER DEFINED FUNCTIONS:
 
 // Joining and splitting of compress/rake clusters:
-extern void Join(std::shared_ptr<ClusterData> leftChild, std::shared_ptr<ClusterData> rightChild, std::shared_ptr<ClusterData> parent);
-extern void Split(std::shared_ptr<ClusterData> leftChild, std::shared_ptr<ClusterData> rightChild, std::shared_ptr<ClusterData> parent);
+extern void Join(std::shared_ptr<ClusterData> leftChild, std::shared_ptr<ClusterData> rightChild, std::shared_ptr<ClusterData> parent, bool isRake=false);
+extern void Split(std::shared_ptr<ClusterData> leftChild, std::shared_ptr<ClusterData> rightChild, std::shared_ptr<ClusterData> parent, bool isRake=false);
 
 // Creating and destroying Base clusters:
 extern void Create(std::shared_ptr<ClusterData> cluster, std::shared_ptr<EdgeData> edge);

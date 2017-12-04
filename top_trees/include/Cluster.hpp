@@ -78,7 +78,8 @@ public:
 protected:
 	static std::shared_ptr<CompressCluster> construct(std::shared_ptr<Cluster> left, std::shared_ptr<Cluster> right);
 
-	virtual bool isCompress() { return true; }
+	virtual bool isCompress() { return !rakerized; }
+	virtual bool isRake() { return rakerized; }
 	virtual void do_join();
 	virtual void do_split(std::vector<std::shared_ptr<Cluster>>* splitted_clusters = NULL);
 	virtual void correct_endpoints();
@@ -86,6 +87,8 @@ protected:
 	virtual void normalize_for_splay();
 
 	virtual std::ostream& _short_name(std::ostream& o) const; // Used only for debugging
+
+	bool rakerized = false; // modyfied to rake node during hard_expose
 };
 
 class RakeCluster : public Cluster, public std::enable_shared_from_this<RakeCluster> {

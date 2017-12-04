@@ -18,6 +18,8 @@ public:
 	std::shared_ptr<Cluster> construct_cluster(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> e=NULL);
 
 	void soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w);
+	std::shared_ptr<Cluster> hard_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w);
+	void restore_hard_expose();
 
 	// Debug methods:
 	void print_rooted_prefix(const std::shared_ptr<Cluster> cluster, const std::string prefix = "", bool last_child = true) const;
@@ -34,6 +36,7 @@ private:
 	void soft_expose_handle(std::shared_ptr<Cluster> handle, std::shared_ptr<Cluster> splay_guard = NULL);
 
 	std::vector<std::shared_ptr<Cluster>> splitted_clusters;
+	std::vector<std::shared_ptr<CompressCluster>> hard_expose_transformed_clusters;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -128,13 +131,16 @@ void TopTree::PrintGraphviz(const std::shared_ptr<Cluster> root, const char* tit
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Soft expose related functions
+// Soft and hard expose related functions
 
-void TopTree::Expose(int v, int w) {
+std::shared_ptr<Cluster> TopTree::Expose(int v, int w) {
+	internal->restore_hard_expose();
+
 	auto vertexV = internal->base_tree->internal->vertices[v];
 	auto vertexW = internal->base_tree->internal->vertices[w];
 
 	internal->soft_expose(vertexV, vertexW);
+	return internal->hard_expose(vertexV, vertexW);
 }
 
 // void TopTree::Internal::fix_endpoints(std::shared_ptr<Cluster> node) {
@@ -466,10 +472,50 @@ void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> 
 	else if (w->degree >= 2) soft_expose_handle(Nv, Nw); // Nw as guard
 
 	// C. Flipping children
-	if (Nv == Nw->left_child) {
-		std::cerr << "FIRST FLIP DONE" << std::endl;
-		Nw->flip();
+	if (Nw->isCompress()) {
+		if (Nv == Nw->left_child) Nw->flip();
+		if ((Nw->left_child->boundary_left == v && Nw->left_child->boundary_right == w)
+		|| (Nw->left_child->boundary_left == w && Nw->left_child->boundary_right == v)) Nw->flip();
 	}
+	if (Nv->isCompress()) {
+		if ((Nv->left_child->boundary_left == v && Nv->left_child->boundary_right == w)
+		 || (Nv->left_child->boundary_left == w && Nv->left_child->boundary_right == v)) Nv->flip();
+	}
+}
+
+// D. Hard expose
+std::shared_ptr<Cluster> TopTree::Internal::hard_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w) {
+	auto Nw = w->handle;
+	auto Nv = v->handle;
+	if (Nw != Nv && Nw->parent == NULL && Nv->parent == NULL) return NULL; // They are in different top trees
+
+	// Wanted node is node's child or grandchild -> raking some nodes needed
+
+	auto node = Nw;
+	// Node representing v-w path may be child or grandchild of the root --> if so, we need to convert ancestors of this node
+	// as rake clusters (they would be restored before next action with the Top Trees structure)
+	while ((node->boundary_left != v || node->boundary_right != w) && (node->boundary_left != w || node->boundary_right != v)) {
+		std::cerr << "Adding into vector" << std::endl;
+		hard_expose_transformed_clusters.push_back(std::dynamic_pointer_cast<CompressCluster>(node));
+		node = node->right_child;
+	}
+	// Rakerizing cluster nodes
+	for (auto v: hard_expose_transformed_clusters) {
+		v->do_split();
+		v->rakerized = true;
+	}
+	for (auto v: hard_expose_transformed_clusters) v->do_join();
+
+	return Nw;
+}
+
+void TopTree::Internal::restore_hard_expose() {
+	for (auto v: hard_expose_transformed_clusters) {
+		v->do_split();
+		v->rakerized = false;
+	}
+	for (auto v: hard_expose_transformed_clusters) v->do_join();
+	hard_expose_transformed_clusters.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -31,13 +31,13 @@ public:
 	}
 };
 
-void TopTree::Join(std::shared_ptr<ClusterData> leftChild, std::shared_ptr<ClusterData> rightChild, std::shared_ptr<ClusterData> parent) {
+void TopTree::Join(std::shared_ptr<ClusterData> leftChild, std::shared_ptr<ClusterData> rightChild, std::shared_ptr<ClusterData> parent, bool isRake) {
 	auto leftChild2 = std::dynamic_pointer_cast<MyClusterData>(leftChild);
 	auto rightChild2 = std::dynamic_pointer_cast<MyClusterData>(rightChild);
 	auto parent2 = std::dynamic_pointer_cast<MyClusterData>(parent);
 	parent2->weight = leftChild2->weight + rightChild2->weight;
 }
-void TopTree::Split(std::shared_ptr<ClusterData> leftChild, std::shared_ptr<ClusterData> rightChild, std::shared_ptr<ClusterData> parent) {
+void TopTree::Split(std::shared_ptr<ClusterData> leftChild, std::shared_ptr<ClusterData> rightChild, std::shared_ptr<ClusterData> parent, bool isRake) {
 	// Nothing
 }
 

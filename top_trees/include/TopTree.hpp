@@ -16,7 +16,7 @@ public:
 	~TopTree();
 
 	// Operations
-	void Expose(int v, int w); // Expose path v-w in the root cluster (vertices are refered by its indexes)
+	std::shared_ptr<Cluster> Expose(int v, int w); // Expose path v-w in the root cluster (vertices are refered by its indexes)
 
 	// Return roots of the top trees
 	std::vector<std::shared_ptr<Cluster> > GetTopTrees();

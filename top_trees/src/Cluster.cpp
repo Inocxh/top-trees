@@ -70,13 +70,15 @@ std::shared_ptr<CompressCluster> CompressCluster::construct(std::shared_ptr<Clus
 	left->parent = cluster;
 	right->parent = cluster;
 
-	cluster->do_join();
+	cluster->correct_endpoints();
 
 	// Foster children (if there are any)
 	cluster->left_foster = cluster->common_vertex->rake_tree_left;
 	cluster->right_foster = cluster->common_vertex->rake_tree_right;
 	if (cluster->left_foster != NULL) cluster->left_foster->parent = cluster;
 	if (cluster->right_foster != NULL) cluster->right_foster->parent = cluster;
+
+	cluster->do_join();
 
 	return cluster;
 }
@@ -86,19 +88,26 @@ void CompressCluster::do_join() {
 	// 1. ensure that childs are fine (joined):
 	left_child->do_join();
 	right_child->do_join();
+	if (left_foster != NULL) left_foster->do_join();
+	if (right_foster != NULL) right_foster->do_join();
 
-	// 2. Compute boundary and common vertices:
+	// 2. Compute boundary and common vertices and check handles
 	correct_endpoints();
 
-	// 3. Compute handles:
-	// - if degree at least 2: handle is comprees node around this middle vertex
-	common_vertex->handle = shared_from_this();
-	// - if leaf: handle is the top most non-rake (base or compress) node having this vertex as one of its endpoints
-	if (boundary_left->degree == 1) boundary_left->handle = shared_from_this();
-	if (boundary_right->degree == 1) boundary_right->handle = shared_from_this();
-
-	// 4. Call user defined method:
-	Join(left_child->data, right_child->data, data);
+	// 3. Call user defined method:
+	// 3.1 If there are foster children first do Join into virtual rake nodes
+	auto left_data = left_child->data;
+	if (left_foster != NULL) {
+		left_data = InitClusterData();
+		Join(left_foster->data, left_child->data, left_data, true);
+	}
+	auto right_data = right_child->data;
+	if (right_foster != NULL) {
+		right_data = InitClusterData();
+		Join(right_foster->data, right_child->data, right_data, true);
+	}
+	// 3.2 Normal Join
+	Join(left_data, right_data, data, rakerized); // if rakerized act as Rake cluster during Joining
 
 	is_splitted = false;
 }
@@ -112,17 +121,34 @@ void CompressCluster::do_split(std::vector<std::shared_ptr<Cluster>>* splitted_c
 	if (parent != NULL) parent->do_split(splitted_clusters);
 
 	// 3. Call user defined method:
-	Split(left_child->data, right_child->data, data);
+	// 3.1 If there are foster children first prepare virtual rake nodes
+	auto left_data = left_child->data;
+	if (left_foster != NULL) left_data = InitClusterData();
+	auto right_data = right_child->data;
+	if (right_foster != NULL) right_data = InitClusterData();
+	// 3.2 Normal Split
+	Split(left_data, right_data, data, rakerized); // if rakerized act as Rake cluster during Splitting
+	// 3.3 If there are foster children Split virtual rake nodes
+	if (left_foster != NULL) Split(left_foster->data, left_child->data, left_data, true);
+	if (right_foster != NULL) Split(right_foster->data, right_child->data, right_data, true);
 
 	is_splitted = true;
 }
 void CompressCluster::correct_endpoints() {
+	// 1. Correct endpoints
 	if (left_child->boundary_left == right_child->boundary_left || left_child->boundary_left == right_child->boundary_right)
 		common_vertex = left_child->boundary_left;
 	else common_vertex = left_child->boundary_right;
 
 	boundary_left = (left_child->boundary_left == common_vertex) ? left_child->boundary_right : left_child->boundary_left;
 	boundary_right = (right_child->boundary_left == common_vertex) ? right_child->boundary_right : right_child->boundary_left;
+
+	// 2. Check handles:
+	// - if degree at least 2: handle is comprees node around this middle vertex
+	common_vertex->handle = shared_from_this();
+	// - if leaf: handle is the top most non-rake (base or compress) node having this vertex as one of its endpoints
+	if (boundary_left->degree == 1) boundary_left->handle = shared_from_this();
+	if (boundary_right->degree == 1) boundary_right->handle = shared_from_this();
 }
 
 void CompressCluster::flip() {
@@ -140,6 +166,7 @@ void CompressCluster::flip() {
 }
 void CompressCluster::normalize_for_splay() {
 	// Recursive call in top-down direction
+	correct_endpoints();
 	if (parent != NULL) parent->normalize_for_splay();
 
 	// Check endpoints
@@ -187,7 +214,7 @@ void RakeCluster::do_join() {
 	correct_endpoints();
 
 	// 3. Call user defined method:
-	Join(rake_from->data, rake_to->data, data);
+	Join(rake_from->data, rake_to->data, data, true);
 
 	is_splitted = false;
 }
@@ -201,7 +228,7 @@ void RakeCluster::do_split(std::vector<std::shared_ptr<Cluster>>* splitted_clust
 	if (parent != NULL) parent->do_split(splitted_clusters);
 
 	// 3. Call user defined method:
-	Split(left_child->data, right_child->data, data);
+	Split(left_child->data, right_child->data, data, true);
 
 	is_splitted = true;
 }
@@ -225,6 +252,7 @@ void RakeCluster::flip() {
 }
 void RakeCluster::normalize_for_splay() {
 	// Recursive call in top-down direction
+	correct_endpoints();
 	if (parent != NULL) parent->normalize_for_splay();
 
 	// Joined by the right boundary
