@@ -35,7 +35,7 @@ protected:
 	std::shared_ptr<Cluster> left_foster = NULL;
 	std::shared_ptr<Cluster> right_foster = NULL;
 
-	int root_vector_index = 0;
+	int root_vector_index = -1;
 	bool is_splitted = true; // Initially clusters are in state that they need do_join method (which is called during construction)
 
 	virtual bool isBase() { return false; }

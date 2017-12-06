@@ -54,6 +54,13 @@ std::shared_ptr<TopTree::ClusterData> TopTree::InitClusterData() {
 	return std::make_shared<MyClusterData>();
 }
 
+void print_node(std::shared_ptr<TopTree::Cluster> node) {
+	if (node != NULL) {
+		auto data = std::dynamic_pointer_cast<MyClusterData>(node->data);
+		std::cerr << "[weight: " << data->weight << ", total_weight:" << data->total_weight << "]" << std::endl;
+	}
+}
+
 int main(int argc, char const *argv[]) {
 	/*
 	std::shared_ptr<MyEdgeData> p1(new MyEdgeData);
@@ -120,7 +127,13 @@ int main(int argc, char const *argv[]) {
 		// T->PrintRooted(root);
 		T->PrintGraphviz(root, "Initial Top Tree");
 	}
-	T->Expose(v, d);
+
+	auto node = T->Expose(s, e);
+	print_node(node);
+	auto nodes = T->Cut(p, z);
+	print_node(std::get<0>(nodes));
+	print_node(std::get<1>(nodes));
+	//T->Expose(v, e);
 	roots = T->GetTopTrees();
 	for (auto root : roots) {
 		// T->PrintRooted(root);

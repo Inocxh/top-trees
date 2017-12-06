@@ -1,5 +1,6 @@
 #include <queue>
 #include <vector>
+#include <sstream>
 
 #include "TopTree.hpp"
 #include "BaseTreeInternal.hpp"
@@ -20,13 +21,16 @@ public:
 	void soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w);
 	std::shared_ptr<Cluster> hard_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w);
 	void restore_hard_expose();
+	void guarded_splay(std::shared_ptr<Cluster> node, std::shared_ptr<Cluster> guard = NULL);
+
+	std::vector<std::shared_ptr<Cluster>> splitted_clusters;
 
 	// Debug methods:
 	void print_rooted_prefix(const std::shared_ptr<Cluster> cluster, const std::string prefix = "", bool last_child = true) const;
+	void print_graphviz(std::shared_ptr<Cluster> node, const std::string title="") const;
 	void print_graphviz_recursive(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> node, const char* edge_label="") const;
 	void print_graphviz_child(std::shared_ptr<Cluster> from, std::shared_ptr<Cluster> to, const char* edge_label="") const;
 private:
-	void guarded_splay(std::shared_ptr<Cluster> node, std::shared_ptr<Cluster> guard = NULL);
 	void adjust_parent(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> old_child, std::shared_ptr<Cluster> new_child);
 	void rotate_left(std::shared_ptr<Cluster> x);
 	void rotate_right(std::shared_ptr<Cluster> x);
@@ -35,7 +39,6 @@ private:
 
 	void soft_expose_handle(std::shared_ptr<Cluster> handle, std::shared_ptr<Cluster> splay_guard = NULL);
 
-	std::vector<std::shared_ptr<Cluster>> splitted_clusters;
 	std::vector<std::shared_ptr<CompressCluster>> hard_expose_transformed_clusters;
 };
 
@@ -106,6 +109,9 @@ void TopTree::Internal::print_graphviz_child(std::shared_ptr<Cluster> from, std:
 	else std::cout << "circle";
 	std::cout << "]" << std::endl;
 
+	// Debug (show broken parent links):
+	if (to->parent != from) std::cout << "\t\"" << to << "\" -> \"" << to->parent << "\" [label=\"" << edge_label << "\", style=bold]" << std::endl;
+
 	// Edge
 	if (from == NULL) return;
 	std::cout << "\t\"" << from << "\" -> \"" << to << "\" [label=\"" << edge_label << "\"";
@@ -119,15 +125,19 @@ void TopTree::Internal::print_graphviz_recursive(std::shared_ptr<Cluster> parent
 
 	print_graphviz_recursive(node, node->left_foster, "LF");
 	print_graphviz_recursive(node, node->left_child, "L");
-	print_graphviz_recursive(node, node->right_child, "R");
 	print_graphviz_recursive(node, node->right_foster, "RF");
+	print_graphviz_recursive(node, node->right_child, "R");
 }
 
-void TopTree::PrintGraphviz(const std::shared_ptr<Cluster> root, const char* title) const {
+void TopTree::Internal::print_graphviz(const std::shared_ptr<Cluster> root, const std::string title) const {
 	std::cout << "digraph \"" << root << "\" {" << std::endl;
-	std::cout << "labelloc=\"t\"" << std::endl << "label=\"" << title << "\"" << std::endl;
-	internal->print_graphviz_recursive(NULL, root);
+	std::cout << "\tlabelloc=\"t\"" << std::endl << "\tlabel=\"" << title << "\"" << std::endl;
+	print_graphviz_recursive(NULL, root);
 	std::cout << "}" << std::endl;
+}
+
+void TopTree::PrintGraphviz(const std::shared_ptr<Cluster> root, const std::string title) const {
+	internal->print_graphviz(root, title);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -158,11 +168,15 @@ void TopTree::Internal::adjust_parent(std::shared_ptr<Cluster> parent, std::shar
 		else if (parent->right_child == old_child) parent->right_child = new_child;
 		else if (parent->left_foster == old_child) parent->left_foster = new_child;
 		else if (parent->right_foster == old_child) parent->right_foster = new_child;
-		else exit(1); // Something bad happens
+		else {
+			std::cerr << "ERROR: " << *old_child << " is not any child of " << *parent << std::endl;
+			exit(1);
+		}
 	} else {
 		// x was one of the roots, replace it in place in the vector
 		new_child->root_vector_index = old_child->root_vector_index;
-		root_clusters[old_child->root_vector_index] = new_child;
+		old_child->root_vector_index = -1;
+		root_clusters[new_child->root_vector_index] = new_child;
 	}
 }
 
@@ -382,14 +396,16 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 
 // C. Soft expose itself
 void TopTree::Internal::soft_expose_handle(std::shared_ptr<Cluster> N, std::shared_ptr<Cluster> extern_splay_guard) {
+	if (N == NULL) return;
 	// 0. Normalize from given node
 	N->normalize_for_splay();
-	for (auto root : root_clusters) {
-		std::cout << "digraph \"" << root << "\" {" << std::endl;
-		std::cout << "label=\"after normalization from " << *N << "\"" << std::endl;
-		print_graphviz_recursive(NULL, root);
-		std::cout << "}" << std::endl;
-	}
+	#ifdef DEBUG
+		for (auto root : root_clusters) {
+			std::ostringstream ss;
+			ss << "after normalization from " << *N;
+			print_graphviz(root, ss.str());
+		}
+	#endif
 
 	// 1. Splay within each compress and rake subtree in the path from N_w to the root
 	auto node = N;
@@ -420,12 +436,13 @@ void TopTree::Internal::soft_expose_handle(std::shared_ptr<Cluster> N, std::shar
 		node = orig_parent -> parent;
 	}
 
-	for (auto root : root_clusters) {
-		std::cout << "digraph \"" << root << "\" {" << std::endl;
-		std::cout << "label=\"after splaying from " << *N << "\"" << std::endl;
-		print_graphviz_recursive(NULL, root);
-		std::cout << "}" << std::endl;
-	}
+	#ifdef DEBUG
+		for (auto root : root_clusters) {
+			std::ostringstream ss;
+			ss << "after splaying from " << *N;
+			print_graphviz(root, ss.str());
+		}
+	#endif
 
 	// 2. Perform a series of splices from N to the root, making N part of the topmost compress subtree
 	node = N;
@@ -434,12 +451,13 @@ void TopTree::Internal::soft_expose_handle(std::shared_ptr<Cluster> N, std::shar
 		node = node->parent;
 	}
 
-	for (auto root : root_clusters) {
-		std::cout << "digraph \"" << root << "\" {" << std::endl;
-		std::cout << "label=\"after splicing from " << *N << "\"" << std::endl;
-		print_graphviz_recursive(NULL, root);
-		std::cout << "}" << std::endl;
-	}
+	#ifdef DEBUG
+		for (auto root : root_clusters) {
+			std::ostringstream ss;
+			ss << "after splicing from " << *N;
+			print_graphviz(root, ss.str());
+		}
+	#endif
 
 	// 3. Splay N and making it the root of the entire tree
 	N->normalize_for_splay();
@@ -451,14 +469,13 @@ void TopTree::Internal::soft_expose_handle(std::shared_ptr<Cluster> N, std::shar
 
 void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w) {
 	// Init array for clusters restoration
-	splitted_clusters = std::vector<std::shared_ptr<Cluster>>();
+	splitted_clusters.clear();
 
 	// A. Making handle of w root node of its top tree
 	auto Nw = w->handle;
-
 	soft_expose_handle(Nw);
 
-	if (w->degree == 1) {
+	if (Nw != NULL && w->degree == 1) {
 		if (Nw->isBase() && Nw->parent != NULL && Nw == Nw->parent->left_child) Nw->parent->flip();
 		if (Nw->isCompress() && (Nw->left_child->boundary_left == w || Nw->left_child->boundary_right == w)) Nw->flip();
 	}
@@ -466,13 +483,13 @@ void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> 
 	// B. Moving handle of v near the handle of w
 	splitted_clusters.clear();
 	auto Nv = v->handle;
-	if (Nv == Nw || v == Nw->boundary_left || v == Nw->boundary_right) return; // We are done is such situation
+	if (Nv == Nw || Nv == NULL || (Nw != NULL && v == Nw->boundary_left) || (Nw != NULL && v == Nw->boundary_right)) return; // We are done is such situation
 
 	if (w->degree == 1) soft_expose_handle(Nv);
 	else if (w->degree >= 2) soft_expose_handle(Nv, Nw); // Nw as guard
 
 	// C. Flipping children
-	if (Nw->isCompress()) {
+	if (Nw != NULL && Nw->isCompress()) {
 		if (Nv == Nw->left_child) Nw->flip();
 		if ((Nw->left_child->boundary_left == v && Nw->left_child->boundary_right == w)
 		|| (Nw->left_child->boundary_left == w && Nw->left_child->boundary_right == v)) Nw->flip();
@@ -484,7 +501,7 @@ void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> 
 		// 2. Swap foster and normal children
 		if (Nw->right_foster != NULL && ((Nw->right_foster->boundary_left == v && Nw->right_foster->boundary_right)
 		|| (Nw->right_foster->boundary_left == w && Nw->right_foster->boundary_right == v))) {
-			Nw->do_split();
+			Nw->do_split(&splitted_clusters);
 			auto temp = Nw->right_foster;
 			Nw->right_foster = Nw->right_child;
 			Nw->right_child = temp;
@@ -515,7 +532,7 @@ std::shared_ptr<Cluster> TopTree::Internal::hard_expose(std::shared_ptr<BaseTree
 	}
 	// Rakerizing cluster nodes
 	for (auto v: hard_expose_transformed_clusters) {
-		v->do_split();
+		v->do_split(&splitted_clusters);
 		v->rakerized = true;
 	}
 	for (auto v: hard_expose_transformed_clusters) v->do_join();
@@ -530,6 +547,213 @@ void TopTree::Internal::restore_hard_expose() {
 	}
 	for (auto v: hard_expose_transformed_clusters) v->do_join();
 	hard_expose_transformed_clusters.clear();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Cut and Link
+
+std::tuple<std::shared_ptr<Cluster>, std::shared_ptr<Cluster>, std::shared_ptr<EdgeData>> TopTree::Cut(int v_index, int w_index) {
+	// Restore previous hard expose (if needed)
+	internal->restore_hard_expose();
+	// Init array for clusters restoration
+	internal->splitted_clusters.clear();
+
+	auto v = internal->base_tree->internal->vertices[v_index];
+	auto w = internal->base_tree->internal->vertices[w_index];
+	internal->soft_expose(v, w);
+
+	auto Nw = w->handle;
+	auto Nv = v->handle;
+	if (Nw != Nv && Nw->parent == NULL && Nv->parent == NULL) return std::make_tuple(Nw, Nv, (std::shared_ptr<EdgeData>)NULL); // They are already in different top trees
+
+	// Variables for new roots
+	std::shared_ptr<Cluster> first = NULL;
+	std::shared_ptr<Cluster> second = NULL;
+
+	// Node representing v-w edge may be child or grandchild of the root --> from every node we came throught
+	// we remove the right child and find some new to its place
+	auto node = Nw;
+	while ((node->boundary_left != v || node->boundary_right != w) && (node->boundary_left != w || node->boundary_right != v)) {
+		auto next = node->right_child;
+		node->do_split(&internal->splitted_clusters);
+		node->parent = NULL;
+
+		if (first == NULL) first = node;
+		else if (second == NULL) second = node;
+
+		std::cerr << "Replacing right child of node " << *node << std::endl;
+		if (node->left_foster != NULL) {
+			// Get leftmost node of the rake tree
+			auto left_foster = node->left_foster;
+			if (!left_foster->isRake()) {
+				node->right_child = left_foster;
+				node->left_foster = NULL;
+			} else {
+				while (left_foster->isRake()) left_foster = left_foster->right_child;
+				internal->guarded_splay(left_foster->parent, node);
+				node->left_foster->do_split();
+				node->right_child = node->left_foster->right_child;
+				node->right_child->parent = node;
+				node->left_foster = node->left_foster->left_child;
+				node->left_foster->parent = node;
+			}
+		} else if (node->right_foster != NULL) {
+			// Get rightmost node of the rake tree
+			auto right_foster = node->right_foster;
+			if (!right_foster->isRake()) {
+				node->right_child = right_foster;
+				node->right_foster = NULL;
+			} else {
+				while (right_foster->isRake()) right_foster = right_foster->left_child;
+				internal->guarded_splay(right_foster->parent, node);
+				node->right_foster->do_split();
+				node->right_child = node->right_foster->left_child;
+				node->right_child->parent = node;
+				node->right_foster = node->right_foster->right_child;
+				node->right_foster->parent = node;
+			}
+		} else {
+			// Left child is the new root and this cluster will be removed
+			if (node->boundary_left->handle == node) node->boundary_left->handle = node->left_child;
+			if (node->boundary_right->handle == node) node->boundary_right->handle = node->left_child;
+
+			if (node == first) {
+				node->left_child->root_vector_index = node->root_vector_index;
+				node->root_vector_index = -1;
+				internal->root_clusters[node->left_child->root_vector_index] = node->left_child;
+				node = node->left_child;
+				first = node;
+			} else {
+				node = node->left_child;
+				second = node;
+			}
+		}
+
+		node->do_join();
+		node = next;
+	}
+
+	// When removing this whole one edge tree
+	if (first == NULL) {
+		internal->root_clusters.erase(internal->root_clusters.begin() + Nw->root_vector_index);
+		Nw->root_vector_index = -1;
+	}
+	if (second != NULL) {
+		second->root_vector_index = internal->root_clusters.size();
+		internal->root_clusters.push_back(second);
+	}
+
+	// Now node should be Base Cluster with edge
+	if (!node->isBase()) std::cerr << "ERROR: It is not Base cluster: " << *node << std::endl;
+	if (v->handle == node) v->handle = NULL;
+	if (w->handle == node) w->handle = NULL;
+	node->do_split(&internal->splitted_clusters);
+	auto edge_data = std::dynamic_pointer_cast<BaseCluster>(node)->edge->data;
+	// Node will be deleted by garbage collector
+
+	v->degree--;
+	w->degree--;
+
+	// Restore all clusters
+	for (auto c: internal->splitted_clusters) c->do_join();
+
+	// Some cleaning
+	if (v->degree == 0) v->handle = NULL;
+	if (w->degree == 0) w->handle = NULL;
+
+	return std::make_tuple(first, second, edge_data);
+}
+
+std::shared_ptr<Cluster> TopTree::Link(int v_index, int w_index, std::shared_ptr<EdgeData> edge_data) {
+	// Restore previous hard expose (if needed)
+	internal->restore_hard_expose();
+	// Init array for clusters restoration
+	internal->splitted_clusters.clear();
+
+	auto v = internal->base_tree->internal->vertices[v_index];
+	auto w = internal->base_tree->internal->vertices[w_index];
+
+	// 0. Degree of w is always >= degree of v
+	if (v->degree > w->degree) {
+		auto temp = v;
+		v = w;
+		w = temp;
+	}
+
+	// 1. Make new base cluster
+	v->degree++;
+	w->degree++;
+	auto edge = std::make_shared<BaseTree::Internal::Edge>(v, w, edge_data);
+	auto edge_cluster = BaseCluster::construct(edge);
+
+	// 2. If joining solitary nodes return only the new cluster
+	if (v->degree == 1 && w->degree == 1) {
+		edge_cluster->root_vector_index = internal->root_clusters.size();
+		internal->root_clusters.push_back(edge_cluster);
+		return edge_cluster;
+	}
+
+	// 3. Joining normal nodes
+	auto Nv = v->handle;
+	auto Nw = w->handle;
+	internal->soft_expose(v, w);
+	// 3.1 Checks
+	if (Nv == Nw || Nw == Nv->parent) {
+		std::cerr << "ERROR: They are already in the same top tree" << std::endl;
+		std::cerr << *Nw << "---" << *Nv << std::endl;
+		return Nw;
+	}
+
+	// 3.2 Remove Nv from the root list
+	if (Nv->root_vector_index >= 0) {
+		internal->root_clusters.erase(internal->root_clusters.begin() + Nv->root_vector_index);
+		Nv->root_vector_index = -1;
+	}
+
+	// 3.3a Manage Nv
+	std::shared_ptr<Cluster> node = edge_cluster;
+	if (v->degree == 1) {
+		// v was independent node -> do nothing and leave node as edge cluster
+	} else if (v->degree == 2) {
+		// v had degree 1, it was endpoint of the Nv -> construct new compress node
+		node = CompressCluster::construct(Nv, node);
+	} else {
+		Nv->do_split();
+		if (Nv->right_foster == NULL) Nv->right_foster = Nv->right_child;
+		else {
+			Nv->right_foster = RakeCluster::construct(Nv->right_foster, Nv->right_child);
+			Nv->right_foster->parent = Nv;
+		}
+		Nv->right_child = node;
+		Nv->do_join();
+		node = Nv;
+	}
+	// 3.3b Manage Nw
+	// Nw cannot have degree one (this case where degree of both is one is special case above)
+	if (w->degree == 2) {
+		std::cerr << *Nw << std::endl;
+		// w had degree 1, it was endpoint of the Nw -> construct new compress node
+		node = CompressCluster::construct(Nw, node);
+		// Nw is not longer root cluster, there is new root cluster
+		node->root_vector_index = Nw->root_vector_index;
+		Nw->root_vector_index = -1;
+		internal->root_clusters[node->root_vector_index] = node;
+	} else {
+		Nw->do_split();
+		if (Nw->right_foster == NULL) Nw->right_foster = Nw->right_child;
+		else {
+			Nw->right_foster = RakeCluster::construct(Nw->right_foster, Nw->right_child);
+			Nw->right_foster->parent = Nw;
+		}
+		Nw->right_child = node;
+		Nw->do_join();
+		node = Nw;
+	}
+
+	// Restore all clusters
+	for (auto c: internal->splitted_clusters) c->do_join();
+
+	return node;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
