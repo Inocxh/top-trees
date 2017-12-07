@@ -670,17 +670,21 @@ std::shared_ptr<Cluster> TopTree::Link(int v_index, int w_index, std::shared_ptr
 	// Init array for clusters restoration
 	internal->splitted_clusters.clear();
 
+	// 0. Get vertices and ensure degree of w is always >= degree of v
 	auto v = internal->base_tree->internal->vertices[v_index];
 	auto w = internal->base_tree->internal->vertices[w_index];
-
-	// 0. Degree of w is always >= degree of v
 	if (v->degree > w->degree) {
 		auto temp = v;
 		v = w;
 		w = temp;
 	}
 
-	// 1. Make new base cluster
+	// 1. Soft expose handles
+	internal->soft_expose(v, w);
+	auto Nv = v->handle;
+	auto Nw = w->handle;
+
+	// 2. Make new base cluster
 	v->degree++;
 	w->degree++;
 	auto edge = std::make_shared<BaseTree::Internal::Edge>(v, w, edge_data);
@@ -694,9 +698,6 @@ std::shared_ptr<Cluster> TopTree::Link(int v_index, int w_index, std::shared_ptr
 	}
 
 	// 3. Joining normal nodes
-	auto Nv = v->handle;
-	auto Nw = w->handle;
-	internal->soft_expose(v, w);
 	// 3.1 Checks
 	if (Nv == Nw || Nw == Nv->parent) {
 		std::cerr << "ERROR: They are already in the same top tree" << std::endl;
@@ -731,7 +732,6 @@ std::shared_ptr<Cluster> TopTree::Link(int v_index, int w_index, std::shared_ptr
 	// 3.3b Manage Nw
 	// Nw cannot have degree one (this case where degree of both is one is special case above)
 	if (w->degree == 2) {
-		std::cerr << *Nw << std::endl;
 		// w had degree 1, it was endpoint of the Nw -> construct new compress node
 		node = CompressCluster::construct(Nw, node);
 		// Nw is not longer root cluster, there is new root cluster
