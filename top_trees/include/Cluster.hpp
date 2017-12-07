@@ -16,7 +16,7 @@ class Cluster;
 
 namespace TopTree {
 
-class Cluster {
+class Cluster : public std::enable_shared_from_this<Cluster> {
 friend class TopTree;
 friend class BaseCluster;
 friend class CompressCluster;
@@ -35,6 +35,11 @@ protected:
 	std::shared_ptr<Cluster> left_foster = NULL;
 	std::shared_ptr<Cluster> right_foster = NULL;
 
+	void set_left_child(std::shared_ptr<Cluster> child);
+	void set_right_child(std::shared_ptr<Cluster> child);
+	void set_left_foster(std::shared_ptr<Cluster> child);
+	void set_right_foster(std::shared_ptr<Cluster> child);
+
 	int root_vector_index = -1;
 	bool is_splitted = true; // Initially clusters are in state that they need do_join method (which is called during construction)
 
@@ -52,7 +57,7 @@ protected:
 };
 std::ostream& operator<<(std::ostream& o, const Cluster& v);
 
-class BaseCluster : public Cluster, public std::enable_shared_from_this<BaseCluster> {
+class BaseCluster : public Cluster {
 friend class TopTree;
 public:
 	virtual std::ostream& ToString(std::ostream& o) const;
@@ -71,7 +76,7 @@ protected:
 	virtual std::ostream& _short_name(std::ostream& o) const; // Used only for debugging
 };
 
-class CompressCluster : public Cluster, public std::enable_shared_from_this<CompressCluster> {
+class CompressCluster : public Cluster {
 friend class TopTree;
 public:
 	virtual std::ostream& ToString(std::ostream& o) const;
@@ -91,7 +96,7 @@ protected:
 	bool rakerized = false; // modyfied to rake node during hard_expose
 };
 
-class RakeCluster : public Cluster, public std::enable_shared_from_this<RakeCluster> {
+class RakeCluster : public Cluster {
 friend class TopTree;
 public:
 	virtual std::ostream& ToString(std::ostream& o) const;

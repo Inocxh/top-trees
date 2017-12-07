@@ -1,8 +1,24 @@
 #include "Cluster.hpp"
 
 namespace TopTree {
-
 std::ostream& operator<<(std::ostream& o, const Cluster& c) { return c.ToString(o); }
+
+void Cluster::set_left_child(std::shared_ptr<Cluster> child) {
+	left_child = child;
+	if (child != NULL) child->parent = shared_from_this();
+}
+void Cluster::set_right_child(std::shared_ptr<Cluster> child) {
+	right_child = child;
+	if (child != NULL) child->parent = shared_from_this();
+}
+void Cluster::set_left_foster(std::shared_ptr<Cluster> child) {
+	left_foster = child;
+	if (child != NULL) child->parent = shared_from_this();
+}
+void Cluster::set_right_foster(std::shared_ptr<Cluster> child) {
+	right_foster = child;
+	if (child != NULL) child->parent = shared_from_this();
+}
 
 std::shared_ptr<BaseCluster> BaseCluster::construct(std::shared_ptr<BaseTree::Internal::Edge> edge) {
 	auto cluster = std::make_shared<BaseCluster>();

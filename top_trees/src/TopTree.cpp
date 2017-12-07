@@ -110,7 +110,7 @@ void TopTree::Internal::print_graphviz_child(std::shared_ptr<Cluster> from, std:
 	std::cout << "]" << std::endl;
 
 	// Debug (show broken parent links):
-	if (to->parent != from) std::cout << "\t\"" << to << "\" -> \"" << to->parent << "\" [label=\"" << edge_label << "\", style=bold]" << std::endl;
+	if (to->parent != from) std::cout << "\t\"" << to << "\" -> \"" << to->parent << "\" [style=bold]" << std::endl;
 
 	// Edge
 	if (from == NULL) return;
@@ -159,15 +159,15 @@ std::shared_ptr<Cluster> TopTree::Expose(int v, int w) {
 
 // A. Splaying
 void TopTree::Internal::adjust_parent(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> old_child, std::shared_ptr<Cluster> new_child) {
-	// Ensure that both childs are splitted before any action
+	// Ensure that both children are splitted before any action
 	new_child->do_split(&splitted_clusters);
 	old_child->do_split(&splitted_clusters);
 
 	if (parent != NULL) {
-		if (parent->left_child == old_child) parent->left_child = new_child;
-		else if (parent->right_child == old_child) parent->right_child = new_child;
-		else if (parent->left_foster == old_child) parent->left_foster = new_child;
-		else if (parent->right_foster == old_child) parent->right_foster = new_child;
+		if (parent->left_child == old_child) parent->set_left_child(new_child);
+		else if (parent->right_child == old_child) parent->set_right_child(new_child);
+		else if (parent->left_foster == old_child) parent->set_left_foster(new_child);
+		else if (parent->right_foster == old_child) parent->set_right_foster(new_child);
 		else {
 			std::cerr << "ERROR: " << *old_child << " is not any child of " << *parent << std::endl;
 			exit(1);
@@ -193,15 +193,12 @@ void TopTree::Internal::rotate_left(std::shared_ptr<Cluster> x) {
 
 	adjust_parent(parent, x, y);
 
-	// Adjust x:
-	x->right_child = y->left_child;
-	if (x->right_child != NULL) x->right_child->parent = x;
-	x->parent = y;
-
-	// Adjust y:
-	y->left_child = x;
+	// Connect:
+	x->set_right_child(y->left_child);
+	y->set_left_child(x);
 	y->parent = parent;
 
+	// Adjust endpoints:
 	x->correct_endpoints();
 	y->correct_endpoints();
 }
@@ -219,15 +216,12 @@ void TopTree::Internal::rotate_right(std::shared_ptr<Cluster> x) {
 
 	adjust_parent(parent, x, y);
 
-	// Adjust x:
-	x->left_child = y->right_child;
-	if (x->left_child != NULL) x->left_child->parent = x;
-	x->parent = y;
-
-	// Adjust y:
-	y->right_child = x;
+	// Connect:
+	x->set_left_child(y->right_child);
+	y->set_right_child(x);
 	y->parent = parent;
 
+	// Adjust endpoints:
 	x->correct_endpoints();
 	y->correct_endpoints();
 }
@@ -335,10 +329,8 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 
 			auto temp = std::make_shared<RakeCluster>();
 
-			temp->left_child = new_left_foster;
-			new_left_foster->parent = temp;
-			temp->right_child = right;
-			right->parent = temp;
+			temp->set_left_child(new_left_foster);
+			temp->set_right_child(right);
 
 			// This cluster will need joining:
 			temp->correct_endpoints();
@@ -369,10 +361,8 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 
 			auto temp = std::make_shared<RakeCluster>();
 
-			temp->right_child = new_right_foster;
-			new_right_foster->parent = temp;
-			temp->left_child = left;
-			left->parent = temp;
+			temp->set_right_child(new_right_foster);
+			temp->set_left_child(left);
 
 			// This cluster will need joining:
 			temp->correct_endpoints();
@@ -383,14 +373,10 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 		}
 	}
 
-
 	// 4. Connect everything in place
-	root->left_child = node;
-	node->parent = root;
-	root->left_foster = new_left_foster;
-	if (new_left_foster != NULL) new_left_foster->parent = root;
-	root->right_foster = new_right_foster;
-	if (new_right_foster != NULL) new_right_foster->parent = root;
+	root->set_left_child(node);
+	root->set_left_foster(new_left_foster);
+	root->set_right_foster(new_right_foster);
 	root->correct_endpoints();
 }
 
@@ -592,10 +578,8 @@ std::tuple<std::shared_ptr<Cluster>, std::shared_ptr<Cluster>, std::shared_ptr<E
 				while (left_foster->isRake()) left_foster = left_foster->right_child;
 				internal->guarded_splay(left_foster->parent, node);
 				node->left_foster->do_split();
-				node->right_child = node->left_foster->right_child;
-				node->right_child->parent = node;
-				node->left_foster = node->left_foster->left_child;
-				node->left_foster->parent = node;
+				node->set_right_child(node->left_foster->right_child);
+				node->set_left_foster(node->left_foster->left_child);
 			}
 		} else if (node->right_foster != NULL) {
 			// Get rightmost node of the rake tree
@@ -607,10 +591,8 @@ std::tuple<std::shared_ptr<Cluster>, std::shared_ptr<Cluster>, std::shared_ptr<E
 				while (right_foster->isRake()) right_foster = right_foster->left_child;
 				internal->guarded_splay(right_foster->parent, node);
 				node->right_foster->do_split();
-				node->right_child = node->right_foster->left_child;
-				node->right_child->parent = node;
-				node->right_foster = node->right_foster->right_child;
-				node->right_foster->parent = node;
+				node->set_right_child(node->right_foster->left_child);
+				node->set_right_foster(node->right_foster->right_child);
 			}
 		} else {
 			// Left child is the new root and this cluster will be removed
@@ -725,7 +707,7 @@ std::shared_ptr<Cluster> TopTree::Link(int v_index, int w_index, std::shared_ptr
 			Nv->right_foster = RakeCluster::construct(Nv->right_foster, Nv->right_child);
 			Nv->right_foster->parent = Nv;
 		}
-		Nv->right_child = node;
+		Nv->set_right_child(node);
 		Nv->do_join();
 		node = Nv;
 	}
@@ -745,7 +727,7 @@ std::shared_ptr<Cluster> TopTree::Link(int v_index, int w_index, std::shared_ptr
 			Nw->right_foster = RakeCluster::construct(Nw->right_foster, Nw->right_child);
 			Nw->right_foster->parent = Nw;
 		}
-		Nw->right_child = node;
+		Nw->set_right_child(node);
 		Nw->do_join();
 		node = Nw;
 	}
@@ -783,7 +765,7 @@ std::shared_ptr<Cluster> TopTree::Internal::construct_cluster(std::shared_ptr<Ba
 					next_v = vv;
 					next_e = ee;
 				} else {
-					// Recursively consruct top tree on subtree
+					// Recursively construct top tree on subtree
 					rake_list.push(construct_cluster(vv, ee));
 				}
 			}
