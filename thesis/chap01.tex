@@ -169,17 +169,19 @@ saving computed data from the cluster).
 
 \subsection{Join}
 
-This function is called during connecting two clusters into one (compress or rake)
-cluster. It gets references to both of the connecting clusters and to the parent
-cluster and it should aggregate data from children to the parent or perform other
-join-related operations according to logic of given problem.
+This function is called during connecting two clusters into one (compress or
+rake) cluster. It gets references to both of the connecting clusters and to the
+parent cluster and information if it is join of rake or compress cluster (user
+may or may not use this information according to the logic of given problem). It
+should aggregate data from children to the parent or perform other join-related
+operations according to logic of given problem.
 
 \subsection{Split}
 
 Opposite of the Join function. It is called just before removing connection
 between parent cluster and its children. This function gets reference to the
-parent cluster and both of its children and it should distribute data from the
-parent into children.
+parent cluster and both of its children and information if it is split of rake
+or compress cluster. It should distribute data from the parent into children.
 
 The Join and Split operations are frequently called during reorganization of the
 Top trees structure -- common pattern is to Split everything around changed path

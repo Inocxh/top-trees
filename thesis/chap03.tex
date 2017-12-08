@@ -162,7 +162,7 @@ Soft expose is the first part of the expose operation. It is called as
 {\I soft\_expose(u,v)} and its target is to bring path $u,v$ as subpath into
 the root cluster of corresponding top tree (so after soft expose there should
 be some path $a\dots u\dots v\dots b$ in the root cluster). Truncating the root
-cluster to contain only $u,v$ path is quest for hard expose.
+cluster to contain only $u,v$ path is quest for the hard expose operation.
 
 Soft expose takes handles of both vertices and brings them to the top of theirs
 top tree. Procedure for one vertex (as described by Tarjan and Werneck in
@@ -187,21 +187,48 @@ root compress tree) to make it root of this top tree.
 
 When exposing the second handle (handle of the second vertex) only difference
 is that all splays are guarded by the first handle (to assure that it remains
-at the top).
+at the top). If both vertices (and so both handles) are in different top trees
+both of them ends as roots of theirs top trees. This situation is not interesting
+anymore, so we will assume that they are in the same top tree.
 
-Tarjan and Werneck discussed when one of the vertices has degree one (and its
-handle is not a compress cluster around this vertex), in this case they realized
-that upper procedure leads to exposing handle of the second vertex with first
-vertex as one of its endpoints. They not discussed situation when both vertices
-have degree one -- in that case before starting procedure for the second vertex
-we have to ensure that base cluster of the first vertex is not the left child
-of root cluster (otherwise it would be moved to rake tree when splicing the
-handle of the second vertex).
+Tarjan and Werneck discussed special situation when one of the vertices has
+degree one (and its handle is not a compress cluster around this vertex), in
+this case they realized that upper procedure leads to exposing handle of the
+second vertex with first vertex as one of its endpoints.
 
-And what are results of this procedure? When both vertices are in different top
-trees this procedure brings both handles to the top of corresponding top trees.
-When they are in the same top tree this procedure leads to exposing cluster
-which contains
+Another special case, which they did not discussed, is situation when both
+vertices have degree one -- in that case before starting procedure for the
+second vertex we have to ensure that the base cluster of the first vertex is not
+the left child of root cluster (otherwise it would be moved to rake tree when
+splicing the handle of the second vertex, what we do not want).
+
+If handles for both vertices are the same there is nothing to do (both handles
+are occupied by the root cluster). When they are different the second handle
+ends as one of the first handles children. To make hard expose easier we will
+assume that this is the right children (otherwise we just flip left and right
+children).
+
+And where is wanted $u\dots v$ path located? There are three possibilities:
+\begin{itemize}
+\item Root cluster itself -- When both vertices has degree one, they are endpoints
+of the root cluster and so their handles are represented in the root cluster.
+\item Child of the root cluster -- When one vertex has degree at least two its
+handle is compress cluster. In that case the root cluster represents some path
+$a\dots u\dots v$ and desired path $u\dots v$ is represented in its child (assume
+that it is the right child, otherwise flip them).\par
+Another case when path is in child of the root cluster is when $u$ and $v$ are
+connected directly by edge. In this case the path is represented by base cluster
+and so it might be child of some compress cluster.
+\item Grandchild of the root cluster -- When both vertices have degree at least
+two both handles are represented by compress clusters. Child of the root cluster
+is limited from the first side and its again compress cluster (the second handle).
+The grandchild of the root cluster is limited from the second cluster and so it
+represents our path (let again assume it is the right child, otherwise flip
+children).
+\end{itemize}
+
+To ensure that the root cluster represents wanted path we need hard expose
+operation.
 
 \subsection{Hard expose}
 
@@ -209,4 +236,88 @@ Hard expose is the second part of the expose procedure, it follows the soft
 expose and its job is to truncate the path in the root cluster that it contains
 only the exposed subpath.
 
-\todo{Hard expose procedure}
+As we discussed at the end of the soft expose operation, wanted subpath may be
+located in the root cluster itself, in its (right) child or in its (rightmost)
+grandchild.
+
+Tarjan and Werneck (in \cite{SelfAdjustingTT}) came with simple trick -- temporarily
+convert compress clusters above wanted cluster (at most two compress clusters as
+we realized above) to rake clusters ({\I rakerizing} them). Because we are using
+left rakes clusters the resulting rake cluster will have the same boundaries as
+its right child -- this is the reason why we needed to have cluster with the
+wanted path on the right side.
+
+After rakerizing clusters (we have to not forget to split them before the
+operation and join them after it) we have the $u\dots v$ path represented in
+the root cluster, expose procedure is finished.
+
+But we brought the top tree in some ugly form by rakerizing (at most two)
+compress cluster. We have to undone this and return the top tree into its
+original form, otherwise the amortization arguments would not work.
+
+When rakerizing we save all rakerized compress clusters into some list and
+before any other operation (Cut, Link or Expose) we need to check this list and
+if there are some vertices we have to change them back to compress clusters.
+All that we could do in constant time at start of every operation.
+
+\section{Cut}
+
+Implementing cut operation is quite easy thanks to the soft expose operation.
+First step of the $cut(u,v)$ operation is to do $soft\_expose(u,v)$ which brings
+the top tree into state described at the end of the soft expose operation
+subsection -- depending on the degrees of $u$ and $v$ the cluster representing
+$u,v$ edge will be rightmost child or grandchild of the root cluster of the
+corresponding top tree.
+
+When one of vertices have degree only one we are removing leaf edge and there
+will be only one resulting top tree (or even no resulting top tree when both
+vertices have degree only one and the whole top tree consists only from this
+edge). Otherwise we have to split the top tree in the middle points of two
+compress clusters (whose we bring to the root by soft expose).
+
+Starting from the root we detach the right child of the current cluster -- but
+we could not leave the cluster in this form, we need to find new right child.
+
+If there are some nodes in left or right foster children (rake trees) we could
+take one leaf from the rake tree (base or compress cluster) and make it the new
+right child of the current cluster. When there is only one cluster in the rake
+tree it is easy, but what to do if there are clusters?
+
+When taking cluster from the left rake tree we want to get the leftmost one
+(or the rightmost one in the right rake tree) to maintain order. We splay on
+the chosen clusters parent (which is rake cluster) to make it the root of this
+rake tree, or chosen cluster will be the left (right) child of this cluster and
+the rest of the rake tree will be the other child. Now we can simply remove this
+parent rake cluster, use our chosen cluster as the right child and rest of the
+rake tree as the new left (right) foster child.
+
+The last case is when the current compress cluster have not any foster children,
+in that case we simply remove this compress cluster and replace it by its left
+child.
+
+This whole procedure is done at most twice (third level is the $u,v$ base
+cluster itself). It produces (two) new root clusters clusters of the resulting
+top trees after cutting the $u,v$ edge.
+
+\section{Link}
+
+It is the opposite of the cut operation. First step during the $link(u,v)$
+operation is bringing both $u$ and $v$ to the top in corresponding top trees.
+This could be simply done by calling $soft\_expose(u,v)$.
+
+Special case is when we are joining solitary vertices. In that case we simply
+construct new base cluster and return it as the new top tree.
+
+Then we choose one vertex (and its handle) as the root of the final top tree,
+for easier construction we choose the vertex with bigger degree. Then starting
+from the second cluster (handle of the second vertex) we firstly move its right
+child into one of its foster children (rake trees). If there is no rake tree it
+is simple, otherwise we just construct new rake cluster connecting the existing
+rake tree as one of its child and the former right child of the current compress
+cluster as its another child.
+
+After this move we simply connect $u,v$ base cluster as new right child and we
+are done with this (lower) compress cluster. For the root compress cluster we
+will do similar procedure with the only difference -- instead of the $u,v$ base
+cluster we will connect just modified compress cluster as the right child. This
+leads to constructing the final top tree.
