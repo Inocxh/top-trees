@@ -4,9 +4,6 @@
 #define CLUSTER_HPP
 
 namespace TopTree {
-struct ClusterData {
-	virtual ~ClusterData() {}
-};
 
 class Cluster;
 }

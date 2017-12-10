@@ -1,9 +1,15 @@
+#include <memory>
+
 #ifndef USER_FUNCTIONS_HPP
 #define USER_FUNCTIONS_HPP
 
-#include "Cluster.hpp"
+#include "BaseTree.hpp"
 
 namespace TopTree {
+struct ClusterData {
+	virtual ~ClusterData() {}
+};
+
 // USER DEFINED FUNCTIONS:
 
 // Joining and splitting of compress/rake clusters:

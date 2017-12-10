@@ -17,6 +17,7 @@ public:
 	struct neighbour {
 		std::weak_ptr<Vertex> vertex;
 		std::weak_ptr<Edge> edge;
+		std::list<std::shared_ptr<Vertex>>::iterator subvertice_iter;
 	};
 
 	std::vector<std::shared_ptr<Vertex> > vertices;
@@ -55,13 +56,19 @@ public:
 	bool used;
 	std::shared_ptr<Cluster> rake_tree_left = NULL;
 	std::shared_ptr<Cluster> rake_tree_right = NULL;
+
+	// Used in TopologyTopTree
+	std::shared_ptr<Vertex> superior_vertex;
+	std::list<std::shared_ptr<Vertex>> subvertices;
 };
 
-class BaseTree::Internal::Edge {
+class BaseTree::Internal::Edge : public std::enable_shared_from_this<Edge> {
 public:
 	Edge(std::shared_ptr<Vertex> from, std::shared_ptr<Vertex> to, std::shared_ptr<EdgeData> data):
 		data{data}, from{from}, to{to}
 	{}
+
+	void register_at_vertices();
 
 	// Edge parameters
 	bool deleted;
@@ -72,6 +79,9 @@ public:
 	std::list<neighbour>::iterator from_iter;
 	std::shared_ptr<Vertex> to;
 	std::list<neighbour>::iterator to_iter;
+
+	// Used in TopologyTopTree
+	bool subvertice_edge = false;
 };
 
 }

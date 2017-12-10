@@ -30,16 +30,9 @@ int BaseTree::AddEdge(int from, int to, std::shared_ptr<EdgeData> e) {
 	int i = internal->edges.size();
 	auto vertex_from = internal->vertices[from];
 	auto vertex_to = internal->vertices[to];
+
 	auto edge = std::make_shared<Internal::Edge>(vertex_from, vertex_to, e);
-
-	vertex_from->neighbours.push_back(Internal::neighbour{vertex_to, edge});
-	edge->from_iter = std::prev(vertex_from->neighbours.end());
-
-	vertex_to->neighbours.push_back(Internal::neighbour{vertex_from, edge});
-	edge->to_iter = std::prev(vertex_to->neighbours.end());
-
-	vertex_from->degree++;
-	vertex_to->degree++;
+	edge->register_at_vertices();
 
 	internal->edges.push_back(edge);
 	return i;
@@ -54,6 +47,18 @@ int BaseTree::AddLeaf(int parent, std::shared_ptr<EdgeData> e, std::shared_ptr<V
 void BaseTree::PrintRooted(int root) {
 	internal->print_rooted_prefix(internal->vertices[root]);
 	//internal->orient_edges_to_root(internal->vertices[root]);
+}
+
+void BaseTree::Internal::Edge::register_at_vertices() {
+	from->neighbours.push_back(Internal::neighbour{to, shared_from_this()});
+	from_iter = std::prev(from->neighbours.end());
+
+	to->neighbours.push_back(Internal::neighbour{from, shared_from_this()});
+	to_iter = std::prev(to->neighbours.end());
+
+
+	from->degree++;
+	to->degree++;
 }
 
 void BaseTree::Internal::print_rooted_prefix(const std::shared_ptr<Vertex> root, const std::shared_ptr<Vertex> from, const std::string prefix, bool last_child) const {
