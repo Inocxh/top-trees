@@ -69,9 +69,9 @@ public:
 
 	// Linkage to the other objects
 	std::shared_ptr<Vertex> from;
-	//std::list<neighbour>::iterator from_iter;
+	std::list<neighbour>::iterator from_iter;
 	std::shared_ptr<Vertex> to;
-	//std::list<neighbour>::iterator to_iter;
+	std::list<neighbour>::iterator to_iter;
 };
 
 }

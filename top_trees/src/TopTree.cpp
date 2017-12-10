@@ -512,7 +512,6 @@ std::shared_ptr<Cluster> TopTree::Internal::hard_expose(std::shared_ptr<BaseTree
 	// Node representing v-w path may be child or grandchild of the root --> if so, we need to convert ancestors of this node
 	// as rake clusters (they would be restored before next action with the Top Trees structure)
 	while ((node->boundary_left != v || node->boundary_right != w) && (node->boundary_left != w || node->boundary_right != v)) {
-		std::cerr << "Adding into vector" << std::endl;
 		hard_expose_transformed_clusters.push_back(std::dynamic_pointer_cast<CompressCluster>(node));
 		node = node->right_child;
 	}
@@ -544,13 +543,25 @@ std::tuple<std::shared_ptr<Cluster>, std::shared_ptr<Cluster>, std::shared_ptr<E
 	// Init array for clusters restoration
 	internal->splitted_clusters.clear();
 
+	// 1. Soft expose
 	auto v = internal->base_tree->internal->vertices[v_index];
 	auto w = internal->base_tree->internal->vertices[w_index];
 	internal->soft_expose(v, w);
-
 	auto Nw = w->handle;
 	auto Nv = v->handle;
-	if (Nw != Nv && Nw->parent == NULL && Nv->parent == NULL) return std::make_tuple(Nw, Nv, (std::shared_ptr<EdgeData>)NULL); // They are already in different top trees
+
+	// 2. Checks
+	if (Nw != Nv && Nw->parent == NULL && Nv->parent == NULL) {
+		std::cerr << "ERROR: They are already in different top trees (not connected by edge)" << std::endl;
+		return std::make_tuple(Nw, Nv, (std::shared_ptr<EdgeData>)NULL); // They are already in different top trees
+	}
+	// Check if it is really an edge:
+	auto node = Nw;
+	while ((node->boundary_left != v || node->boundary_right != w) && (node->boundary_left != w || node->boundary_right != v)) node = node->right_child;
+	if (!node->isBase()) {
+		std::cerr << "ERROR: It is not Base cluster: " << *node << std::endl;
+		return std::make_tuple(Nw, Nv, (std::shared_ptr<EdgeData>)NULL);
+	}
 
 	// Variables for new roots
 	std::shared_ptr<Cluster> first = NULL;
@@ -558,7 +569,7 @@ std::tuple<std::shared_ptr<Cluster>, std::shared_ptr<Cluster>, std::shared_ptr<E
 
 	// Node representing v-w edge may be child or grandchild of the root --> from every node we came throught
 	// we remove the right child and find some new to its place
-	auto node = Nw;
+	node = Nw;
 	while ((node->boundary_left != v || node->boundary_right != w) && (node->boundary_left != w || node->boundary_right != v)) {
 		auto next = node->right_child;
 		node->do_split(&internal->splitted_clusters);
@@ -567,7 +578,9 @@ std::tuple<std::shared_ptr<Cluster>, std::shared_ptr<Cluster>, std::shared_ptr<E
 		if (first == NULL) first = node;
 		else if (second == NULL) second = node;
 
-		std::cerr << "Replacing right child of node " << *node << std::endl;
+		#ifdef DEBUG
+			std::cerr << "Replacing right child of node " << *node << std::endl;
+		#endif
 		if (node->left_foster != NULL) {
 			// Get leftmost node of the rake tree
 			auto left_foster = node->left_foster;
@@ -626,18 +639,22 @@ std::tuple<std::shared_ptr<Cluster>, std::shared_ptr<Cluster>, std::shared_ptr<E
 	}
 
 	// Now node should be Base Cluster with edge
-	if (!node->isBase()) std::cerr << "ERROR: It is not Base cluster: " << *node << std::endl;
+	// Remove handles
 	if (v->handle == node) v->handle = NULL;
 	if (w->handle == node) w->handle = NULL;
 	node->do_split(&internal->splitted_clusters);
 	auto edge_data = std::dynamic_pointer_cast<BaseCluster>(node)->edge->data;
-	// Node will be deleted by garbage collector
-
+	// Remove edge from underlying Base tree
+	auto baseNode = std::dynamic_pointer_cast<BaseCluster>(node);
+	baseNode->edge->from->neighbours.erase(baseNode->edge->from_iter);
+	baseNode->edge->to->neighbours.erase(baseNode->edge->to_iter);
 	v->degree--;
 	w->degree--;
+	// Node will be deleted by garbage collector
 
 	// Restore all clusters
 	for (auto c: internal->splitted_clusters) c->do_join();
+	internal->splitted_clusters.clear();
 
 	// Some cleaning
 	if (v->degree == 0) v->handle = NULL;
@@ -665,12 +682,24 @@ std::shared_ptr<Cluster> TopTree::Link(int v_index, int w_index, std::shared_ptr
 	internal->soft_expose(v, w);
 	auto Nv = v->handle;
 	auto Nw = w->handle;
+	// 1.1 Checks
+	if (Nv == Nw || Nw == Nv->parent) {
+		std::cerr << "ERROR: They are already in the same top tree" << std::endl;
+		std::cerr << *Nw << "---" << *Nv << std::endl;
+		return Nw;
+	}
 
 	// 2. Make new base cluster
 	v->degree++;
 	w->degree++;
 	auto edge = std::make_shared<BaseTree::Internal::Edge>(v, w, edge_data);
 	auto edge_cluster = BaseCluster::construct(edge);
+	// Add new edge into vertices neighbors lists
+	v->neighbours.push_back(BaseTree::Internal::neighbour{w, edge});
+	edge->from_iter = std::prev(v->neighbours.end());
+
+	w->neighbours.push_back(BaseTree::Internal::neighbour{v, edge});
+	edge->to_iter = std::prev(w->neighbours.end());
 
 	// 2. If joining solitary nodes return only the new cluster
 	if (v->degree == 1 && w->degree == 1) {
@@ -680,20 +709,13 @@ std::shared_ptr<Cluster> TopTree::Link(int v_index, int w_index, std::shared_ptr
 	}
 
 	// 3. Joining normal nodes
-	// 3.1 Checks
-	if (Nv == Nw || Nw == Nv->parent) {
-		std::cerr << "ERROR: They are already in the same top tree" << std::endl;
-		std::cerr << *Nw << "---" << *Nv << std::endl;
-		return Nw;
-	}
-
-	// 3.2 Remove Nv from the root list
+	// 3.1 Remove Nv from the root list
 	if (Nv->root_vector_index >= 0) {
 		internal->root_clusters.erase(internal->root_clusters.begin() + Nv->root_vector_index);
 		Nv->root_vector_index = -1;
 	}
 
-	// 3.3a Manage Nv
+	// 3.2a Manage Nv
 	std::shared_ptr<Cluster> node = edge_cluster;
 	if (v->degree == 1) {
 		// v was independent node -> do nothing and leave node as edge cluster
@@ -711,7 +733,7 @@ std::shared_ptr<Cluster> TopTree::Link(int v_index, int w_index, std::shared_ptr
 		Nv->do_join();
 		node = Nv;
 	}
-	// 3.3b Manage Nw
+	// 3.2b Manage Nw
 	// Nw cannot have degree one (this case where degree of both is one is special case above)
 	if (w->degree == 2) {
 		// w had degree 1, it was endpoint of the Nw -> construct new compress node

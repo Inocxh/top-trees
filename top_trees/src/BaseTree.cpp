@@ -33,10 +33,10 @@ int BaseTree::AddEdge(int from, int to, std::shared_ptr<EdgeData> e) {
 	auto edge = std::make_shared<Internal::Edge>(vertex_from, vertex_to, e);
 
 	vertex_from->neighbours.push_back(Internal::neighbour{vertex_to, edge});
-	//edge->from_iter = std::prev(vertex_from->neighbours.end());
+	edge->from_iter = std::prev(vertex_from->neighbours.end());
 
 	vertex_to->neighbours.push_back(Internal::neighbour{vertex_from, edge});
-	//edge->to_iter = std::prev(vertex_to->neighbours.end());
+	edge->to_iter = std::prev(vertex_to->neighbours.end());
 
 	vertex_from->degree++;
 	vertex_to->degree++;
