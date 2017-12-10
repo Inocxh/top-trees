@@ -53,13 +53,14 @@ public:
 	std::shared_ptr<Cluster> handle = NULL;
 
 	// Used for building TopTree:
-	bool used;
+	bool used = false;
 	std::shared_ptr<Cluster> rake_tree_left = NULL;
 	std::shared_ptr<Cluster> rake_tree_right = NULL;
 
 	// Used in TopologyTopTree
 	std::shared_ptr<Vertex> superior_vertex;
 	std::list<std::shared_ptr<Vertex>> subvertices;
+	std::list<std::shared_ptr<Edge>> subvertice_edges;
 };
 
 class BaseTree::Internal::Edge : public std::enable_shared_from_this<Edge> {

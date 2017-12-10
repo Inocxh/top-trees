@@ -10,7 +10,7 @@ namespace TopTree {
 
 class VertexData {
 public:
-	virtual std::ostream& ToString(std::ostream& o) const { return o << "V"; }
+	virtual std::ostream& ToString(std::ostream& o) const { return o << "<v>"; }
 };
 std::ostream& operator<<(std::ostream& o, const VertexData& v);
 
@@ -18,7 +18,7 @@ std::ostream& operator<<(std::ostream& o, const VertexData& v);
 
 class EdgeData {
 public:
-	virtual std::ostream& ToString(std::ostream& o) const { return o; }
+	virtual std::ostream& ToString(std::ostream& o) const { return o << "<e>"; }
 };
 std::ostream& operator<<(std::ostream& o, const EdgeData& e);
 

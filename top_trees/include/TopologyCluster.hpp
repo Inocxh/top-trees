@@ -27,6 +27,7 @@ protected:
 	std::shared_ptr<BaseTree::Internal::Vertex> vertex;
 
 	std::vector<neighbour> outer_edges;
+	int outer_edges_count;
 
 	// Data of corresponding clusters in the top tree:
 	std::shared_ptr<ClusterData> edge_cluster_data;

@@ -3,6 +3,7 @@
 #include <string>
 
 #include "TopTree.hpp"
+#include "TopologyTopTree.hpp"
 
 struct MyClusterData: public TopTree::ClusterData {
 	int weight;
@@ -114,7 +115,7 @@ int main(int argc, char const *argv[]) {
 	auto h = baseTree->AddLeaf(g, std::make_shared<MyEdgeData>("g-h"), std::make_shared<MyVertexData>("h"));
 
 	auto n = baseTree->AddLeaf(c, std::make_shared<MyEdgeData>("c-n"), std::make_shared<MyVertexData>("n"));
-	baseTree->AddLeaf(n, std::make_shared<MyEdgeData>("n-k"), std::make_shared<MyVertexData>("k"));
+	auto k = baseTree->AddLeaf(n, std::make_shared<MyEdgeData>("n-k"), std::make_shared<MyVertexData>("k"));
 
 	auto v = baseTree->AddLeaf(n, std::make_shared<MyEdgeData>("n-v"), std::make_shared<MyVertexData>("v"));
 	baseTree->AddLeaf(v, std::make_shared<MyEdgeData>("v-u"), std::make_shared<MyVertexData>("u"));
@@ -133,6 +134,9 @@ int main(int argc, char const *argv[]) {
 
 	////////////////
 
+	auto TT = std::make_shared<TopTree::TopologyTopTree>(baseTree);
+
+	/*
 	auto T = std::make_shared<TopTree::TopTree>(baseTree);
 
 	for (auto root : T->GetTopTrees()) T->PrintGraphviz(root, "Initial Top Tree");
@@ -144,10 +148,11 @@ int main(int argc, char const *argv[]) {
 	print_node(std::get<1>(nodes));
 	for (auto root : T->GetTopTrees()) T->PrintGraphviz(root, "After Cut");
 
-	node = T->Link(p, j, std::make_shared<MyEdgeData>("p-j"));
+	node = T->Link(k, y, std::make_shared<MyEdgeData>("k-y"));
 	print_node(node);
 	//T->Expose(v, e);
 	for (auto root : T->GetTopTrees()) T->PrintGraphviz(root, "After Link");
+	*/
 
 	return 0;
 }

@@ -35,25 +35,29 @@ void TopologyCluster::calculate_outer_edges() {
 
 	outer_edges.clear();
 
-	if (first == NULL) outer_edges = second->outer_edges;
-	else if (second == NULL) outer_edges = first->outer_edges;
-	else {
+	//if (first == NULL) {
+	//	for (auto o: second->outer_edges) outer_edges.push_back(neighbour{o.edge, o.cluster->parent});
+	//}
+
+	if (second == NULL) {
+		for (auto o: first->outer_edges) outer_edges.push_back(neighbour{o.edge, o.cluster->parent});
+	} else {
 		// Take only unique edges from both children
-		for (auto e: first->outer_edges) {
+		for (auto o: first->outer_edges) {
 			bool unique = true;
-			for (auto ee: second->outer_edges) if (e.edge == ee.edge) {
-				// edge = e; // not neede because the second for does it
+			for (auto oo: second->outer_edges) if (o.edge == oo.edge) {
+				// edge = o.edge; // not neede because the second for does it
 				unique = false;
 			}
-			if (unique) outer_edges.push_back(neighbour{e.edge, e.cluster->parent});
+			if (unique) outer_edges.push_back(neighbour{o.edge, o.cluster->parent});
 		}
-		for (auto e: second->outer_edges) {
+		for (auto o: second->outer_edges) {
 			bool unique = true;
-			for (auto ee: first->outer_edges) if (e.edge == ee.edge) {
-				edge = e.edge;
+			for (auto oo: first->outer_edges) if (o.edge == oo.edge) {
+				edge = o.edge;
 				unique = false;
 			}
-			if (unique) outer_edges.push_back(neighbour{e.edge, e.cluster->parent});
+			if (unique) outer_edges.push_back(neighbour{o.edge, o.cluster->parent});
 		}
 	}
 
