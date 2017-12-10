@@ -18,26 +18,31 @@ tree in time $\O(\log N)$ (where $N$ denotes the number of vertices).
 
 Because it is essential to understand how the Top Trees structure works, some
 basic principles of the Top Trees structure are introduced in the Chapter 1
-and some examples of problems, which could Top Trees handle quickly are listed
-in Chapter 2 of this thesis.
+and some basic principles of a Topology trees used in one of the implementations
+in the Chapter 2. Some examples of problems, which could Top Trees handle
+quickly, are listed in Chapter 3 of this thesis.
+
+Basic usage of both implementations and some technicals detail are the contents
+of the Chapter 4 and Chapter 5 and 6 describes details of both implementations.
 
 First implementation of the Top Trees structure is based on article {\I
 Self-Adjusting Top Trees} \cite{SelfAdjustingTT} by Tarjan and Werneck. This
 implementation promises quick amortized time per operations (with small
 constant), but it does not guarantee these times in worst case. This
-implementation is described in Chapter 3 of this thesis.
+implementation is described in Chapter 5 of this thesis.
 
-Second implementation is based on article {\I Maintaining Information in
-Fully-Dynamic Trees with Top Trees} \cite{TopTrees} by Alstrup, Holm,
-Lichtenberg and Thorup. This implementation promises time $\O(\log N)$ in
-worst-case but with much larger multiplicative constant. This implementation is
-described in Chapter 4 of this thesis.
+Second implementation is based on article {\I Maintaining Information in Fully-
+Dynamic Trees with Top Trees} \cite{TopTrees} by Alstrup, Holm, Lichtenberg and
+Thorup and uses Topology trees introduced by Frederickson in
+\cite{DSforDynamicallyMaintainingRootedTrees}. This implementation promises time
+$\O(\log N)$ in worst-case but with much larger multiplicative constant. This
+implementation is described in Chapter 6 of this thesis.
 
 To compare both implementations it was necessary to perform some experiments on
 different problems on different trees with different sizes. Experiments were
 performed on problems of \todo{which problems?}. Details of these experiment
-and their setup are described in Chapter 5.
+and their setup are described in Chapter 7.
 
 After the experiments it turned out that
 \todo{after experiments add some basic conclusion here}.
-More detailed results are described in Chapter 6.
+More detailed results are described in Chapter 8.

@@ -1,0 +1,34 @@
+\chapter{Implementation and usage}
+
+As has beeen mentioned in the Introduction both implementation are writtten
+in \Cpp. More precisely they are written in \Cpp11 with frequent use of smart
+pointers introduced in \Cpp11, which helped a lot with memory handling.
+
+Source code of both implementations is attached to this thesis including
+Makefile for easier compiling and testing. Source code is also published on
+Github, which may be more pleasant way to explore it or use it in other
+projects:
+
+\bigskip
+\centerline{\url{https://github.com/setnicka/top-trees}}
+\bigskip
+
+\section{Interface of the Top Trees structure}
+
+Both implementations share the same interface which makes them easily
+interchangeable.
+
+\todo{interface details}
+
+\section{Testing and Graphviz output}
+
+Both implementations have debugging debugging output showing its current state
+in Graphviz format.
+
+Graphviz is open source program which is able to visualize several types of
+graphs (tree structures included). Both implementations are able to print
+Graphviz script at their standard output and this script could be translated by
+Graphviz program to a PDF image.
+
+Currently user is able to visualize state of the structure after each operation
+(Cut, Link or Expose) using ... \todo{Graphviz methods}
