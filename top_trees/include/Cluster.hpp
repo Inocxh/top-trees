@@ -4,7 +4,6 @@
 #define CLUSTER_HPP
 
 namespace TopTree {
-
 class Cluster;
 }
 

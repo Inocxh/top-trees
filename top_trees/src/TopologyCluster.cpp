@@ -3,6 +3,15 @@
 
 namespace TopTree {
 
+void TopologyCluster::set_first_child(std::shared_ptr<TopologyCluster> child) {
+	first = child;
+	if (child != NULL) child->parent = shared_from_this();
+}
+void TopologyCluster::set_second_child(std::shared_ptr<TopologyCluster> child) {
+	second = child;
+	if (child != NULL) child->parent = shared_from_this();
+}
+
 void TopologyCluster::do_join() {
 	if (!is_splitted) return;
 

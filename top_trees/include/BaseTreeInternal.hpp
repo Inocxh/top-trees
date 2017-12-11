@@ -3,6 +3,8 @@
 
 #include "BaseTree.hpp"
 #include "Cluster.hpp"
+#include "TopologyCluster.hpp"
+#include "UserFunctions.hpp"
 
 #ifndef BASE_TREE_INTERNAL_HPP
 #define BASE_TREE_INTERNAL_HPP
@@ -61,6 +63,7 @@ public:
 	std::shared_ptr<Vertex> superior_vertex;
 	std::list<std::shared_ptr<Vertex>> subvertices;
 	std::list<std::shared_ptr<Edge>> subvertice_edges;
+	std::shared_ptr<TopologyCluster> topology_cluster;
 };
 
 class BaseTree::Internal::Edge : public std::enable_shared_from_this<Edge> {

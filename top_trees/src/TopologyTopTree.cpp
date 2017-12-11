@@ -45,6 +45,19 @@ private:
 
 	//std::vector<std::shared_ptr<CompressCluster>> hard_expose_transformed_clusters;
 
+	// Used in update_clusters() and helper methods
+	// it is declared globally to easier sharing between helper methods
+	std::vector<std::shared_ptr<TopologyCluster>> delete_list;
+	std::vector<std::shared_ptr<TopologyCluster>> change_list;
+	std::vector<std::shared_ptr<TopologyCluster>> abandon_list;
+
+	std::vector<std::shared_ptr<TopologyCluster>> next_delete;
+	std::vector<std::shared_ptr<TopologyCluster>> next_change;
+	std::vector<std::shared_ptr<TopologyCluster>> next_abandon;
+
+	void update_clusters();
+	void update_clusters_join_with_neighbour(std::shared_ptr<TopologyCluster> cluster, std::shared_ptr<TopologyCluster> neighbour);
+	void update_clusters_only_child(std::shared_ptr<TopologyCluster> cluster);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -115,8 +128,182 @@ void TopologyTopTree::Internal::print_graphviz(const std::shared_ptr<TopologyClu
 	std::cout << "}" << std::endl;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+/// Update procedure:
+
+void TopologyTopTree::Internal::update_clusters_join_with_neighbour(std::shared_ptr<TopologyCluster> cluster, std::shared_ptr<TopologyCluster> neighbour) {
+	neighbour->listed_in_abandon_list = false;
+	if (cluster->parent == NULL && neighbour->parent == NULL) {
+		// Add new cluster to above level
+		auto parent = std::make_shared<TopologyCluster>();
+		parent->set_first_child(cluster);
+		parent->set_second_child(neighbour);
+		to_calculate_outer_edges.push_back(parent);
+		// Add new cluster to next abandon list
+		next_abandon.push_back(parent);
+		parent->listed_in_abandon_list = true;
+	} else {
+		if (cluster->parent == NULL) {
+			// Add cluster into neighbour's parent
+			if (neighbour->parent->second != NULL) std::cerr << "ERROR: Expecting that neighbour's parent would have only one child, but it have both children" << std::endl;
+			neighbour->parent->set_second_child(cluster);
+		} else if (neighbour->parent == NULL) {
+			// Add neighbour into cluster's parent
+			if (cluster->parent->second != NULL) std::cerr << "ERROR: Expecting that cluster's parent would have only one child, but it have both children" << std::endl;
+			cluster->parent->set_second_child(neighbour);
+		} else {
+			// Both have parents, use cluster's parent and delete neighbors parent
+			neighbour->parent->first = NULL;
+			next_delete.push_back(neighbour->parent);
+			neighbour->parent->listed_in_delete_list = true;
+			neighbour->parent = cluster->parent;
+			cluster->parent->second = neighbour;
+		}
+		to_calculate_outer_edges.push_back(cluster->parent);
+		next_change.push_back(cluster->parent);
+		cluster->parent->listed_in_change_list = true;
+	}
+}
+
+void TopologyTopTree::Internal::update_clusters_only_child(std::shared_ptr<TopologyCluster> cluster) {
+	// This cluster is the only one child of its parent, ensure that parent exists
+	if (cluster->parent == NULL) {
+		// Have to create new parent
+		auto parent = std::make_shared<TopologyCluster>();
+		parent->set_first_child(cluster);
+		to_calculate_outer_edges.push_back(parent);
+		next_abandon.push_back(parent);
+		parent->listed_in_abandon_list = true;
+	} else {
+		to_calculate_outer_edges.push_back(cluster->parent);
+		next_change.push_back(cluster->parent);
+		cluster->parent->listed_in_change_list = true;
+	}
+}
+
+void TopologyTopTree::Internal::update_clusters() {
+	// When all lists empty -> end procedure
+	if (delete_list.size() == 0 && abandon_list.size() == 0 && change_list.size() == 0) return;
+
+	to_calculate_outer_edges.clear();
+
+	next_delete.clear();
+	next_change.clear();
+	next_abandon.clear();
+
+	// 1. Run through deleted vertices
+	for (auto cluster: delete_list) {
+		if (cluster->parent != NULL) {
+			if (cluster->parent->second == NULL) {
+				// No second child:
+				next_delete.push_back(cluster->parent);
+				cluster->parent->listed_in_delete_list = true;
+				// Remove child link
+				cluster->parent->first = NULL;
+			} else {
+				// There is another child
+				if (cluster == cluster->parent->first) {
+					cluster->parent->first = cluster->parent->second;
+					cluster->parent->second = NULL;
+				} else cluster->parent->second = NULL;
+
+				// Remove edge in the parent cluster
+				cluster->parent->edge = NULL;
+
+				// Test another child (which is now the first child of parent)
+				if (!cluster->parent->first->listed_in_change_list && cluster->parent->first->listed_in_delete_list) {
+					change_list.push_back(cluster->parent->first);
+					cluster->parent->first->listed_in_change_list = true;
+				}
+			}
+		}
+		// Remove cluster from list and delete it
+		cluster->parent = NULL;
+		if (cluster->vertex != NULL) cluster->vertex->topology_cluster = NULL;
+		cluster->listed_in_delete_list = false;
+	}
+
+	// 2. Run through changed list that have sibling
+	for (auto cluster: change_list) {
+		// Skip clusters removed from list and clusters with no parent or without sibling (parent have only one child)
+		if (!cluster->listed_in_change_list || cluster->parent == NULL || cluster->parent->second == NULL) continue;
+		auto sibling = (cluster->parent->first == cluster ? cluster->parent->second : cluster->parent->first);
+
+		// If connected with sibling by edge and parent is valid cluster
+		// Get common edge:
+		std::shared_ptr<BaseTree::Internal::Edge> common_edge = NULL;
+		for (auto o: cluster->outer_edges) if (o.cluster == sibling) common_edge = o.edge;
+		// Test parent
+		if (common_edge != NULL && cluster->parent->outer_edges.size() <= 2) {
+			// Everything OK, remove cluster and edge from change list and add parent into next change list
+			cluster->listed_in_change_list = false;
+			sibling->listed_in_change_list = false;
+			next_change.push_back(cluster->parent);
+			cluster->parent->listed_in_change_list = true;
+		} else {
+			// Parent goes into next delete list
+			cluster->parent->first = NULL;
+			cluster->parent->second = NULL;
+			next_delete.push_back(cluster->parent);
+			cluster->parent->listed_in_delete_list = true;
+
+			// This cluster and sibling are now abandon (move to abandon list)
+			cluster->parent = NULL;
+			cluster->listed_in_change_list = false;
+			abandon_list.push_back(cluster);
+			cluster->listed_in_abandon_list = true;
+
+			sibling->parent = NULL;
+			sibling->listed_in_change_list = false;
+			abandon_list.push_back(sibling);
+			sibling->listed_in_abandon_list = true;
+		}
+	}
+
+	// 3. Run through rest of changed list and whole abandon list
+	for (auto cluster: change_list) {
+		if (cluster->listed_in_change_list && !cluster->listed_in_abandon_list) {
+			abandon_list.push_back(cluster);
+			cluster->listed_in_abandon_list = true;
+		}
+		cluster->listed_in_change_list = false;
+	}
+	for (auto cluster: abandon_list) {
+		if (!cluster->listed_in_abandon_list) continue;
+		if (cluster->outer_edges.size() == 3) {
+			// Find if there is neighbour with degree 1
+			std::shared_ptr<TopologyCluster> neighbour = NULL;
+			for (auto o: cluster->outer_edges) if (o.cluster->outer_edges.size() == 1) neighbour = o.cluster;
+
+			if (neighbour != NULL) update_clusters_join_with_neighbour(cluster, neighbour); // Join with neighbour
+			else update_clusters_only_child(cluster);
+		} else if (cluster->outer_edges.size() >= 1) {
+			// Find if there is neighbour with degree <= (4 - #outer_edges)
+			std::shared_ptr<TopologyCluster> neighbour = NULL;
+			for (auto o: cluster->outer_edges) if (o.cluster->outer_edges.size() <= (4 - cluster->outer_edges.size())) neighbour = o.cluster;
+
+			if (neighbour != NULL && (neighbour->parent == NULL || neighbour->parent->second == NULL))
+				update_clusters_join_with_neighbour(cluster, neighbour); // Join with neighbour as in the first case
+			else update_clusters_only_child(cluster);
+		}
+		// else 0 outer edges -> it is root and nothing is needed
+		cluster->listed_in_abandon_list = false;
+	}
+
+	// 4. Calculate outer edges for parent layer
+	for (auto c: to_calculate_outer_edges) c->calculate_outer_edges();
+
+	// Continue with above level
+	delete_list = next_delete;
+	change_list = next_change;
+	abandon_list = next_abandon;
+	return update_clusters();
+}
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
+/// Functions for construction:
 
 std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::split_vertex(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> parent_edge) {
 	// Create subvertices
@@ -170,6 +357,7 @@ std::shared_ptr<TopologyCluster> TopologyTopTree::Internal::construct_basic_clus
 	// 2. Construct basic topology clusters from this vertex and connect with outgoing edges with others
 	auto cluster = std::make_shared<TopologyCluster>();
 	cluster->vertex = v;
+	v->topology_cluster = cluster;
 	v->used = true;
 	for (auto n : v->neighbours) {
 		if (auto vv = n.vertex.lock()) if (auto ee = n.edge.lock()) {

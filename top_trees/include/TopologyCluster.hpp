@@ -4,6 +4,10 @@
 #ifndef TOPOLOGY_CLUSTER_HPP
 #define TOPOLOGY_CLUSTER_HPP
 
+namespace TopTree {
+class TopologyCluster;
+}
+
 #include "BaseTreeInternal.hpp"
 #include "Cluster.hpp"
 
@@ -34,9 +38,14 @@ protected:
 	std::shared_ptr<ClusterData> combined_edge_cluster_data;
 	std::shared_ptr<ClusterData> cluster_data;
 
+	void set_first_child(std::shared_ptr<TopologyCluster> child);
+	void set_second_child(std::shared_ptr<TopologyCluster> child);
+
 	int root_vector_index = -1;
-	int cluster_level = 0; // used for building
 	bool is_splitted = false;
+	bool listed_in_delete_list = false;
+	bool listed_in_change_list = false;
+	bool listed_in_abandon_list = false;
 
 	void do_split(std::vector<std::shared_ptr<TopologyCluster>>* splitted_clusters = NULL);
 	void do_join();
