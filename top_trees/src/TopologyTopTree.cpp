@@ -25,26 +25,13 @@ public:
 	//void restore_hard_expose();
 	//void guarded_splay(std::shared_ptr<Cluster> node, std::shared_ptr<Cluster> guard = NULL);
 
-	//std::vector<std::shared_ptr<Cluster>> splitted_clusters;
-
+	std::vector<std::shared_ptr<TopologyCluster>> splitted_clusters;
 	std::vector<std::shared_ptr<TopologyCluster>> to_calculate_outer_edges;
 
 	// Debug methods:
-	//void print_rooted_prefix(const std::shared_ptr<Cluster> cluster, const std::string prefix = "", bool last_child = true) const;
 	void print_graphviz(std::shared_ptr<TopologyCluster> node, const std::string title="") const;
 	void print_graphviz_recursive(std::shared_ptr<TopologyCluster> cluster, std::shared_ptr<BaseTree::Internal::Edge> parent_edge = NULL, std::shared_ptr<TopologyCluster> parent = NULL) const;
-	//void print_graphviz_child(std::shared_ptr<Cluster> from, std::shared_ptr<Cluster> to, const char* edge_label="") const;
 private:
-	//void adjust_parent(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> old_child, std::shared_ptr<Cluster> new_child);
-	//void rotate_left(std::shared_ptr<Cluster> x);
-	//void rotate_right(std::shared_ptr<Cluster> x);
-
-	//void splice(std::shared_ptr<Cluster> node);
-
-	//void soft_expose_handle(std::shared_ptr<Cluster> handle, std::shared_ptr<Cluster> splay_guard = NULL);
-
-	//std::vector<std::shared_ptr<CompressCluster>> hard_expose_transformed_clusters;
-
 	// Used in update_clusters() and helper methods
 	// it is declared globally to easier sharing between helper methods
 	std::vector<std::shared_ptr<TopologyCluster>> delete_list;
@@ -152,7 +139,7 @@ void TopologyTopTree::Internal::update_clusters_join_with_neighbour(std::shared_
 			if (cluster->parent->second != NULL) std::cerr << "ERROR: Expecting that cluster's parent would have only one child, but it have both children" << std::endl;
 			cluster->parent->set_second_child(neighbour);
 		} else {
-			// Both have parents, use cluster's parent and delete neighbors parent
+			// Both have parents, use cluster's parent and delete neighbours parent
 			neighbour->parent->first = NULL;
 			next_delete.push_back(neighbour->parent);
 			neighbour->parent->listed_in_delete_list = true;
@@ -193,6 +180,7 @@ void TopologyTopTree::Internal::update_clusters() {
 
 	// 1. Run through deleted vertices
 	for (auto cluster: delete_list) {
+		cluster->do_split(&splitted_clusters);
 		if (cluster->parent != NULL) {
 			if (cluster->parent->second == NULL) {
 				// No second child:
@@ -220,11 +208,14 @@ void TopologyTopTree::Internal::update_clusters() {
 		// Remove cluster from list and delete it
 		cluster->parent = NULL;
 		if (cluster->vertex != NULL) cluster->vertex->topology_cluster = NULL;
+		cluster->remove_all_outer_edges();
+
 		cluster->listed_in_delete_list = false;
 	}
 
 	// 2. Run through changed list that have sibling
 	for (auto cluster: change_list) {
+		cluster->do_split(&splitted_clusters);
 		// Skip clusters removed from list and clusters with no parent or without sibling (parent have only one child)
 		if (!cluster->listed_in_change_list || cluster->parent == NULL || cluster->parent->second == NULL) continue;
 		auto sibling = (cluster->parent->first == cluster ? cluster->parent->second : cluster->parent->first);
@@ -235,7 +226,7 @@ void TopologyTopTree::Internal::update_clusters() {
 		for (auto o: cluster->outer_edges) if (o.cluster == sibling) common_edge = o.edge;
 		// Test parent
 		if (common_edge != NULL && cluster->parent->outer_edges.size() <= 2) {
-			// Everything OK, remove cluster and edge from change list and add parent into next change list
+			// Everything OK, remove cluster and sibling from change list and add parent into next change list
 			cluster->listed_in_change_list = false;
 			sibling->listed_in_change_list = false;
 			next_change.push_back(cluster->parent);
@@ -269,6 +260,7 @@ void TopologyTopTree::Internal::update_clusters() {
 		cluster->listed_in_change_list = false;
 	}
 	for (auto cluster: abandon_list) {
+		cluster->do_split(&splitted_clusters);
 		if (!cluster->listed_in_abandon_list) continue;
 		if (cluster->outer_edges.size() == 3) {
 			// Find if there is neighbour with degree 1
@@ -291,7 +283,7 @@ void TopologyTopTree::Internal::update_clusters() {
 	}
 
 	// 4. Calculate outer edges for parent layer
-	for (auto c: to_calculate_outer_edges) c->calculate_outer_edges();
+	for (auto c: to_calculate_outer_edges) c->calculate_outer_edges(true); // with checking neighbours (neighbours may not be on this list and we need to add new edges into them)
 
 	// Continue with above level
 	delete_list = next_delete;

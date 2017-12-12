@@ -42,15 +42,17 @@ protected:
 	void set_second_child(std::shared_ptr<TopologyCluster> child);
 
 	int root_vector_index = -1;
-	bool is_splitted = false;
+	bool is_splitted = true; // Initially clusters are in state that they need do_join method (which is called during construction)
 	bool listed_in_delete_list = false;
 	bool listed_in_change_list = false;
 	bool listed_in_abandon_list = false;
+	bool listed_in_recompute_list = false;
 
 	void do_split(std::vector<std::shared_ptr<TopologyCluster>>* splitted_clusters = NULL);
 	void do_join();
 
-	void calculate_outer_edges();
+	void calculate_outer_edges(bool check_neighbours = false);
+	void remove_all_outer_edges();
 };
 
 }

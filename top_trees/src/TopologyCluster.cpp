@@ -39,7 +39,23 @@ void TopologyCluster::do_join() {
 	is_splitted = false;
 }
 
-void TopologyCluster::calculate_outer_edges() {
+void TopologyCluster::remove_all_outer_edges() {
+	for (auto o: outer_edges) {
+		// Remove outer edge from neighbour
+		bool removed = false;
+		for (uint i = 0; i < o.cluster->outer_edges.size(); i++) {
+			if (o.cluster->outer_edges[i].edge == o.edge) {
+				o.cluster->outer_edges.erase(o.cluster->outer_edges.begin() + i);
+				removed = true;
+				break;
+			}
+		}
+		if (!removed) std::cerr << "ERROR: Cannot remove edge " << *edge->data << " from second vertex" << std::endl;
+	}
+	outer_edges.clear();
+}
+
+void TopologyCluster::calculate_outer_edges(bool check_neighbours) {
 	if (first == NULL && second == NULL) return;
 
 	outer_edges.clear();
@@ -70,6 +86,16 @@ void TopologyCluster::calculate_outer_edges() {
 		}
 	}
 
+	if (check_neighbours) for (auto o: outer_edges) {
+		bool found = false;
+		for (auto oo: o.cluster->outer_edges) {
+			if (oo.edge == o.edge) {
+				found = true;
+				break;
+			}
+		}
+		if (!found) o.cluster->outer_edges.push_back(neighbour{o.edge, shared_from_this()});
+	}
 }
 
 void TopologyCluster::do_split(std::vector<std::shared_ptr<TopologyCluster>>* splitted_clusters) {
