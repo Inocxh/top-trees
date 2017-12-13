@@ -19,7 +19,7 @@ public:
 	struct neighbour {
 		std::weak_ptr<Vertex> vertex;
 		std::weak_ptr<Edge> edge;
-		std::list<std::shared_ptr<Vertex>>::iterator subvertice_iter;
+		std::list<std::shared_ptr<Vertex>>::iterator subvertice_iter; // may be set, it is needed to everytime check the edge->subvertiec_edge to test if it is subvertice_edge
 	};
 
 	std::vector<std::shared_ptr<Vertex> > vertices;
@@ -60,7 +60,7 @@ public:
 	std::shared_ptr<Cluster> rake_tree_right = NULL;
 
 	// Used in TopologyTopTree
-	std::shared_ptr<Vertex> superior_vertex;
+	std::shared_ptr<Vertex> superior_vertex = NULL;
 	std::list<std::shared_ptr<Vertex>> subvertices;
 	std::list<std::shared_ptr<Edge>> subvertice_edges;
 	std::shared_ptr<TopologyCluster> topology_cluster;
@@ -86,6 +86,7 @@ public:
 
 	// Used in TopologyTopTree
 	bool subvertice_edge = false;
+	std::list<std::shared_ptr<Edge>>::iterator subvertice_edges_iterator;
 };
 
 }
