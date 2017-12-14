@@ -3,6 +3,20 @@
 
 namespace TopTree {
 
+int TopologyCluster::global_index = 0;
+
+TopologyCluster::TopologyCluster() {
+	index = global_index++;
+}
+
+std::ostream& TopologyCluster::ToString(std::ostream& o) const {
+	o << index;
+	if (edge != NULL) o << *edge->data;
+	else if (vertex != NULL) o << *vertex->data;
+	return o;
+}
+std::ostream& operator<<(std::ostream& o, const TopologyCluster& c) { return c.ToString(o); }
+
 void TopologyCluster::set_first_child(std::shared_ptr<TopologyCluster> child) {
 	first = child;
 	if (child != NULL) child->parent = shared_from_this();
@@ -42,15 +56,16 @@ void TopologyCluster::do_join() {
 void TopologyCluster::remove_all_outer_edges() {
 	for (auto o: outer_edges) {
 		// Remove outer edge from neighbour
-		bool removed = false;
+		// bool removed = false;
 		for (uint i = 0; i < o.cluster->outer_edges.size(); i++) {
-			if (o.cluster->outer_edges[i].edge == o.edge) {
+			if (o.cluster->outer_edges[i].edge == o.edge && o.cluster->outer_edges[i].cluster == shared_from_this()) {
+				// std::cerr << "Removed edge to " << *o.cluster << " " << *o.cluster->outer_edges[i].cluster << "(" << *o.edge->data << ")" << std::endl;
 				o.cluster->outer_edges.erase(o.cluster->outer_edges.begin() + i);
-				removed = true;
+				// removed = true;
 				break;
 			}
 		}
-		if (!removed) std::cerr << "ERROR: Cannot remove edge " << *edge->data << " from second vertex" << std::endl;
+		// if (!removed) std::cerr << "ERROR: Cannot remove edge " << *o.edge->data << " from second vertex" << std::endl;
 	}
 	outer_edges.clear();
 }
@@ -68,7 +83,9 @@ void TopologyCluster::calculate_outer_edges(bool check_neighbours) {
 		for (auto o: first->outer_edges) outer_edges.push_back(neighbour{o.edge, o.cluster->parent});
 	} else {
 		// Take only unique edges from both children
+		// std::cerr << "First " << *first << " edges:" << std::endl;
 		for (auto o: first->outer_edges) {
+			// std::cerr << *o.cluster << "(" << *o.edge->data << ")" << std::endl;
 			bool unique = true;
 			for (auto oo: second->outer_edges) if (o.edge == oo.edge) {
 				// edge = o.edge; // not neede because the second for does it
@@ -76,7 +93,9 @@ void TopologyCluster::calculate_outer_edges(bool check_neighbours) {
 			}
 			if (unique) outer_edges.push_back(neighbour{o.edge, o.cluster->parent});
 		}
+		// std::cerr << "Second " << *second << " edges:" << std::endl;
 		for (auto o: second->outer_edges) {
+			// std::cerr << *o.cluster << "(" << *o.edge->data << ")" << std::endl;
 			bool unique = true;
 			for (auto oo: first->outer_edges) if (o.edge == oo.edge) {
 				edge = o.edge;
@@ -86,10 +105,19 @@ void TopologyCluster::calculate_outer_edges(bool check_neighbours) {
 		}
 	}
 
+	// DEBUG
+	// for (auto o: outer_edges) {
+	// 	std::cerr << " " << *o.cluster << " (" << *o.edge->data << ")";
+	// }
+	// std::cerr << std::endl;
+
 	if (check_neighbours) for (auto o: outer_edges) {
 		bool found = false;
-		for (auto oo: o.cluster->outer_edges) {
+		// std::cerr << "Checking outer edge pair " << *o.cluster << std::endl;
+		for (auto &oo: o.cluster->outer_edges) {
 			if (oo.edge == o.edge) {
+				if (oo.cluster != shared_from_this()) oo.cluster = shared_from_this();
+				// std::cerr << "found " << *oo.cluster << "(" << *oo.edge->data << ")" << std::endl;
 				found = true;
 				break;
 			}

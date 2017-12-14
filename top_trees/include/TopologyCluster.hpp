@@ -12,9 +12,15 @@ class TopologyCluster;
 #include "Cluster.hpp"
 
 namespace TopTree {
-
 class TopologyCluster : public std::enable_shared_from_this<TopologyCluster> {
 friend class TopologyTopTree;
+public:
+	TopologyCluster();
+	int index;
+
+	static int global_index;
+
+	virtual std::ostream& ToString(std::ostream& o) const;
 protected:
 	struct neighbour {
 		std::shared_ptr<BaseTree::Internal::Edge> edge;
@@ -54,6 +60,7 @@ protected:
 	void calculate_outer_edges(bool check_neighbours = false);
 	void remove_all_outer_edges();
 };
+std::ostream& operator<<(std::ostream& o, const TopologyCluster& v);
 
 }
 

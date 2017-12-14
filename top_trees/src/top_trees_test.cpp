@@ -135,6 +135,7 @@ int main(int argc, char const *argv[]) {
 	////////////////
 
 	auto TT = std::make_shared<TopTree::TopologyTopTree>(baseTree);
+	TT->Cut(c, w);
 
 	/*
 	auto T = std::make_shared<TopTree::TopTree>(baseTree);
