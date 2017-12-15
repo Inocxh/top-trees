@@ -6,7 +6,7 @@
 #include "BaseTreeInternal.hpp"
 #include "TopologyCluster.hpp"
 
-#define DEBUG
+//#define DEBUG
 //#define DEBUG_GRAPHVIZ
 
 namespace TopTree {
@@ -20,7 +20,7 @@ public:
 	std::shared_ptr<TopologyCluster> construct_basic_clusters(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> parent_edge=NULL);
 	std::shared_ptr<TopologyCluster> construct_topology_tree(std::shared_ptr<TopologyCluster> cluster, int level = 0, std::shared_ptr<BaseTree::Internal::Edge> parent_edge = NULL);
 	std::shared_ptr<BaseTree::Internal::Vertex> split_vertex(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> parent_edge = NULL);
-	void repair_subvertex_after_cut(std::shared_ptr<BaseTree::Internal::Vertex> v);
+	std::shared_ptr<BaseTree::Internal::Vertex> repair_subvertex_after_cut(std::shared_ptr<BaseTree::Internal::Vertex> v);
 
 	std::tuple<std::shared_ptr<TopologyCluster>, std::shared_ptr<TopologyCluster>, std::shared_ptr<BaseTree::Internal::Edge>> cut(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w);
 	std::shared_ptr<TopologyCluster> link(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w, std::shared_ptr<BaseTree::Internal::Edge> edge);
@@ -368,6 +368,7 @@ void TopologyTopTree::Internal::update_clusters() {
 				next_delete.push_back(cluster->parent);
 				cluster->parent->listed_in_delete_list = true;
 			}
+			cluster->parent = NULL;
 			found_roots.push_back(cluster);
 			#ifdef DEBUG
 				std::cerr << "Found root " << *cluster << std::endl;
@@ -428,9 +429,9 @@ void TopologyTopTree::Cut(int v_index, int w_index) {
 	// 3. Cut itself (save results)
 	auto result = internal->cut(vv, ww);
 
-	// 4. If were subvertices it may be necessary to update subvertices
+	// 4. If were subvertices it may be necessary to update subvertices and to delete edge even from superior vertices
+	// 4.1 Delete edges from superior vertices
 	if (vv->superior_vertex != NULL) {
-		internal->repair_subvertex_after_cut(vv);
 		for (auto n = vv->superior_vertex->neighbours.begin(); n != vv->superior_vertex->neighbours.end(); ++n) {
 			if ((*n).edge.lock() == edge) {
 				vv->superior_vertex->neighbours.erase(n);
@@ -439,7 +440,6 @@ void TopologyTopTree::Cut(int v_index, int w_index) {
 		}
 	}
 	if (ww->superior_vertex != NULL) {
-		internal->repair_subvertex_after_cut(ww);
 		for (auto n = ww->superior_vertex->neighbours.begin(); n != ww->superior_vertex->neighbours.end(); ++n) {
 			if ((*n).edge.lock() == edge) {
 				ww->superior_vertex->neighbours.erase(n);
@@ -447,10 +447,22 @@ void TopologyTopTree::Cut(int v_index, int w_index) {
 			}
 		}
 	}
+	// 4.2 Repair connections
+	if (vv->superior_vertex != NULL) vv = internal->repair_subvertex_after_cut(vv);
+	#ifdef DEBUG_GRAPHVIZ
+		internal->print_graphviz(std::get<0>(result), "Before second repair", true);
+	#endif
+	if (ww->superior_vertex != NULL) ww = internal->repair_subvertex_after_cut(ww);
 
 	// 5. Get roots - TODO: do we want to return them, is that necessary?
-	internal->print_graphviz(std::get<0>(result), "Result A", true);
-	internal->print_graphviz(std::get<1>(result), "Result B", true);
+	if (vv == w || vv->superior_vertex == w) std::swap(vv, ww);
+	auto root_v = vv->topology_cluster;
+	while (root_v->parent != NULL) root_v = root_v->parent;
+	auto root_w = ww->topology_cluster;
+	while (root_w->parent != NULL) root_w = root_w->parent;
+
+	internal->print_graphviz(root_v, "Result A", true);
+	internal->print_graphviz(root_w, "Result B", true);
 }
 
 std::tuple<std::shared_ptr<TopologyCluster>, std::shared_ptr<TopologyCluster>, std::shared_ptr<BaseTree::Internal::Edge>> TopologyTopTree::Internal::cut(
@@ -482,7 +494,26 @@ std::tuple<std::shared_ptr<TopologyCluster>, std::shared_ptr<TopologyCluster>, s
 			break;
 		}
 	}
-	// 1.1 Update degrees
+	// 1.1 Remove edge from neighbours list
+	bool erased = false;
+	for (auto n = v->neighbours.begin(); n != v->neighbours.end(); ++n) {
+		if ((*n).edge.lock() == edge) {
+			v->neighbours.erase(n);
+			erased = true;
+			break;
+		}
+	}
+	if (!erased) std::cerr << "ERROR: Cannot erase edge " << *edge->data << " from vertex " << *v->data << std::endl;
+	erased = false;
+	for (auto n = w->neighbours.begin(); n != w->neighbours.end(); ++n) {
+		if ((*n).edge.lock() == edge) {
+			w->neighbours.erase(n);
+			erased = true;
+			break;
+		}
+	}
+	if (!erased) std::cerr << "ERROR: Cannot erase edge " << *edge->data << " from vertex " << *w->data << std::endl;
+	// 1.2 Update degrees
 	v->degree--;
 	w->degree--;
 
@@ -561,7 +592,7 @@ std::shared_ptr<TopologyCluster> TopologyTopTree::Internal::link(std::shared_ptr
 ////////////////////////////////////////////////////////////////////////////////
 /// Functions for construction:
 
-void TopologyTopTree::Internal::repair_subvertex_after_cut(std::shared_ptr<BaseTree::Internal::Vertex> v) {
+std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_subvertex_after_cut(std::shared_ptr<BaseTree::Internal::Vertex> v) {
 	std::shared_ptr<BaseTree::Internal::Vertex> first_neighbour = NULL;
 	std::shared_ptr<BaseTree::Internal::Vertex> second_neighbour = NULL;
 
@@ -579,10 +610,16 @@ void TopologyTopTree::Internal::repair_subvertex_after_cut(std::shared_ptr<BaseT
 		if (subvertice_edges_counter == 1) {
 			// There is second endpoint (with 2 valid edges) -> we join them back into superior vertex
 			// superior vertex may not have its TopologyCluster, create it
-			if (v->superior_vertex->topology_cluster == NULL) v->superior_vertex->topology_cluster = std::make_shared<TopologyCluster>();
+			if (v->superior_vertex->topology_cluster == NULL) {
+				v->superior_vertex->topology_cluster = std::make_shared<TopologyCluster>();
+				v->superior_vertex->topology_cluster->vertex = v->superior_vertex;
+			}
 			// run through neighbours and reconnect them
-			for (auto n: v->neighbours) {
-				if (auto vv = n.vertex.lock()) if (auto ee = n.edge.lock()) {
+			auto n = v->neighbours.begin();
+			while (n != v->neighbours.end()) {
+				// (because cut operation deletes from this std::list we need to get next pointer before calling cut)
+				auto next_n = std::next(n);
+				if (auto vv = (*n).vertex.lock()) if (auto ee = (*n).edge.lock()) {
 					// vv may be vertex with subvertices too
 					if (!vv->subvertices.empty()) {
 						if (ee->from == vv) vv = *((*ee->from_iter).subvertice_iter);
@@ -601,9 +638,13 @@ void TopologyTopTree::Internal::repair_subvertex_after_cut(std::shared_ptr<BaseT
 					}
 					else v->superior_vertex->subvertice_edges.erase(ee->subvertice_edges_iterator); // erase unused subvertice edge
 				}
+				n = next_n;
 			}
-			for (auto n: first_neighbour->neighbours) {
-				if (auto vv = n.vertex.lock()) if (auto ee = n.edge.lock()) {
+			n = first_neighbour->neighbours.begin();
+			while (n != first_neighbour->neighbours.end()) {
+				// (because cut operation deletes from this std::list we need to get next pointer before calling cut)
+				auto next_n = std::next(n);
+				if (auto vv = (*n).vertex.lock()) if (auto ee = (*n).edge.lock()) {
 					// vv may be vertex with subvertices too
 					if (!vv->subvertices.empty()) {
 						if (ee->from == vv) vv = *((*ee->from_iter).subvertice_iter);
@@ -622,9 +663,10 @@ void TopologyTopTree::Internal::repair_subvertex_after_cut(std::shared_ptr<BaseT
 					}
 					else v->superior_vertex->subvertice_edges.erase(ee->subvertice_edges_iterator); // erase unused subvertice edge
 				}
+				n = next_n;
 			}
 			v->superior_vertex->subvertices.clear();
-			return;
+			return v->superior_vertex;
 		} else {
 			// We "steal" one edge from the neighbour and then we repair on this vertex
 			for (auto n: first_neighbour->neighbours) {
