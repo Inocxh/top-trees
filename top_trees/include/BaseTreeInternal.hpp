@@ -81,13 +81,29 @@ public:
 	// Linkage to the other objects
 	std::shared_ptr<Vertex> from;
 	std::list<neighbour>::iterator from_iter;
+	std::list<neighbour>::iterator superior_from_iter;
 	std::shared_ptr<Vertex> to;
 	std::list<neighbour>::iterator to_iter;
+	std::list<neighbour>::iterator superior_to_iter;
 
 	// Used in TopologyTopTree
 	bool subvertice_edge = false;
 	std::list<std::shared_ptr<Edge>>::iterator subvertice_edges_iterator;
 };
+
+// Edges in TopologyTree
+// a) normal edge
+//     - from / to = real vertex to which this edge points
+//     - from_iter / to_iter = iter in the neighbours list
+//     - superior_from_iter / superior_to_iter = iterator to the superior vertex's neighbours list
+//     - subvertice_edge = false
+//     - subvertice_edges_iterator = NULL
+// b) subvertice edge
+//     - from / to = real vertex to which this edge points
+//     - from_iter / to_iter = iter in the neighbours list
+//     - superior_from_iter / superior_to_iter = NULL
+//     - subvertice_edge = true
+//     - subvertice_edges_iterator = iter in the superior vertex's subvertice_edges list
 
 }
 

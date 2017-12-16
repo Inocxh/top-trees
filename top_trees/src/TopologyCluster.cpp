@@ -1,6 +1,8 @@
 #include "UserFunctions.hpp"
 #include "TopologyCluster.hpp"
 
+//#define DEBUG
+
 namespace TopTree {
 
 int TopologyCluster::global_index = 0;
@@ -71,15 +73,23 @@ void TopologyCluster::remove_all_outer_edges() {
 }
 
 void TopologyCluster::calculate_outer_edges(bool check_neighbours) {
-	if (first == NULL && second == NULL) return;
-
 	outer_edges.clear();
-
-	//if (first == NULL) {
-	//	for (auto o: second->outer_edges) outer_edges.push_back(neighbour{o.edge, o.cluster->parent});
-	//}
-
-	if (second == NULL) {
+	if (first == NULL && second == NULL) {
+		#ifdef DEBUG
+			std::cerr << "Calculating edges for basic cluster of " << *vertex->data << " with " << vertex->neighbours.size() << " neighbours" << std::endl;
+		#endif
+		// Update outer edges according to underlying vertex
+		for (auto n: vertex->neighbours) {
+			#ifdef DEBUG
+				std::cerr << "... " << *n.vertex.lock()->data << " with " << *n.edge.lock()->data << std::endl;
+			#endif
+			outer_edges.push_back(neighbour{n.edge.lock(), n.vertex.lock()->topology_cluster});
+			if (n.vertex.lock()->topology_cluster == NULL) {
+				std::cerr << "ERROR: Cannot get topology cluster for neighbour " << n.vertex.lock()->data << std::endl;
+				exit(1);
+			}
+		}
+	} else if (second == NULL) {
 		for (auto o: first->outer_edges) outer_edges.push_back(neighbour{o.edge, o.cluster->parent});
 	} else {
 		// Take only unique edges from both children
@@ -105,15 +115,11 @@ void TopologyCluster::calculate_outer_edges(bool check_neighbours) {
 		}
 	}
 
-	// DEBUG
-	// for (auto o: outer_edges) {
-	// 	std::cerr << " " << *o.cluster << " (" << *o.edge->data << ")";
-	// }
-	// std::cerr << std::endl;
-
 	if (check_neighbours) for (auto o: outer_edges) {
+		#ifdef DEBUG
+			std::cerr << "Checking edge " << *o.edge->data << " to cluster " << *o.cluster << std::endl;
+		#endif
 		bool found = false;
-		// std::cerr << "Checking outer edge pair " << *o.cluster << std::endl;
 		for (auto &oo: o.cluster->outer_edges) {
 			if (oo.edge == o.edge) {
 				if (oo.cluster != shared_from_this()) oo.cluster = shared_from_this();

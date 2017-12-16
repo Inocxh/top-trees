@@ -56,7 +56,6 @@ void BaseTree::Internal::Edge::register_at_vertices() {
 	to->neighbours.push_back(Internal::neighbour{from, shared_from_this()});
 	to_iter = std::prev(to->neighbours.end());
 
-
 	from->degree++;
 	to->degree++;
 }
