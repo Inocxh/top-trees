@@ -21,6 +21,7 @@ public:
 	std::shared_ptr<TopologyCluster> construct_topology_tree(std::shared_ptr<TopologyCluster> cluster, int level = 0, std::shared_ptr<BaseTree::Internal::Edge> parent_edge = NULL);
 	std::shared_ptr<BaseTree::Internal::Vertex> split_vertex(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> parent_edge = NULL);
 	std::shared_ptr<BaseTree::Internal::Vertex> repair_subvertex_after_cut(std::shared_ptr<BaseTree::Internal::Vertex> v);
+	std::shared_ptr<BaseTree::Internal::Vertex> get_vertex_to_link(std::shared_ptr<BaseTree::Internal::Vertex> v);
 
 	std::tuple<std::shared_ptr<TopologyCluster>, std::shared_ptr<TopologyCluster>> cut(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w, std::shared_ptr<BaseTree::Internal::Edge> edge);
 	std::shared_ptr<TopologyCluster> link(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w, std::shared_ptr<BaseTree::Internal::Edge> edge);
@@ -453,7 +454,7 @@ std::tuple<std::shared_ptr<TopologyCluster>, std::shared_ptr<TopologyCluster>> T
 	// 0. Firstly test edge
 	if (edge->from == w && edge->to == v) std::swap(v, w);
 	if (edge->from != v || edge->to != w) {
-		std::cerr << "Wrong edge between vertices " << *v->data << " and " << *w->data << ", got edge " << *edge->data << std::endl;
+		std::cerr << "Wrong edge between vertices " << *v->data << " and " << *w->data << ", got edge " << *edge->data << " between " << *edge->from->data << " and " << *edge->to->data << std::endl;
 		exit(1);
 	}
 
@@ -511,10 +512,116 @@ void TopologyTopTree::Link(int v_index, int w_index, std::shared_ptr<EdgeData> e
 		std::cerr << "Starting Link operation between " << *v->data << " and " << *w->data << std::endl;
 	#endif
 
-	// 1. Create edge
-	auto edge = std::make_shared<BaseTree::Internal::Edge>(v, w, edge_data);
+	// 1. Split vertices into subvertices if needed
+	auto vv = internal->get_vertex_to_link(v);
+	auto ww = internal->get_vertex_to_link(w);
 
-	// TODO: Link in way of subvertices
+	// 2. Create edge
+	auto edge = std::make_shared<BaseTree::Internal::Edge>(vv, ww, edge_data);
+
+	// 3. Link vertices
+	auto result = internal->link(vv, ww, edge);
+
+	internal->print_graphviz(result, "Link result", true);
+}
+
+std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::get_vertex_to_link(std::shared_ptr<BaseTree::Internal::Vertex> v) {
+	std::cerr << "Getting vertex for link for vertex " << *v->data << std::endl;
+
+	if (!v->subvertices.empty()) {
+		#ifdef DEBUG
+			std::cerr << "Will add subvertex to other subvertices of " << *v->data << std::endl;
+		#endif
+
+		// Have to add new subvertice, we add at as second subvertice in the chain
+		// 1. Prepare new subvertice
+		auto subvertex = std::make_shared<BaseTree::Internal::Vertex>(std::make_shared<VertexData>());
+		subvertex->superior_vertex = v;
+		subvertex->topology_cluster = std::make_shared<TopologyCluster>();
+		subvertex->topology_cluster->vertex = subvertex;
+
+		// 2. Cut between first and second subvertex
+		auto first = v->subvertices.begin();
+		auto second = std::next(first);
+		std::shared_ptr<BaseTree::Internal::Edge> edge;
+		std::cerr << "First subvertex is " << *(*first)->topology_cluster << " and second " << *(*second)->topology_cluster << std::endl;
+		for (auto n: (*first)->neighbours) if (n.vertex.lock() == *second) edge = n.edge.lock();
+		std::cerr << "Edge: " << edge << std::endl;
+		cut(*first, *second, edge);
+
+		// 3. Link first-new-second
+		// 3.1 Insert new subvertex a
+		subvertex->superior_vertex_subvertices_iter = v->subvertices.insert(second, subvertex);
+		// 3.2 Link itself
+		link(*first, subvertex, edge); // reuse original edge
+		auto edge2 = std::make_shared<BaseTree::Internal::Edge>(subvertex, *second, std::make_shared<EdgeData>());
+		edge2->subvertice_edge = true;
+		v->subvertice_edges.push_back(edge2);
+		edge2->subvertice_edges_iterator = std::prev(v->subvertice_edges.end());
+		link(subvertex, *second, edge2);
+
+		return subvertex;
+	} else if (v->degree == 3) {
+		// Have to split vertex
+		#ifdef DEBUG
+			std::cerr << "Will split vertex " << *v->data << std::endl;
+		#endif
+
+		// 1. Prepare two subvertices
+		auto subvertexA = std::make_shared<BaseTree::Internal::Vertex>(std::make_shared<VertexData>());
+		auto subvertexB = std::make_shared<BaseTree::Internal::Vertex>(std::make_shared<VertexData>());
+		subvertexA->superior_vertex = v;
+		subvertexB->superior_vertex = v;
+		subvertexA->topology_cluster = std::make_shared<TopologyCluster>();
+		subvertexA->topology_cluster->vertex = subvertexA;
+		subvertexB->topology_cluster = std::make_shared<TopologyCluster>();
+		subvertexB->topology_cluster->vertex = subvertexB;
+
+		// 2. Add subvertices to superior vertex's list of subvertices
+		v->subvertices.push_back(subvertexA);
+		subvertexA->superior_vertex_subvertices_iter = std::prev(v->subvertices.end());
+		v->subvertices.push_back(subvertexB);
+		subvertexB->superior_vertex_subvertices_iter = std::prev(v->subvertices.end());
+
+		// 2. Reconnect first two edges to subvertexA and third edge to subvertexB
+		auto n = v->neighbours.begin();
+		while (n != v->neighbours.end()) {
+			// (because cut operation deletes from this std::list we need to get next pointer before calling cut)
+			auto next_n = std::next(n);
+			if (auto vv = (*n).vertex.lock()) if (auto ee = (*n).edge.lock()) {
+				#ifdef DEBUG
+					std::cerr << "Working on edge " << *ee->data << " to the " << *vv->data << std::endl;
+				#endif
+
+				auto subvertex = subvertexA;
+				(*n).subvertice_iter = v->subvertices.begin();
+				if (subvertexA->degree == 2) {
+					subvertex = subvertexB;
+					(*n).subvertice_iter = std::next((*n).subvertice_iter);
+				}
+
+				if (ee->from == v) {
+					ee->superior_from_iter = ee->from_iter;
+					cut(v, ee->to, ee);
+					link(subvertex, ee->to, ee);
+				} else {
+					ee->superior_to_iter = ee->to_iter;
+					cut(ee->from, v, ee);
+					link(ee->from, subvertex, ee);
+				}
+			}
+			n = next_n;
+		}
+
+		// 3. Connect subvertices one to the other
+		auto edge = std::make_shared<BaseTree::Internal::Edge>(subvertexA, subvertexB, std::make_shared<EdgeData>());
+		edge->subvertice_edge = true;
+		v->subvertice_edges.push_back(edge);
+		edge->subvertice_edges_iterator = std::prev(v->subvertice_edges.end());
+		link(subvertexA, subvertexB, edge);
+
+		return subvertexB; // subvertexB has one free slot for the new edge
+	} else return v; // else we can use the vertex itself
 }
 
 std::shared_ptr<TopologyCluster> TopologyTopTree::Internal::link(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w, std::shared_ptr<BaseTree::Internal::Edge> edge) {
@@ -562,9 +669,6 @@ std::shared_ptr<TopologyCluster> TopologyTopTree::Internal::link(std::shared_ptr
 	return found_roots[0];
 	// expecting that do_join will be called from outside Cut function
 }
-
-////////////////////////////////////////////////////////////////////////////////
-/// Functions for construction:
 
 std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_subvertex_after_cut(std::shared_ptr<BaseTree::Internal::Vertex> v) {
 	std::shared_ptr<BaseTree::Internal::Vertex> first_neighbour = NULL;
@@ -667,6 +771,12 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_su
 							if (*std::prev(old_iter) == v) (*ee->superior_from_iter).subvertice_iter = std::prev(old_iter);
 							else if (*std::next(old_iter) == v) (*ee->superior_from_iter).subvertice_iter = std::next(old_iter);
 							else std::cerr << "ERROR: Cannot find updated subvertice iter for edge after steal operation" << std::endl;
+						} else {
+							result2 = link(v, vv, ee);
+							auto old_iter = (*ee->superior_to_iter).subvertice_iter;
+							if (*std::prev(old_iter) == v) (*ee->superior_to_iter).subvertice_iter = std::prev(old_iter);
+							else if (*std::next(old_iter) == v) (*ee->superior_to_iter).subvertice_iter = std::next(old_iter);
+							else std::cerr << "ERROR: Cannot find updated subvertice iter for edge after steal operation" << std::endl;
 						}
 						#ifdef DEBUG_GRAPHVIZ
 							print_graphviz(result2, "Stealing from neighbour - After link", true);
@@ -695,11 +805,14 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_su
 		#ifdef DEBUG_GRAPHVIZ
 			print_graphviz(result2, "After chain link", true);
 		#endif
+		// Delete vertex from supervertice's subvertices list
+		v->superior_vertex->subvertices.erase(v->superior_vertex_subvertices_iter);
 		return first_neighbour;
 	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+/// Functions for construction:
 
 std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::split_vertex(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> parent_edge) {
 	// Create subvertices
@@ -722,6 +835,7 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::split_ver
 			auto temp = std::make_shared<BaseTree::Internal::Vertex>(std::make_shared<VertexData>());
 			temp->superior_vertex = v;
 			v->subvertices.push_back(temp);
+			temp->superior_vertex_subvertices_iter = std::prev(v->subvertices.end());
 
 			// Add edge between them (subvertice edge)
 			auto inner_edge = std::make_shared<BaseTree::Internal::Edge>(current, temp, std::make_shared<EdgeData>());

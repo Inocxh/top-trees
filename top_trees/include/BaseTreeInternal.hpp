@@ -62,6 +62,7 @@ public:
 	// Used in TopologyTopTree
 	std::shared_ptr<Vertex> superior_vertex = NULL;
 	std::list<std::shared_ptr<Vertex>> subvertices;
+	std::list<std::shared_ptr<Vertex>>::iterator superior_vertex_subvertices_iter;
 	std::list<std::shared_ptr<Edge>> subvertice_edges;
 	std::shared_ptr<TopologyCluster> topology_cluster;
 };

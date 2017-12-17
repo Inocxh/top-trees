@@ -80,12 +80,14 @@ void TopologyCluster::calculate_outer_edges(bool check_neighbours) {
 		#endif
 		// Update outer edges according to underlying vertex
 		for (auto n: vertex->neighbours) {
+			auto ee = n.edge.lock();
+			auto vv = (ee->from == vertex ? ee->to : ee->from);
 			#ifdef DEBUG
-				std::cerr << "... " << *n.vertex.lock()->data << " with " << *n.edge.lock()->data << std::endl;
+				std::cerr << "... " << *vv->data << " (superior vertex " << *n.vertex.lock()->data << ") with " << *ee->data << std::endl;
 			#endif
-			outer_edges.push_back(neighbour{n.edge.lock(), n.vertex.lock()->topology_cluster});
-			if (n.vertex.lock()->topology_cluster == NULL) {
-				std::cerr << "ERROR: Cannot get topology cluster for neighbour " << n.vertex.lock()->data << std::endl;
+			outer_edges.push_back(neighbour{ee, vv->topology_cluster});
+			if (vv->topology_cluster == NULL) {
+				std::cerr << "ERROR: Cannot get topology cluster for neighbour " << *vv->data << std::endl;
 				exit(1);
 			}
 		}

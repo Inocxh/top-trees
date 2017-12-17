@@ -137,6 +137,8 @@ int main(int argc, char const *argv[]) {
 	auto TT = std::make_shared<TopTree::TopologyTopTree>(baseTree);
 	TT->Cut(c, w);
 
+	TT->Link(b, p, std::make_shared<MyEdgeData>("B-P"));
+
 	/*
 	auto T = std::make_shared<TopTree::TopTree>(baseTree);
 

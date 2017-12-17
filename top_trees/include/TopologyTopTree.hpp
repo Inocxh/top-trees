@@ -21,7 +21,7 @@ public:
 	//std::tuple<std::shared_ptr<Cluster>, std::shared_ptr<Cluster>, std::shared_ptr<EdgeData>>
 	void Cut(int v, int w); // Cut between vertices u and v and return two new roots
 	//std::shared_ptr<Cluster>
-	void Link(int v, int w, std::shared_ptr<EdgeData> edge_data = NULL); // Add edge u-w and return new root cluster
+	void Link(int v, int w, std::shared_ptr<EdgeData> edge_data); // Add edge u-w and return new root cluster
 
 	// Return roots of the top trees
 	// std::vector<std::shared_ptr<Cluster> > GetTopTrees();
