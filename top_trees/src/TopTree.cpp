@@ -4,7 +4,6 @@
 
 #include "TopTree.hpp"
 #include "BaseTreeInternal.hpp"
-#include "Cluster.hpp"
 
 //#define DEBUG
 
@@ -13,31 +12,31 @@ namespace TopTree {
 // Hide data from .hpp file using PIMP idiom
 class TopTree::Internal {
 public:
-	std::vector<std::shared_ptr<Cluster> > root_clusters;
+	std::vector<std::shared_ptr<TopCluster>> root_clusters;
 	std::shared_ptr<BaseTree> base_tree;
 
-	std::shared_ptr<Cluster> construct_cluster(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> e=NULL);
+	std::shared_ptr<TopCluster> construct_cluster(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> e=NULL);
 
 	void soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w);
-	std::shared_ptr<Cluster> hard_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w);
+	std::shared_ptr<TopCluster> hard_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w);
 	void restore_hard_expose();
-	void guarded_splay(std::shared_ptr<Cluster> node, std::shared_ptr<Cluster> guard = NULL);
+	void guarded_splay(std::shared_ptr<TopCluster> node, std::shared_ptr<TopCluster> guard = NULL);
 
-	std::vector<std::shared_ptr<Cluster>> splitted_clusters;
+	std::vector<std::shared_ptr<TopCluster>> splitted_clusters;
 
 	// Debug methods:
-	void print_rooted_prefix(const std::shared_ptr<Cluster> cluster, const std::string prefix = "", bool last_child = true) const;
-	void print_graphviz(std::shared_ptr<Cluster> node, const std::string title="") const;
-	void print_graphviz_recursive(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> node, const char* edge_label="") const;
-	void print_graphviz_child(std::shared_ptr<Cluster> from, std::shared_ptr<Cluster> to, const char* edge_label="") const;
+	void print_rooted_prefix(const std::shared_ptr<TopCluster> cluster, const std::string prefix = "", bool last_child = true) const;
+	void print_graphviz(std::shared_ptr<TopCluster> node, const std::string title="") const;
+	void print_graphviz_recursive(std::shared_ptr<TopCluster> parent, std::shared_ptr<TopCluster> node, const char* edge_label="") const;
+	void print_graphviz_child(std::shared_ptr<TopCluster> from, std::shared_ptr<TopCluster> to, const char* edge_label="") const;
 private:
-	void adjust_parent(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> old_child, std::shared_ptr<Cluster> new_child);
-	void rotate_left(std::shared_ptr<Cluster> x);
-	void rotate_right(std::shared_ptr<Cluster> x);
+	void adjust_parent(std::shared_ptr<TopCluster> parent, std::shared_ptr<TopCluster> old_child, std::shared_ptr<TopCluster> new_child);
+	void rotate_left(std::shared_ptr<TopCluster> x);
+	void rotate_right(std::shared_ptr<TopCluster> x);
 
-	void splice(std::shared_ptr<Cluster> node);
+	void splice(std::shared_ptr<TopCluster> node);
 
-	void soft_expose_handle(std::shared_ptr<Cluster> handle, std::shared_ptr<Cluster> splay_guard = NULL);
+	void soft_expose_handle(std::shared_ptr<TopCluster> handle, std::shared_ptr<TopCluster> splay_guard = NULL);
 
 	std::vector<std::shared_ptr<CompressCluster>> hard_expose_transformed_clusters;
 };
@@ -60,14 +59,14 @@ TopTree::TopTree(std::shared_ptr<BaseTree> from_base_tree) : TopTree() {
 	}
 }
 
-std::vector<std::shared_ptr<Cluster> > TopTree::GetTopTrees() {
+std::vector<std::shared_ptr<TopCluster> > TopTree::GetTopTrees() {
 	return internal->root_clusters;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Debug output - console
 
-void TopTree::Internal::print_rooted_prefix(const std::shared_ptr<Cluster> cluster, const std::string prefix, bool last_child) const {
+void TopTree::Internal::print_rooted_prefix(const std::shared_ptr<TopCluster> cluster, const std::string prefix, bool last_child) const {
 	std::cout << *cluster << std::endl;
 	auto prefix_child = prefix + (last_child ? "   " : "|  ");
 
@@ -89,7 +88,7 @@ void TopTree::Internal::print_rooted_prefix(const std::shared_ptr<Cluster> clust
 	}
 }
 
-void TopTree::PrintRooted(const std::shared_ptr<Cluster> root) const {
+void TopTree::PrintRooted(const std::shared_ptr<TopCluster> root) const {
 	internal->print_rooted_prefix(root);
 
 	for (auto v: internal->base_tree->internal->vertices) {
@@ -102,7 +101,7 @@ void TopTree::PrintRooted(const std::shared_ptr<Cluster> root) const {
 ////////////////////////////////////////////////////////////////////////////////
 // Debug outpu - Graphviz
 
-void TopTree::Internal::print_graphviz_child(std::shared_ptr<Cluster> from, std::shared_ptr<Cluster> to, const char* edge_label) const {
+void TopTree::Internal::print_graphviz_child(std::shared_ptr<TopCluster> from, std::shared_ptr<TopCluster> to, const char* edge_label) const {
 	to->_short_name(std::cout << "\t\"" << to << "\" [label=\"") << "\",shape=";
 	if (to->isCompress()) std::cout << "box";
 	else if (to->isRake()) std::cout << "diamond";
@@ -119,7 +118,7 @@ void TopTree::Internal::print_graphviz_child(std::shared_ptr<Cluster> from, std:
 	std::cout << "]" << std::endl;
 }
 
-void TopTree::Internal::print_graphviz_recursive(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> node, const char* edge_label) const {
+void TopTree::Internal::print_graphviz_recursive(std::shared_ptr<TopCluster> parent, std::shared_ptr<TopCluster> node, const char* edge_label) const {
 	if (node == NULL) return;
 	print_graphviz_child(parent, node, edge_label);
 
@@ -153,12 +152,8 @@ std::shared_ptr<Cluster> TopTree::Expose(int v, int w) {
 	return internal->hard_expose(vertexV, vertexW);
 }
 
-// void TopTree::Internal::fix_endpoints(std::shared_ptr<Cluster> node) {
-//
-// }
-
 // A. Splaying
-void TopTree::Internal::adjust_parent(std::shared_ptr<Cluster> parent, std::shared_ptr<Cluster> old_child, std::shared_ptr<Cluster> new_child) {
+void TopTree::Internal::adjust_parent(std::shared_ptr<TopCluster> parent, std::shared_ptr<TopCluster> old_child, std::shared_ptr<TopCluster> new_child) {
 	// Ensure that both children are splitted before any action
 	new_child->do_split(&splitted_clusters);
 	old_child->do_split(&splitted_clusters);
@@ -183,7 +178,7 @@ void TopTree::Internal::adjust_parent(std::shared_ptr<Cluster> parent, std::shar
 //     x               y
 //   A   y    ->    x    C
 //      B C        A B
-void TopTree::Internal::rotate_left(std::shared_ptr<Cluster> x) {
+void TopTree::Internal::rotate_left(std::shared_ptr<TopCluster> x) {
 	auto parent = x->parent;
 	auto y = x->right_child;
 
@@ -206,7 +201,7 @@ void TopTree::Internal::rotate_left(std::shared_ptr<Cluster> x) {
 //     x               y
 //   y   C    ->    A    x
 //  A B                 B C
-void TopTree::Internal::rotate_right(std::shared_ptr<Cluster> x) {
+void TopTree::Internal::rotate_right(std::shared_ptr<TopCluster> x) {
 	auto parent = x->parent;
 	auto y = x->left_child;
 
@@ -226,7 +221,7 @@ void TopTree::Internal::rotate_right(std::shared_ptr<Cluster> x) {
 	y->correct_endpoints();
 }
 
-void TopTree::Internal::guarded_splay(std::shared_ptr<Cluster> node, std::shared_ptr<Cluster> guard) {
+void TopTree::Internal::guarded_splay(std::shared_ptr<TopCluster> node, std::shared_ptr<TopCluster> guard) {
 	if (node->isBase()) {
 		// Not splay base clusters
 		if (node->parent != NULL && node->parent != guard && node->parent->isCompress()) guarded_splay(node->parent, guard);
@@ -252,9 +247,9 @@ void TopTree::Internal::guarded_splay(std::shared_ptr<Cluster> node, std::shared
 
 // B. Splicing
 // Splicing occur only after splaying -> at most two rake nodes to the root of some compress tree
-void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
-	auto left_nodes = std::vector<std::shared_ptr<Cluster>>();
-	auto right_nodes = std::vector<std::shared_ptr<Cluster>>();
+void TopTree::Internal::splice(std::shared_ptr<TopCluster> node) {
+	auto left_nodes = std::vector<std::shared_ptr<TopCluster>>();
+	auto right_nodes = std::vector<std::shared_ptr<TopCluster>>();
 
 	#ifdef DEBUG
 		std::cerr << "Splicing " << *node << std::endl;
@@ -310,7 +305,7 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 	if (check_boundary->handle == root) check_boundary->handle = root->left_child;
 
 	// 3. construct new left and right foster trees
-	std::shared_ptr<Cluster> new_left_foster = NULL;
+	std::shared_ptr<TopCluster> new_left_foster = NULL;
 	if (!left_nodes.empty()) {
 		new_left_foster = left_nodes.back();
 		left_nodes.pop_back();
@@ -342,7 +337,7 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 	}
 
 	// The same for right nodes
-	std::shared_ptr<Cluster> new_right_foster = NULL;
+	std::shared_ptr<TopCluster> new_right_foster = NULL;
 	if (!right_nodes.empty()) {
 		new_right_foster = right_nodes.back();
 		right_nodes.pop_back();
@@ -381,7 +376,7 @@ void TopTree::Internal::splice(std::shared_ptr<Cluster> node) {
 }
 
 // C. Soft expose itself
-void TopTree::Internal::soft_expose_handle(std::shared_ptr<Cluster> N, std::shared_ptr<Cluster> extern_splay_guard) {
+void TopTree::Internal::soft_expose_handle(std::shared_ptr<TopCluster> N, std::shared_ptr<TopCluster> extern_splay_guard) {
 	if (N == NULL) return;
 	// 0. Normalize from given node
 	N->normalize_for_splay();
@@ -501,7 +496,7 @@ void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> 
 }
 
 // D. Hard expose
-std::shared_ptr<Cluster> TopTree::Internal::hard_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w) {
+std::shared_ptr<TopCluster> TopTree::Internal::hard_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w) {
 	auto Nw = w->handle;
 	auto Nv = v->handle;
 	if (Nw != Nv && Nw->parent == NULL && Nv->parent == NULL) return NULL; // They are in different top trees
@@ -564,8 +559,8 @@ std::tuple<std::shared_ptr<Cluster>, std::shared_ptr<Cluster>, std::shared_ptr<E
 	}
 
 	// Variables for new roots
-	std::shared_ptr<Cluster> first = NULL;
-	std::shared_ptr<Cluster> second = NULL;
+	std::shared_ptr<TopCluster> first = NULL;
+	std::shared_ptr<TopCluster> second = NULL;
 
 	// Node representing v-w edge may be child or grandchild of the root --> from every node we came throught
 	// we remove the right child and find some new to its place
@@ -686,7 +681,7 @@ std::shared_ptr<Cluster> TopTree::Link(int v_index, int w_index, std::shared_ptr
 	if (Nv == Nw || Nw == Nv->parent) {
 		std::cerr << "ERROR: They are already in the same top tree" << std::endl;
 		std::cerr << *Nw << "---" << *Nv << std::endl;
-		return Nw;
+		return NULL;
 	}
 
 	// 2. Make new base cluster
@@ -716,7 +711,7 @@ std::shared_ptr<Cluster> TopTree::Link(int v_index, int w_index, std::shared_ptr
 	}
 
 	// 3.2a Manage Nv
-	std::shared_ptr<Cluster> node = edge_cluster;
+	std::shared_ptr<TopCluster> node = edge_cluster;
 	if (v->degree == 1) {
 		// v was independent node -> do nothing and leave node as edge cluster
 	} else if (v->degree == 2) {
@@ -762,9 +757,9 @@ std::shared_ptr<Cluster> TopTree::Link(int v_index, int w_index, std::shared_ptr
 
 ////////////////////////////////////////////////////////////////////////////////
 
-std::shared_ptr<Cluster> TopTree::Internal::construct_cluster(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> e) {
-	std::queue<std::shared_ptr<Cluster> > path;
-	std::queue<std::shared_ptr<Cluster> > rake_list;
+std::shared_ptr<TopCluster> TopTree::Internal::construct_cluster(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> e) {
+	std::queue<std::shared_ptr<TopCluster>> path;
+	std::queue<std::shared_ptr<TopCluster>> rake_list;
 
 	auto next_v = v;
 	auto next_e = e;
@@ -776,7 +771,7 @@ std::shared_ptr<Cluster> TopTree::Internal::construct_cluster(std::shared_ptr<Ba
 		next_v = NULL;
 
 		// 1. Construct BaseCluster if there was edge given
-		std::shared_ptr<Cluster> path_cluster = (e != NULL ? BaseCluster::construct(e) : NULL);
+		std::shared_ptr<TopCluster> path_cluster = (e != NULL ? BaseCluster::construct(e) : NULL);
 
 		// 2. Select continuation and recursive construct top trees on subtrees
 		for (auto n : v->neighbours) {
@@ -798,7 +793,7 @@ std::shared_ptr<Cluster> TopTree::Internal::construct_cluster(std::shared_ptr<Ba
 		// and add path edge into path
 		if (path_cluster != NULL) {
 			// 3.1 Rake all edges into rake tree
-			std::queue<std::shared_ptr<Cluster> > rake_list_new;
+			std::queue<std::shared_ptr<TopCluster>> rake_list_new;
 			while (rake_list.size() > 1) {
 				while (rake_list.size() > 0) {
 					if (rake_list.size() == 1) {
@@ -832,7 +827,7 @@ std::shared_ptr<Cluster> TopTree::Internal::construct_cluster(std::shared_ptr<Ba
 	}
 
 	// B. Compress all clusters into one compress cluster
-	std::queue<std::shared_ptr<Cluster> > path_new;
+	std::queue<std::shared_ptr<TopCluster>> path_new;
 	while (path.size() > 1) {
 		while (path.size() > 0) {
 			if (path.size() == 1) {

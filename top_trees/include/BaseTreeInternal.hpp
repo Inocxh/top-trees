@@ -2,7 +2,7 @@
 #include <list>
 
 #include "BaseTree.hpp"
-#include "Cluster.hpp"
+#include "TopCluster.hpp"
 #include "TopologyCluster.hpp"
 #include "UserFunctions.hpp"
 
@@ -52,12 +52,12 @@ public:
 	// Handle
 	// - if degree at least 2: handle is comprees node around this middle vertex
 	// - if leaf: handle is the top most non-rake (base or compress) node having this vertex as one of its endpoints
-	std::shared_ptr<Cluster> handle = NULL;
+	std::shared_ptr<TopCluster> handle = NULL;
 
 	// Used for building TopTree:
 	bool used = false;
-	std::shared_ptr<Cluster> rake_tree_left = NULL;
-	std::shared_ptr<Cluster> rake_tree_right = NULL;
+	std::shared_ptr<TopCluster> rake_tree_left = NULL;
+	std::shared_ptr<TopCluster> rake_tree_right = NULL;
 
 	// Used in TopologyTopTree
 	std::shared_ptr<Vertex> superior_vertex = NULL;

@@ -9,7 +9,7 @@ class TopologyCluster;
 }
 
 #include "BaseTreeInternal.hpp"
-#include "Cluster.hpp"
+#include "TopCluster.hpp"
 
 namespace TopTree {
 class TopologyCluster : public std::enable_shared_from_this<TopologyCluster> {

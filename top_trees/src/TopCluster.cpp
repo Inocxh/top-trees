@@ -1,21 +1,21 @@
-#include "Cluster.hpp"
+#include "TopCluster.hpp"
 
 namespace TopTree {
-std::ostream& operator<<(std::ostream& o, const Cluster& c) { return c.ToString(o); }
+std::ostream& operator<<(std::ostream& o, const TopCluster& c) { return c.ToString(o); }
 
-void Cluster::set_left_child(std::shared_ptr<Cluster> child) {
+void TopCluster::set_left_child(std::shared_ptr<TopCluster> child) {
 	left_child = child;
 	if (child != NULL) child->parent = shared_from_this();
 }
-void Cluster::set_right_child(std::shared_ptr<Cluster> child) {
+void TopCluster::set_right_child(std::shared_ptr<TopCluster> child) {
 	right_child = child;
 	if (child != NULL) child->parent = shared_from_this();
 }
-void Cluster::set_left_foster(std::shared_ptr<Cluster> child) {
+void TopCluster::set_left_foster(std::shared_ptr<TopCluster> child) {
 	left_foster = child;
 	if (child != NULL) child->parent = shared_from_this();
 }
-void Cluster::set_right_foster(std::shared_ptr<Cluster> child) {
+void TopCluster::set_right_foster(std::shared_ptr<TopCluster> child) {
 	right_foster = child;
 	if (child != NULL) child->parent = shared_from_this();
 }
@@ -46,7 +46,7 @@ void BaseCluster::do_join() {
 
 	is_splitted = false;
 }
-void BaseCluster::do_split(std::vector<std::shared_ptr<Cluster>>* splitted_clusters) {
+void BaseCluster::do_split(std::vector<std::shared_ptr<TopCluster>>* splitted_clusters) {
 	if (is_splitted) return;
 
 	// 1. Log that this cluster will be splitted
@@ -77,7 +77,7 @@ std::ostream& BaseCluster::_short_name(std::ostream& o) const {
 	return o << *boundary_left->data << "," << *boundary_right->data;
 }
 
-std::shared_ptr<CompressCluster> CompressCluster::construct(std::shared_ptr<Cluster> left, std::shared_ptr<Cluster> right) {
+std::shared_ptr<CompressCluster> CompressCluster::construct(std::shared_ptr<TopCluster> left, std::shared_ptr<TopCluster> right) {
 	auto cluster = std::make_shared<CompressCluster>();
 
 	// Basic connections (needed by do_join):
@@ -127,7 +127,7 @@ void CompressCluster::do_join() {
 
 	is_splitted = false;
 }
-void CompressCluster::do_split(std::vector<std::shared_ptr<Cluster>>* splitted_clusters) {
+void CompressCluster::do_split(std::vector<std::shared_ptr<TopCluster>>* splitted_clusters) {
 	if (is_splitted) return;
 
 	// 1. Log that this cluster will be splitted
@@ -202,7 +202,7 @@ std::ostream& CompressCluster::_short_name(std::ostream& o) const {
 }
 
 
-std::shared_ptr<RakeCluster> RakeCluster::construct(std::shared_ptr<Cluster> rake_from, std::shared_ptr<Cluster> rake_to) {
+std::shared_ptr<RakeCluster> RakeCluster::construct(std::shared_ptr<TopCluster> rake_from, std::shared_ptr<TopCluster> rake_to) {
 	auto cluster = std::make_shared<RakeCluster>();
 
 	// Basic connections (needed by do_join):
@@ -234,7 +234,7 @@ void RakeCluster::do_join() {
 
 	is_splitted = false;
 }
-void RakeCluster::do_split(std::vector<std::shared_ptr<Cluster>>* splitted_clusters) {
+void RakeCluster::do_split(std::vector<std::shared_ptr<TopCluster>>* splitted_clusters) {
 	if (is_splitted) return;
 
 	// 1. Log that this cluster will be splitted

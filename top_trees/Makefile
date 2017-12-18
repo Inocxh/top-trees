@@ -1,5 +1,5 @@
 PROG=top_trees_test
-CLASSES=BaseTree TopTree Cluster TopologyCluster TopologyTopTree
+CLASSES=BaseTree TopTree TopCluster TopologyCluster TopologyTopTree
 OTHER=
 DIRECTORIES=obj
 
