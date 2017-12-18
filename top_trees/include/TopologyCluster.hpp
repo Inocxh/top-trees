@@ -8,11 +8,12 @@ namespace TopTree {
 class TopologyCluster;
 }
 
+#include "TopTreeInterface.hpp"
 #include "BaseTreeInternal.hpp"
 #include "TopCluster.hpp"
 
 namespace TopTree {
-class TopologyCluster : public std::enable_shared_from_this<TopologyCluster> {
+class TopologyCluster : public ICluster, public std::enable_shared_from_this<TopologyCluster> {
 friend class TopologyTopTree;
 public:
 	static int global_index;

@@ -68,7 +68,7 @@ std::shared_ptr<TopTree::ClusterData> TopTree::InitClusterData() {
 	return std::make_shared<MyClusterData>();
 }
 
-void print_node(std::shared_ptr<TopTree::Cluster> node) {
+void print_node(std::shared_ptr<TopTree::ICluster> node) {
 	if (node != NULL) {
 		auto data = std::dynamic_pointer_cast<MyClusterData>(node->data);
 		std::cerr << "[weight: " << data->weight << ", total_weight:" << data->total_weight << "]" << std::endl;
@@ -76,17 +76,6 @@ void print_node(std::shared_ptr<TopTree::Cluster> node) {
 }
 
 int main(int argc, char const *argv[]) {
-	/*
-	std::shared_ptr<MyEdgeData> p1(new MyEdgeData);
-	std::shared_ptr<MyEdgeData> p2(new MyEdgeData);
-	std::shared_ptr<MyEdgeData> p3(new MyEdgeData);
-	auto T = MyTopTree();
-	T.Create(p1);
-	T.Create(p2);
-	T.Join(p1,p2,p3);
-	std::cout << p3->weight << std::endl;
-	*/
-
 	auto baseTree = std::make_shared<TopTree::BaseTree>();
 
 	// Example from article:
@@ -135,9 +124,12 @@ int main(int argc, char const *argv[]) {
 	////////////////
 
 	auto TT = std::make_shared<TopTree::TopologyTopTree>(baseTree);
-	TT->Cut(c, w);
+	auto result = TT->Cut(c, w);
+	print_node(std::get<0>(result));
+	print_node(std::get<1>(result));
 
-	TT->Link(b, p, std::make_shared<MyEdgeData>("B-P"));
+	auto result2 = TT->Link(b, p, std::make_shared<MyEdgeData>("B-P"));
+	print_node(result2);
 
 	/*
 	auto T = std::make_shared<TopTree::TopTree>(baseTree);

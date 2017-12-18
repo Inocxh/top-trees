@@ -128,21 +128,21 @@ void TopTree::Internal::print_graphviz_recursive(std::shared_ptr<TopCluster> par
 	print_graphviz_recursive(node, node->right_child, "R");
 }
 
-void TopTree::Internal::print_graphviz(const std::shared_ptr<Cluster> root, const std::string title) const {
+void TopTree::Internal::print_graphviz(const std::shared_ptr<TopCluster> root, const std::string title) const {
 	std::cout << "digraph \"" << root << "\" {" << std::endl;
 	std::cout << "\tlabelloc=\"t\"" << std::endl << "\tlabel=\"" << title << "\"" << std::endl;
 	print_graphviz_recursive(NULL, root);
 	std::cout << "}" << std::endl;
 }
 
-void TopTree::PrintGraphviz(const std::shared_ptr<Cluster> root, const std::string title) const {
+void TopTree::PrintGraphviz(const std::shared_ptr<TopCluster> root, const std::string title) const {
 	internal->print_graphviz(root, title);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Soft and hard expose related functions
 
-std::shared_ptr<Cluster> TopTree::Expose(int v, int w) {
+std::shared_ptr<ICluster> TopTree::Expose(int v, int w) {
 	internal->restore_hard_expose();
 
 	auto vertexV = internal->base_tree->internal->vertices[v];
@@ -532,7 +532,7 @@ void TopTree::Internal::restore_hard_expose() {
 ////////////////////////////////////////////////////////////////////////////////
 // Cut and Link
 
-std::tuple<std::shared_ptr<Cluster>, std::shared_ptr<Cluster>, std::shared_ptr<EdgeData>> TopTree::Cut(int v_index, int w_index) {
+std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr<EdgeData>> TopTree::Cut(int v_index, int w_index) {
 	// Restore previous hard expose (if needed)
 	internal->restore_hard_expose();
 	// Init array for clusters restoration
@@ -658,7 +658,7 @@ std::tuple<std::shared_ptr<Cluster>, std::shared_ptr<Cluster>, std::shared_ptr<E
 	return std::make_tuple(first, second, edge_data);
 }
 
-std::shared_ptr<Cluster> TopTree::Link(int v_index, int w_index, std::shared_ptr<EdgeData> edge_data) {
+std::shared_ptr<ICluster> TopTree::Link(int v_index, int w_index, std::shared_ptr<EdgeData> edge_data) {
 	// Restore previous hard expose (if needed)
 	internal->restore_hard_expose();
 	// Init array for clusters restoration

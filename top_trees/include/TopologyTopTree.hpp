@@ -4,24 +4,21 @@
 #ifndef TOPOLOGY_TOP_TREE_HPP
 #define TOPOLOGY_TOP_TREE_HPP
 
-#include "BaseTree.hpp"
+#include "TopTreeInterface.hpp"
 // #include "Cluster.hpp"
 
 namespace TopTree {
 
-class TopologyTopTree {
+class TopologyTopTree: public ITopTree {
 public:
 	TopologyTopTree();
 	TopologyTopTree(std::shared_ptr<BaseTree> baseTree); // Construct from underlying tree
 	~TopologyTopTree();
 
-	// Operations
-	//std::shared_ptr<Cluster>
-	void Expose(int v, int w); // Expose path v-w in the root cluster (vertices are refered by its indexes) and return this root cluster
-	//std::tuple<std::shared_ptr<Cluster>, std::shared_ptr<Cluster>, std::shared_ptr<EdgeData>>
-	void Cut(int v, int w); // Cut between vertices u and v and return two new roots
-	//std::shared_ptr<Cluster>
-	void Link(int v, int w, std::shared_ptr<EdgeData> edge_data); // Add edge u-w and return new root cluster
+	// User operations (documented in the ITopTree interface)
+	std::shared_ptr<ICluster> Expose(int v, int w);
+	std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr<EdgeData>> Cut(int v, int w);
+	std::shared_ptr<ICluster> Link(int v, int w, std::shared_ptr<EdgeData> edge_data);
 
 	// Return roots of the top trees
 	// std::vector<std::shared_ptr<Cluster> > GetTopTrees();

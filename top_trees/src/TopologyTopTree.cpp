@@ -396,7 +396,7 @@ void TopologyTopTree::Internal::update_clusters() {
 ////////////////////////////////////////////////////////////////////////////////
 /// Cut and Link
 
-void TopologyTopTree::Cut(int v_index, int w_index) {
+std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr<EdgeData>> TopologyTopTree::Cut(int v_index, int w_index) {
 	// Init array for clusters restoration
 	internal->splitted_clusters.clear();
 
@@ -413,7 +413,7 @@ void TopologyTopTree::Cut(int v_index, int w_index) {
 	for (auto n: v->neighbours) if (n.vertex.lock() == w) { edge = n.edge.lock(); break; }
 	if (edge == NULL) {
 		std::cerr << "ERROR: Vertices not linked by edge, cannot cut" << std::endl;
-		return;
+		return std::make_tuple((std::shared_ptr<ICluster>)NULL, (std::shared_ptr<ICluster>)NULL, (std::shared_ptr<EdgeData>)NULL);
 	}
 
 	#ifdef DEBUG
@@ -442,8 +442,14 @@ void TopologyTopTree::Cut(int v_index, int w_index) {
 	auto root_w = ww->topology_cluster;
 	while (root_w->parent != NULL) root_w = root_w->parent;
 
+	// 6. Restore all splitted clusters
+	for (auto c: internal->splitted_clusters) c->do_join();
+	internal->splitted_clusters.clear();
+
 	internal->print_graphviz(root_v, "Result A", true);
 	internal->print_graphviz(root_w, "Result B", true);
+
+	return std::make_tuple(root_v, root_w, edge->data);
 }
 
 std::tuple<std::shared_ptr<TopologyCluster>, std::shared_ptr<TopologyCluster>> TopologyTopTree::Internal::cut(
@@ -500,7 +506,7 @@ std::tuple<std::shared_ptr<TopologyCluster>, std::shared_ptr<TopologyCluster>> T
 	// expecting that do_join will be called from outside Cut function
 }
 
-void TopologyTopTree::Link(int v_index, int w_index, std::shared_ptr<EdgeData> edge_data) {
+std::shared_ptr<ICluster> TopologyTopTree::Link(int v_index, int w_index, std::shared_ptr<EdgeData> edge_data) {
 	// Init array for clusters restoration
 	internal->splitted_clusters.clear();
 
@@ -522,7 +528,13 @@ void TopologyTopTree::Link(int v_index, int w_index, std::shared_ptr<EdgeData> e
 	// 3. Link vertices
 	auto result = internal->link(vv, ww, edge);
 
+	// 4. Restore all splitted clusters
+	for (auto c: internal->splitted_clusters) c->do_join();
+	internal->splitted_clusters.clear();
+
 	internal->print_graphviz(result, "Link result", true);
+
+	return result;
 }
 
 std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::get_vertex_to_link(std::shared_ptr<BaseTree::Internal::Vertex> v) {
@@ -810,6 +822,15 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_su
 		return first_neighbour;
 	}
 }
+
+////////////////////////////////////////////////////////////////////////////////
+/// Expose
+
+std::shared_ptr<ICluster> TopologyTopTree::Expose(int v, int w) {
+	// Not implemented yet
+	return NULL;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Functions for construction:
