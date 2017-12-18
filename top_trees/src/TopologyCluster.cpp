@@ -43,14 +43,14 @@ void TopologyCluster::do_join() {
 	// 3. Series of Joins itself
 	if (edge != NULL && !edge->subvertice_edge) {
 		// Firstly join one of nodes with edge
-		if (first != NULL && first->cluster_data != NULL) Join(first->cluster_data, edge_cluster_data, combined_edge_cluster_data);
+		if (first != NULL && first->data != NULL) Join(first->data, edge_cluster_data, combined_edge_cluster_data);
 		else combined_edge_cluster_data = edge_cluster_data;
 
-		if (second != NULL && second->cluster_data != NULL) Join(combined_edge_cluster_data, second->cluster_data, cluster_data);
-		else cluster_data = edge_cluster_data;
+		if (second != NULL && second->data != NULL) Join(combined_edge_cluster_data, second->data, data);
+		else data = edge_cluster_data;
 	} else if (edge != NULL) {
-		Join(first->cluster_data, second->cluster_data, cluster_data);
-	} else cluster_data = (first != NULL) ? first->cluster_data : second->cluster_data;
+		Join(first->data, second->data, data);
+	} else data = (first != NULL) ? first->data : second->data;
 
 	is_splitted = false;
 }
@@ -147,16 +147,16 @@ void TopologyCluster::do_split(std::vector<std::shared_ptr<TopologyCluster>>* sp
 
 	// 3. Series of Splits itself
 	if (edge != NULL && !edge->subvertice_edge) {
-		if (second != NULL && second->cluster_data != NULL) Split(combined_edge_cluster_data, second->cluster_data, cluster_data);
-		else combined_edge_cluster_data = cluster_data;
+		if (second != NULL && second->data != NULL) Split(combined_edge_cluster_data, second->data, data);
+		else combined_edge_cluster_data = data;
 
-		if (first != NULL && first->cluster_data != NULL) Split(first->cluster_data, edge_cluster_data, combined_edge_cluster_data);
+		if (first != NULL && first->data != NULL) Split(first->data, edge_cluster_data, combined_edge_cluster_data);
 		else edge_cluster_data = combined_edge_cluster_data;
 	} else if (edge != NULL) {
-		Split(first->cluster_data, second->cluster_data, cluster_data);
+		Split(first->data, second->data, data);
 	} else {
-		if (first != NULL) first->cluster_data = cluster_data;
-		else second->cluster_data = cluster_data;
+		if (first != NULL) first->data = data;
+		else second->data = data;
 	}
 
 	is_splitted = true;

@@ -15,17 +15,19 @@ namespace TopTree {
 class TopologyCluster : public std::enable_shared_from_this<TopologyCluster> {
 friend class TopologyTopTree;
 public:
-	TopologyCluster();
-	int index;
-
 	static int global_index;
 
+	TopologyCluster();
+
+	std::shared_ptr<ClusterData> data = InitClusterData();
 	virtual std::ostream& ToString(std::ostream& o) const;
 protected:
 	struct neighbour {
 		std::shared_ptr<BaseTree::Internal::Edge> edge;
 		std::shared_ptr<TopologyCluster> cluster;
 	};
+
+	int index;
 
 	std::shared_ptr<TopologyCluster> parent;
 	std::shared_ptr<TopologyCluster> first;
@@ -42,7 +44,6 @@ protected:
 	// Data of corresponding clusters in the top tree:
 	std::shared_ptr<ClusterData> edge_cluster_data;
 	std::shared_ptr<ClusterData> combined_edge_cluster_data;
-	std::shared_ptr<ClusterData> cluster_data;
 
 	void set_first_child(std::shared_ptr<TopologyCluster> child);
 	void set_second_child(std::shared_ptr<TopologyCluster> child);
