@@ -8,15 +8,19 @@ understanding of how this data structure works and what must be done to use
 it in our case.
 
 Basic idea of the Topology Trees is to divide a tree (or in general a forest)
-with max degree of three into recursive {\I clusters}. A collection of trees
-(called {\I topology trees}) is built from these clusters, one for each tree in
-the original forest.
+with maximal degree of three into recursive {\I clusters}. Trees with higher
+degree has to be firstly {\I ternarized} -- their vertices have to be splitted.
+We will discuss the ternarization later, let's suppose we already have
+ternarized tree.
+
+A collection of rooted binary trees (called {\I topology trees}) is built from
+these recursive clusters, one for each tree in the original forest.
 
 Cluster in topology tree is a set of maximally two nodes (vertices of the
-original tree or other clusters) with edge between them (but without edges to
-neighbours) and with maximally three neighbours, better definition will conclude
-below. Nodes not connected by edge cannot be in common cluster, thus clusters
-represents some contracted continuous subtrees of the original tree.
+original tree or other topology tree clusters) with edge between them (but
+without edges to neighbours) and with maximally three neighbours, better
+definition will conclude below. Nodes not connected by edge cannot be in common
+cluster, thus clusters represents some contracted subtrees of the original tree.
 
 Note that clusters in topology trees are slightly different than clusters in
 top trees. In top trees clusters are generalized edges (with two endpoints)
@@ -35,7 +39,7 @@ division of this graph into clusters that:
 \item Each vertex of the original graph is contained in exactly one cluster.
 \end{itemize}
 
-The {\I Topology clusterization} of a tree (with max degree 3) is clusterization
+The {\I Topology clusterization} of a tree (with maximal degree 3) is clusterization
 of order 2 whose clusters (called {\I topology clusters}) must meet these conditions:
 \begin{enumerate}
 \item {\bf Neighbours limit}: Every topology cluster has degree (number of
@@ -68,9 +72,9 @@ cluster has at most three outgoing edges.
 Frederickson in \cite{DSforDynamicallyMaintainingRootedTrees} proved that each
 level of topology clusterization has at most $5/6$ clusters of the previous
 level. Number of clusters on the lowest level corresponds to the number of
-vertices of the original tree (denote it as $N$) and the loss on each level is
-exponential. Therefore the height of the topology tree for tree with $N$
-vertices could be estimated as $\O(\log N)$.
+vertices of the original tree (denote it as $N$) and at $k$-th level there are
+at most $N\cdot(5/6)^k$ clusters. Therefore the height of the topology tree for
+tree with $N$ vertices could be estimated as $\O(\log N)$.
 
 \section{Updates -- Cut and Links}
 
@@ -81,7 +85,7 @@ tree is splitted into two topology trees.
 
 This change has to be propagated on all levels of a topology tree and
 corresponding topology clusters (and their neighbours) have to be updated. The
-main idea is that this operation should do constant work on each levels which
+main idea is that this operation should do constant work on each level which
 leads to the time $\O(\log N)$ for each operation.
 
 Update process was originally described by Frederickson in
@@ -91,7 +95,7 @@ process is the same but in the second work was described more clearly.
 
 \subsection{Update process}
 
-Both Join and Cut starts by modifying the original forest which will break some
+Both Link and Cut starts by modifying the original forest which will break some
 constraints in the lowest level of our topology trees. Whole update process
 goes from the lowest level up and repairs broken constraints.
 
@@ -105,7 +109,7 @@ it contains basic clusters at endpoints of the added/removed edge.
 needs some, initially is empty.
 \end{itemize}
 
-In each phase update process processes all clusters from all three list and
+In each phase update process processes all clusters from all three lists and
 prepares lists of clusters from above level for the next phase. When there are
 no clusters to process it ends.
 
@@ -117,7 +121,7 @@ that transitively ensures that parent would get into new change list).
 
 Next for all clusters in change list: If they have sibling (the second child of
 their parent) and they are connected with him by edge then everything is correct
--- we only update theirs neighbours (based on it's children neighbours) and add
+-- we only update their neighbours (based on it's children neighbours) and add
 the parent into next change list (we need to update parent's neighbours too).
 
 If cluster from change list has sibling but they are not connected by edge (for
@@ -157,6 +161,8 @@ second case. If there is no such neighbour we only ensure that parent of this cl
 
 This process takes $\O(1)$ per level and $\O(\log N)$ for the whole topology tree.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \section{Ternarization of a tree}
 
 One of the things we have to deal with when using Topology trees as an executive
@@ -168,7 +174,7 @@ We have to {\I ternarize} each vertex -- turning vertex with higher degree into
 chain of multiple vertices with degree 3 -- and keep this ternarization during
 cuts and joins.
 
-Lets have a vertex of degree $D\ge4$. It could be splitted into chain of
+Let's have a vertex of degree $D\ge4$. It could be splitted into chain of
 multiple vertices with maximal degree 3 by these simple steps:
 \begin{itemize}
 \item Create $D - 2$ subvertices.
@@ -179,7 +185,7 @@ subvertices (there are exactly the right number of free neighbour slots) and
 remove the original vertex.
 \end{itemize}
 
-But the Cut and Join operations in the Top trees works with the original
+But the Cut and Link operations in the Top trees works with the original
 vertices, we have to build some mapping on internal Topology trees cuts and link
 operations.
 
@@ -217,7 +223,7 @@ Because degree of the original vertex is 3 after this operation we do exactly
 \end{itemize}
 
 In each case we have to do only constant number of inner cuts and links. All
-these inner operations works in the $\O(\log N)$ time so the time complexity of
+these inner operations work in the $\O(\log N)$ time so the time complexity of
 the whole Cut operation is $\O(\log N)$ (but the multiplicative constant could
 be really large).
 
@@ -238,13 +244,13 @@ and link them to one of the subvertices. One subvertex ends with degree only
 2 and this subvertex we use as an endpoint for the main link operation.
 
 Otherwise when vertex is already splitted into subvertices we have to create
-a new subvertice and insert it into the subvertices chain. Easiest is to do cut
+a new subvertex and insert it into the subvertices chain. Easiest is to do cut
 between the first and the second subvertex in the chain and then two links --
-between the first and the new and between the new and the second subvertices.
+between the first and the new and between the new subvertex and the second subvertex.
 Then we use the new subvertex as an endpoint for the main link operation
 
 In each case we have to do only constant number of inner cuts and links. All
-these inner operations works in the $\O(\log N)$ time si the time complexity of
+these inner operations works in the $\O(\log N)$ time so the time complexity of
 the whole Link operation is $\O(\log N)$ (but as in the Cut's case the
 multiplicative constant could be really large).
 
@@ -265,6 +271,9 @@ connected by an edge) plus one base cluster per each edge not it any topology
 cluster (all outer edges joining topology clusters).
 
 \penalty-3000
+
+\todo{Revise mapping of topology cluster to top trees clusters (after completing
+implementation)}
 
 Then when joining two topology clusters into one we need to do at most two
 top tree Joins:

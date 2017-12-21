@@ -22,8 +22,14 @@ that they are not connected) in $\O(\log N)$ time.
 \item {\sc Create} creates cluster length equivalent to the length of the
 underlying edge.
 
-\item {\sc Join} of clusters $C_1$ and $C_2$ into $C$ sets length of the cluster
-path as sum of the lengths of $C_1$ and $C_2$.
+\item {\sc Join} of clusters $C_1$ and $C_2$ into $C$ depends on the type of the $C$:
+	\begin{itemize}
+	\item If $C$ is a compress cluster of $C_1$ and $C_2$:
+	Set length of the $C$'s path as sum of the lengths of $C_1$ and $C_2$.
+	\item If $C$ is a rake cluster and $C_1$ is raked onto $C_2$:
+	Set length of the $C$'s path as length of the $C_2$'s path (and vice
+	versa if $C_2$ is raked onto $C_1$).
+	\end{itemize}
 
 \item {\sc Split} and {\sc Destroy} does nothing.
 
@@ -42,35 +48,49 @@ Similarly to the previous problem this problem was originally solved in
 \cite{DSforDynamicTrees} and then it was adapted for Top Trees  in
 \cite{TopTrees}.
 
-{\bf Theorem:} Lets have dynamic collection of weighted trees with operation of linking,
+{\bf Theorem:} Let's have dynamic collection of weighted trees with operation of linking,
 cutting, updating edge weight and updating edge weight on given path. We could
 find maximum edge weight between any two vertices (or find that they are not
 connected) in $\O(\log N)$ time.
 
 \medskip\noindent
-{\bf Proof:} We can maintain $w_{max}$ in each cluster as maximum weight in the
-whole cluster and $w_{extra}$ as weight added to each edge in this cluster.
+{\bf Proof:} We can maintain $w_{max}$ in each cluster as maximum weight on this
+cluster's path and $w_{extra}$ as weight added to each edge on this path.
 
 \begin{itemize}
 
 \item {\sc Create} creates cluster with $w_{max}=w(e)$ where $e$ is the edge for
-which is cluster created. There is no extra weight yet, so $w_{extra}=0$.
+which is this cluster created. There is no extra weight yet, so $w_{extra}=0$.
 
-\item {\sc Join} of clusters $C_1$ and $C_2$ into $C$ sets $w_{max}$ as maximum
-of $w_{max}$ from clusters $C_1$ and $C_2$. There is no extra weight, so $w_{extra}=0$.
+\item {\sc Join} of clusters $C_1$ and $C_2$ into $C$ depends on the type of the $C$:
+	\begin{itemize}
+	\item If $C$ is a compress cluster of $C_1$ and $C_2$:
+	Set $w_{max}$ as maximum of $w_{max}$ from clusters $C_1$ and $C_2$.
+	There is no extra weight, so $w_{extra}=0$.
+	\item If $C$ is a rake cluster and $C_1$ is raked onto $C_2$:
+	Copy $w_{max}$ from the $C_2$. There is no extra weigh, so $w_{extra}=0$.
+	\end{itemize}
 
 \item {\sc Split} have to distribute $w_{extra}$ to the children. For $C_i$ children
-of splitted $C$ will be:
-	\begin{itemize}[$\circ$]
-	\item $w_{extra}(C_i)=w_{extra}(C_i)+w_{extra}(C)$
-	\item $w_{max}(C_i)=w_{max}(C_i)+w_{extra}(C)$
+of splitted $C$ will operations depends on the type of the $C$:
+	\begin{itemize}
+	\item If $C$ is a compress cluster of $C_1$ and $C_2$:
+		\begin{itemize}[$\circ$]
+		\item $w_{extra}(C_i)=w_{extra}(C_i)+w_{extra}(C)$
+		\item $w_{max}(C_i)=w_{max}(C_i)+w_{extra}(C)$
+		\end{itemize}
+	\item If $C$ is a rake cluster and $C_1$ is raked onto $C_2$:
+	Apply above operation only for $C_2$ (and vice versa only for $C_1$ if $C_2$
+	is raked onto $C_1$).
 	\end{itemize}
+
+
 
 \item {\sc Destroy} sets weight of the underlying edge: $w(e)=w_{max}+w_{extra}$.
 
 \end{itemize}
 
-Then we could just call {\sc Expose}$(u,v)$ and read $w_{max}$ or set $w_{extra}$
+Then we could just call {\sc Expose}$(u,v)$ and read $w_{max}$ or add to $w_{extra}$
 of the root cluster representing the $(u,v)$-path. Everything in time complexity
 of an {\sc Expose} operation, which is $\O(\log N)$.
 
