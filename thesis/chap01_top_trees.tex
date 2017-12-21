@@ -1,4 +1,5 @@
 \chapter{Top Trees}
+\label{chap:TopTrees}
 
 Top Trees are data structure intended to maintain informations of underlying
 dynamically updated forest. They were introduced by Alstrup, Holm, Lichtenberg
@@ -155,7 +156,7 @@ constructing, destroying or reorganizing clusters.
 If user wants to use the {\I Search} operation, he has to implement fifth user
 function {\I Choose} to traverse around the path by choosing children.
 
-Examples of the functions and related problems are given in the Chapter 2.
+Examples of the functions and related problems are given in the \Cref{chap:Problems}.
 
 \subsection{Create}
 
@@ -253,7 +254,7 @@ is the same.
 In the first implementation expose is splitted into soft and hard expose and the
 soft expose is used internally by others operations. In the second
 implementation with topology trees the expose is implemented by series of cuts
-and joins and this is described in the second chapter of this thesis. We
+and joins and this is described in the \Cref{chap:TopologyTrees} of this thesis. We
 describe here the soft and hard expose from the first implementation as they
 operates directly with the top trees clusters.
 
@@ -301,6 +302,7 @@ the Top Trees structure to reflect this change. We assume that $u\ne v$ and
 there exists edge $(u,v)$. Implementation of the Cut operation in the second
 implementation would be described in the next chapter of this thesis, now we
 describe the Cut operation from the first implemenation.
+% TODO: chapter link
 
 Firstly the structure internally performs {\I soft expose} on $u,v$ to bring
 theirs handles to the top of corresponding top tree. In this situation the
@@ -319,6 +321,7 @@ Calling $\link{u,v}$ on two disjoint vertices joins them by new edge $(u,v)$.
 Implementation of the Link operation in the second implementation would be
 described in the next chapter of this thesis, now we describe the Link operation
 from the first implemenation.
+% TODO: chapter link
 
 Link is similar to the cut operation but in the opposite way. Firstly we start
 by {\I exposing} (bringing to root) handles of $u$ and $v$.
