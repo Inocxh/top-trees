@@ -10,10 +10,10 @@ model with foster children discussed in the \Cref{chap:TopTrees}.
 Tarjan and Werneck in \cite{SelfAdjustingTT} suggested this construction:
 \begin{enumerate}
 \item Choose root $r$ as a vertex with degree one.
-\item Orient all edges in the tree containing vertex $r$ towards the $r$.
+\item Orient all edges in the tree containing vertex $r$ towards the vertex $r$.
 \item Divide tree into paths starting in some leaf and continuing along the
 direction of the edges -- the first path will end in the root $r$ and became the
-{\I root path}, other paths ends in some other path.
+{\I root path}, other paths end up being connected to some existing path.
 \item Recursively compute clusters to represent each path incident to the
 root path and create {\I rake trees} from these incident paths.
 \item Create binary tree of compress clusters to represent the root path and
@@ -28,7 +28,7 @@ one, but I don't divide the tree into paths.
 
 Starting from the second vertex we choose one neighbour as continuation of the
 path and recursively called the same function on all other neighbours. Recursion
-returns cluster representing for each of the subtrees and then they could be
+returns clusters representing each of the subtrees and then they could be
 raked into left and right rake trees and saved into this vertex for future use.
 
 When compressing the path into compress clusters we just look into the common
@@ -69,7 +69,7 @@ of this tree too). This is crucial because after changing shape of the top tree
 a data stored in these nodes may be changed (for example depth of subtree bellow
 this node).
 
-Split operations has to be done in top-down manner (starting from the root). The
+Split operations have to be done in top-down manner (starting from the root). The
 easiest way how to accomplish this is to have flag in each node if it is
 splitted and recursively split parent before splitting current node. All
 splitted nodes should be logged into some list to easily join all of them after
@@ -98,12 +98,12 @@ works in amortized time $\O(\log n)$ per operation.
 In the Top Trees structure We will use {\I guarded splays} that works exactly
 the same way as normal splays, but it stops splaying when reaching a guard (some
 node). Normal splay has as guard root of the whole tree, but we want to do
-splays limited only inside compress or rake tree (to not mixing compress and
+splays limited only inside compress or rake tree (not to mix compress and
 rake clusters).
 
 Implementation of the splay is straightforward. Only noticeable detail (which
 Tarjan and Werneck mentioned in the \cite{SelfAdjustingTT}) is that foster
-children are not affected by any rotations, they always keeps the same parents.
+children are not affected by any rotations, they always keep the same parents.
 
 \subsection{Splicing}
 
@@ -144,7 +144,7 @@ right neighbors lists with respecting their order. New internal rake nodes have
 to be constructed (and added into list of nodes for joining).
 \end{enumerate}
 
-To assure that we not broke connectivity of $N_c$ with above clusters by
+To assure that we do not broke connectivity of $N_c$ with above clusters by
 replacing left child we need to check children of the $N_c$. If the above
 cluster (parent) is compress cluster, one of boundary vertices is common vertex
 of the parent. And if the parent is rake cluster, one of boundary vertices is
@@ -153,8 +153,8 @@ child we need to flip children (otherwise child with the connection would be
 moved into rake tree and connection would broke).
 
 This detail was not discussed by Tarjan and Werneck -- they only suggested
-transforming top trees into some normalized forms whose would work for both
-splaying and splicing. But they not mentioned some corner cases where such
+transforming top trees into some normalized form which would work for both
+splaying and splicing. But they did not mention some corner cases where such
 checking and flipping is needed.
 
 \subsection{Soft expose}
@@ -165,7 +165,7 @@ the root cluster of corresponding top tree (so after soft expose there should
 be some path $a\dots u\dots v\dots b$ in the root cluster). Truncating the root
 cluster to contain only $u,v$ path is quest for the hard expose operation.
 
-Soft expose takes handles of both vertices and brings them to the top of theirs
+Soft expose takes handles of both vertices and brings them to the top of their
 top tree. Procedure for one vertex (as described by Tarjan and Werneck in
 \cite{SelfAdjustingTT}) is following:
 
@@ -173,7 +173,7 @@ top tree. Procedure for one vertex (as described by Tarjan and Werneck in
 \item Local Splays -- Starting from the handle of given vertex:
   \begin{enumerate}
   \item Splay current node inside compress tree (that makes it root of that compress tree)
-  \item If reaching root clusters (there is no parent) $\rightarrow$ stop the cycle.
+  \item If reaching a root cluster (there is no parent) $\rightarrow$ stop the cycle.
   \item Splay parent inside rake tree (parent of a root of a compress tree is always rake cluster).
   \item Take parent of that node (it is compress cluster having this rake tree as foster child)
   and repeat the cycle.
@@ -186,15 +186,15 @@ root compress tree.
 root compress tree) to make it root of this top tree.
 \end{enumerate}
 
-When exposing the second handle (handle of the second vertex) only difference
-is that all splays are guarded by the first handle (to assure that it remains
+Firstly we expose $handle(u)$ using above procedure. After that we expose
+$handle(v)$ with $handle(u)$ as the guard (to assure that it remains
 at the top). If both vertices (and so both handles) are in different top trees
 both of them ends as roots of theirs top trees. This situation is not interesting
 anymore, so we will assume that they are in the same top tree.
 
 Tarjan and Werneck discussed special situation when one of the vertices has
 degree one (and its handle is not a compress cluster around this vertex), in
-this case they realized that upper procedure leads to exposing handle of the
+this case they realized that mentioned procedure leads to exposing handle of the
 second vertex with first vertex as one of its endpoints.
 
 Another special case, which they did not discussed, is situation when both
@@ -205,31 +205,42 @@ splicing the handle of the second vertex, what we do not want).
 
 If handles for both vertices are the same there is nothing to do (both handles
 are occupied by the root cluster). When they are different the second handle
-ends as one of the first handles children. To make hard expose easier we will
+ends as one of the first handle children. To make hard expose easier we will
 assume that this is the right children (otherwise we just flip left and right
 children).
 
-And where is wanted $u\dots v$ path located? There are three possibilities:
+And where is path $u\dots v$ located? There are three possibilities (notice that
+we are still operating with extended clusters model, where rake trees are
+connected as foster children -- in standard top tree model there could be
+intermediate rake clusters and the cluster with path $u\dots v$ could be located
+deeper):
+
+\todo{Pictures of all three cases}
 \begin{itemize}
+
 \item Root cluster itself -- When both vertices has degree one, they are endpoints
 of the root cluster and so their handles are represented in the root cluster.
+
 \item Child of the root cluster -- When one vertex has degree at least two its
 handle is compress cluster. In that case the root cluster represents some path
-$a\dots u\dots v$ and desired path $u\dots v$ is represented in its child (assume
-that it is the right child, otherwise flip them).\par
+$a\dots u\dots v$ or $u\dots v\dots b$ and desired path $u\dots v$ is
+represented in its child (assume that it is the right child, otherwise flip them).
+
 Another case when path is in child of the root cluster is when $u$ and $v$ are
-connected directly by edge. In this case the path is represented by base cluster
+connected directly by an edge. In this case the path is represented by base cluster
 and so it might be child of some compress cluster.
+
 \item Grandchild of the root cluster -- When both vertices have degree at least
 two both handles are represented by compress clusters. Child of the root cluster
 is limited from the first side and its again compress cluster (the second handle).
 The grandchild of the root cluster is limited from the second cluster and so it
 represents our path (let again assume it is the right child, otherwise flip
 children).
+
 \end{itemize}
 
-To ensure that the root cluster represents wanted path we need hard expose
-operation.
+To ensure that the root cluster represents only the path $u\dots v$ we need hard
+expose operation.
 
 \subsection{Hard expose}
 
@@ -244,7 +255,7 @@ grandchild.
 Tarjan and Werneck (in \cite{SelfAdjustingTT}) came with simple trick -- temporarily
 convert compress clusters above wanted cluster (at most two compress clusters as
 we realized above) to rake clusters ({\I rakerizing} them). Because we are using
-left rakes clusters the resulting rake cluster will have the same boundaries as
+left rake clusters the resulting rake cluster will have the same boundaries as
 its right child -- this is the reason why we needed to have cluster with the
 wanted path on the right side.
 
@@ -253,8 +264,9 @@ operation and join them after it) we have the $u\dots v$ path represented in
 the root cluster, expose procedure is finished.
 
 But we brought the top tree in some ugly form by rakerizing (at most two)
-compress cluster. We have to undone this and return the top tree into its
-original form, otherwise the amortization arguments would not work.
+compress clusters. Prior the beginning of the next operation (Expose, Link, Cut
+or Search) we have to undone this and return the top tree into its original
+form, otherwise the amortization arguments would not work.
 
 When rakerizing we save all rakerized compress clusters into some list and
 before any other operation (Cut, Link or Expose) we need to check this list and
