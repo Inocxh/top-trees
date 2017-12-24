@@ -221,12 +221,30 @@ reference to one of them. It is used internally by the {\I Search} operation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\penalty-5000 % PRINTHACK
 
 \section{Top Trees operations}
 
 These are the only operations which could user use to manipulate with the Top
 Trees structure. In addition to that user could access root clusters and read
 informations from them.
+
+\subsubsection{Normalized shape}
+
+Depending on implementation there could be defined a normalized shape of the
+Top Trees structure. All operations expect the Top Trees structure in this
+normalized shape.
+
+Some operations may corrupt this normalized shape and in that case the correct
+shape must be restored prior to the next operation. For both following
+implementations an example of such operation is the expose operation (see
+implementation details).
+
+We cannot restore the correct shape right after finishing the operation because
+user may need to interact with the Top Trees structure in this corrupted state.
+Therefore we have to record that the structure is in corrupted form and we have
+to do check and eventually restoration at beginning of each operation. See the
+following {\I Restore} operation for more details.
 
 \subsubsection{Handles}
 
@@ -249,7 +267,7 @@ underlying forest in this way:
 \item If the vertex is a leaf of the underlying tree the
 handle for this vertex is the topmost compress (or base) cluster having this
 vertex as one of its boundary vertices.
-\item Root cluster is handle for its boundary vertices regardless of this vertex
+\item Root cluster is handle for its boundary vertices regardless of their
 degree in the underlying tree.
 \item And finally if the vertex has degree at least two the compress cluster of
 this vertex (compress cluster having this vertex as the common boundary vertex)
@@ -265,110 +283,49 @@ clusters.
 
 \subsection{Expose}
 
-This is the most basic operation (which is used internally by other
-operations). Calling $\expose{u,v}$ will result in several changes in the Top
-Trees structure depending on the positions of vertices $u$ and $v$.
+Expose is one of the most basic operation. Calling $\expose{u,v}$ will result in
+exposing the $u\dots v$ path (if exists) in the root cluster, which the user
+could modify.
 
 Implementation of the expose slightly differs in the first and the second
 implementation (first implementation uses splays and splices and the second one
-does expose through several splits and joins), but the result cluster is the
+does expose through several splits and joins), but result of both is the
 same cluster (but with possibly different decomposition to subclusters).
 
-% TODO: move into implementation chapter
+See details of both implementations for more information.
 
-In the first implementation expose operation has two parts: soft and hard
-expose. Soft expose is used internally by others operations, hard expose is used
-only in Expose itself.
-In the second
-implementation with topology trees the expose is implemented by series of cuts
-and joins and this is described in the \Cref{chap:TopologyTrees} of this thesis. We
-describe here the soft and hard expose from the first implementation as they
-operate directly with the top trees clusters.
+\subsection{Restore}
 
-\subsubsection{Soft expose}
+As we mentioned before we may need to keep the Top Trees structure in some
+normalized shape. Purpose of the Restore operation is to restore the structure
+in such form. Because some operation may corrupt this normalized shape we
+use the Restore operation at beginning of all others operations.
 
-% TODO: is definition of components necessary?
-If given vertices are in different components (they are not connected by a path)
-both the handles of $u$ and $v$ are brought to the roots of corresponding top
-trees using series of local changes in the top trees (similarly if $u=v$).
+To allow the user to modify user functions (cut, join, \dots) for each operation
+we will enable the Restore operation to be called independently.
 
-When they are in the same component (they are connected by a path) firstly the
-handle of $u$ is brought to the root of corresponding top tree. If the current
-root cluster is also handle of $v$ we are done, otherwise the handle of $v$ is
-brought as close to the root as possible (but not replacing the handle of $u$ as
-root).
-
-\todo{Picture of situation after soft expose}
-
-In the most general case there will be one compress cluster (with one of the
-exposed vertices as middle common vertex) as root of the corresponding top tree
-with another compress cluster (with the second exposed vertice) as child. These
-compress clusters would limit the path from both sides and finally between them
-as a child of the second one compress cluster there will be cluster representing
-the $u,v$-path. To expose it we will need the hard expose operation.
-
-\subsubsection{Hard expose}
-
-Ideal situation is when $u$ and $v$ are endpoints of the root cluster, it is
-possible when both of them have degree one or when all others clusters incident
-to the root clusters are raked onto the root cluster.
-
-But in general root cluster could represent some path $(x,y)$ with path $(u,v)$
-as subpath. In this case we need to temporarily convert ends of this path (paths
-$(x,u)$ and $(v,y)$) into rake clusters so the compress tree would represent the
-path $(u,v)$ with these ends raked onto this path.
-
-% TODO: "at most two compress clusters" this is true only for model with foster children
-As we described above there could be at most two compress clusters above our
-wanted cluster. We could convert them to rake clusters (before that we may need
-to swap their children to ensure that the final rake cluster will have the same
-endpoints as our wanted cluster).
-
-% TODO: defined "normal state"
-Before any other operation we have to return all converted clusters back into
-their normal state (change rake clusters back to compress clusters), otherwise
-after several hard exposes we would split all paths into short segments.
-
-% end TODO
+In the second implementation we will use this functionality to turn off
+expensive updates during the expose operation, restore the structure back to the
+correct form and before next operation turn the expensive updates back on.
 
 \subsection{Cut}
 
 Operation $\cut{u,v}$ deletes edge between vertices $u$ and $v$ and reorganizes
-the Top Trees structure to reflect this change. We assume that $u\ne v$ and
-there exists edge $(u,v)$. Implementation of the Cut operation in the second
-implementation would be described in the next chapter of this thesis, now we
-describe the Cut operation from the first implementation.
-% TODO: chapter link
+the Top Trees structure to reflect this change. Precondition for this operation
+is that $u\ne v$ and there exists edge $(u,v)$.
 
-Firstly the structure internally performs {\I soft expose} on $u,v$ to bring
-their handles to the top of corresponding top tree. In this situation the
-handle of $u$ will be the root cluster and the handle of $v$ will be child of
-the root cluster.
-
-\todo{Picture of cut}
-We have to destroy the base node representing $(u,v)$ and remove connection
-between these two handles. After that we have to reorganize clusters to ensure
-all clusters have both children. This operation results in two top trees, one
-with handle of~$u$ as root cluster and second with handle of~$v$ as root
-cluster.
+Both implementations user different approaches, but the result is the same --
+they remove the $(u,v)$ edge and return root of two new top trees.
 
 \subsection{Link}
 
-Calling $\link{u,v}$ on two disconnected vertices joins them by new edge $(u,v)$.
-Implementation of the Link operation in the second implementation would be
-described in the next chapter of this thesis, now we describe the Link operation
-from the first implemenation.
-% TODO: chapter link
+The Link operation is an opposite to the Cut operation. Calling $\link{u,v}$ on
+two disconnected vertices joins them by the new edge $(u,v)$. Precondition for
+this operation is that $u$ and $v$ are disconnected.
 
-Link is similar to the cut operation but in the opposite way. Firstly we start
-by {\I exposing} (bringing to root) handles of $u$ and $v$.
-
-\todo{Picture of link}
-Then we create new base cluster representing edge $(u,v)$ and connect it as
-child of the root cluster of the first top tree (the former child must be
-moved deeper in the top tree). And lastly we connect this top tree as child of
-the root cluster of the second top tree (again the former child must be moved
-away).
+Both implementations user different approaches, but the result is the same --
+both top trees are joined by the new edge $(u,v)$ and the cluster of resulting
+top tree is returned.
 
 \subsection{Search}
 
