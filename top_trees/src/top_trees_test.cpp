@@ -34,33 +34,38 @@ public:
 	}
 };
 
-void TopTree::Join(std::shared_ptr<ClusterData> leftChild, std::shared_ptr<ClusterData> rightChild, std::shared_ptr<ClusterData> parent, bool isRake) {
-	auto leftChild2 = std::dynamic_pointer_cast<MyClusterData>(leftChild);
-	auto rightChild2 = std::dynamic_pointer_cast<MyClusterData>(rightChild);
-	auto parent2 = std::dynamic_pointer_cast<MyClusterData>(parent);
+void TopTree::Join(std::shared_ptr<ICluster> leftChild, std::shared_ptr<ICluster> rightChild, std::shared_ptr<ICluster> parent) {
+	auto left_data = std::dynamic_pointer_cast<MyClusterData>(leftChild->data);
+	auto right_data = std::dynamic_pointer_cast<MyClusterData>(rightChild->data);
+	auto parent_data = std::dynamic_pointer_cast<MyClusterData>(parent->data);
 
-	if (isRake) parent2->weight = rightChild2->weight;
-	else parent2->weight = leftChild2->weight + rightChild2->weight;
+	if (isLeftRake(leftChild, rightChild, parent)) {
+		parent_data->weight = right_data->weight;
+	} else if (isRightRake(leftChild, rightChild, parent)) {
+		parent_data->weight = left_data->weight;
+	} else {
+		parent_data->weight = left_data->weight + right_data->weight;
+	}
 
-	parent2->total_weight = leftChild2->total_weight + rightChild2->total_weight;
+	parent_data->total_weight = left_data->total_weight + right_data->total_weight;
 
 	// For debug:
-	// parent2->label = leftChild2->label + "," + rightChild2->label;
-	// std::cerr << "Joining " << leftChild2->total_weight << "(" << leftChild2->label << ") + " << rightChild2->total_weight << "(" << rightChild2->label << ")" << std::endl;
+	parent_data->label = left_data->label + "," + right_data->label;
+	std::cerr << "Joining " << left_data->total_weight << "(" << left_data->label << ") + " << right_data->total_weight << "(" << right_data->label << ")" << std::endl;
 }
-void TopTree::Split(std::shared_ptr<ClusterData> leftChild, std::shared_ptr<ClusterData> rightChild, std::shared_ptr<ClusterData> parent, bool isRake) {
+void TopTree::Split(std::shared_ptr<ICluster> leftChild, std::shared_ptr<ICluster> rightChild, std::shared_ptr<ICluster> parent) {
 	// Nothing
 }
 
 // Creating and destroying Base clusters:
-void TopTree::Create(std::shared_ptr<ClusterData> cluster, std::shared_ptr<EdgeData> edge) {
-	auto cluster2 = std::dynamic_pointer_cast<MyClusterData>(cluster);
-	auto edge2 = std::dynamic_pointer_cast<MyEdgeData>(edge);
-	cluster2->weight = 10;
-	cluster2->total_weight = 10;
-	cluster2->label = edge2->label;
+void TopTree::Create(std::shared_ptr<ICluster> cluster, std::shared_ptr<EdgeData> edge) {
+	auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
+	auto edge_data = std::dynamic_pointer_cast<MyEdgeData>(edge);
+	data->weight = 10;
+	data->total_weight = 10;
+	data->label = edge_data->label;
 }
-void TopTree::Destroy(std::shared_ptr<ClusterData> cluster, std::shared_ptr<EdgeData> edge) {
+void TopTree::Destroy(std::shared_ptr<ICluster> cluster, std::shared_ptr<EdgeData> edge) {
 	// Nothing
 }
 
@@ -71,7 +76,7 @@ std::shared_ptr<TopTree::ClusterData> TopTree::InitClusterData() {
 void print_node(std::shared_ptr<TopTree::ICluster> node) {
 	if (node != NULL) {
 		auto data = std::dynamic_pointer_cast<MyClusterData>(node->data);
-		std::cerr << "[weight: " << data->weight << ", total_weight:" << data->total_weight << "]" << std::endl;
+		std::cerr << "[weight: " << data->weight << ", total_weight:" << data->total_weight << "]: " << data->label << std::endl;
 	}
 }
 
@@ -124,6 +129,8 @@ int main(int argc, char const *argv[]) {
 	////////////////
 
 	auto TT = std::make_shared<TopTree::TopologyTopTree>(baseTree);
+	std::cerr << "Top Tree builded" << std::endl;
+
 	auto result = TT->Cut(c, w);
 	print_node(std::get<0>(result));
 	print_node(std::get<1>(result));
