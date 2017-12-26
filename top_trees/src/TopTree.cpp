@@ -2,6 +2,7 @@
 #include <vector>
 #include <sstream>
 
+#include "ClusterInterface.hpp"
 #include "TopTree.hpp"
 #include "BaseTreeInternal.hpp"
 

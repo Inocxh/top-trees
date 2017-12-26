@@ -7,8 +7,9 @@ namespace TopTree {
 class TopCluster;
 }
 
+#include "ClusterInterface.hpp"
 #include "BaseTreeInternal.hpp"
-#include "TopTreeInterface.hpp"
+#include "UserFunctions.hpp"
 
 namespace TopTree {
 
@@ -20,8 +21,6 @@ friend class RakeCluster;
 public:
 	virtual std::ostream& ToString(std::ostream& o) const = 0;
 protected:
-	std::shared_ptr<BaseTree::Internal::Vertex> boundary_left;
-	std::shared_ptr<BaseTree::Internal::Vertex> boundary_right;
 	std::shared_ptr<BaseTree::Internal::Vertex> common_vertex;
 
 	std::shared_ptr<TopCluster> parent = NULL;
@@ -56,8 +55,8 @@ class BaseCluster : public TopCluster {
 friend class TopTree;
 public:
 	virtual std::ostream& ToString(std::ostream& o) const;
-protected:
 	static std::shared_ptr<BaseCluster> construct(std::shared_ptr<BaseTree::Internal::Edge> edge);
+protected:
 
 	std::shared_ptr<BaseTree::Internal::Edge> edge;
 
@@ -71,12 +70,32 @@ protected:
 	virtual std::ostream& _short_name(std::ostream& o) const; // Used only for debugging
 };
 
+class RakeCluster : public TopCluster {
+friend class TopTree;
+public:
+	virtual std::ostream& ToString(std::ostream& o) const;
+	static std::shared_ptr<RakeCluster> construct(std::shared_ptr<TopCluster> rake_from, std::shared_ptr<TopCluster> rake_to);
+protected:
+
+	virtual bool isRake() { return true; }
+	virtual void do_join();
+	virtual void do_split(std::vector<std::shared_ptr<TopCluster>>* splitted_clusters = NULL);
+	virtual void correct_endpoints();
+	virtual void flip();
+	virtual void normalize_for_splay();
+
+	virtual std::ostream& _short_name(std::ostream& o) const; // Used only for debugging
+};
+
 class CompressCluster : public TopCluster {
 friend class TopTree;
 public:
 	virtual std::ostream& ToString(std::ostream& o) const;
-protected:
 	static std::shared_ptr<CompressCluster> construct(std::shared_ptr<TopCluster> left, std::shared_ptr<TopCluster> right);
+protected:
+
+	std::shared_ptr<RakeCluster> left_foster_rake;
+	std::shared_ptr<RakeCluster> right_foster_rake;
 
 	virtual bool isCompress() { return !rakerized; }
 	virtual bool isRake() { return rakerized; }
@@ -89,23 +108,6 @@ protected:
 	virtual std::ostream& _short_name(std::ostream& o) const; // Used only for debugging
 
 	bool rakerized = false; // modyfied to rake node during hard_expose
-};
-
-class RakeCluster : public TopCluster {
-friend class TopTree;
-public:
-	virtual std::ostream& ToString(std::ostream& o) const;
-protected:
-	static std::shared_ptr<RakeCluster> construct(std::shared_ptr<TopCluster> rake_from, std::shared_ptr<TopCluster> rake_to);
-
-	virtual bool isRake() { return true; }
-	virtual void do_join();
-	virtual void do_split(std::vector<std::shared_ptr<TopCluster>>* splitted_clusters = NULL);
-	virtual void correct_endpoints();
-	virtual void flip();
-	virtual void normalize_for_splay();
-
-	virtual std::ostream& _short_name(std::ostream& o) const; // Used only for debugging
 };
 
 }

@@ -1,11 +1,17 @@
 #include "UserFunctions.hpp"
 #include "TopologyCluster.hpp"
+#include "TopCluster.hpp"
 
 //#define DEBUG
 
 namespace TopTree {
 
 int TopologyCluster::global_index = 0;
+
+class SimpleCluster: public ICluster {
+public:
+	std::ostream& ToString(std::ostream& o) const { return o; }
+};
 
 TopologyCluster::TopologyCluster() {
 	index = global_index++;

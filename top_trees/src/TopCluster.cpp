@@ -42,7 +42,7 @@ void BaseCluster::do_join() {
 	if (boundary_right->degree == 1) boundary_right->handle = shared_from_this();
 
 	// 3. Call user defined method:
-	Create(data, edge->data);
+	Create(shared_from_this(), edge->data);
 
 	is_splitted = false;
 }
@@ -56,7 +56,7 @@ void BaseCluster::do_split(std::vector<std::shared_ptr<TopCluster>>* splitted_cl
 	if (parent != NULL) parent->do_split(splitted_clusters);
 
 	// 3. Call user defined method:
-	Destroy(data, edge->data);
+	Destroy(shared_from_this(), edge->data);
 
 	is_splitted = true;
 }
@@ -112,18 +112,18 @@ void CompressCluster::do_join() {
 
 	// 3. Call user defined method:
 	// 3.1 If there are foster children first do Join into virtual rake nodes
-	auto left_data = left_child->data;
+	auto left = left_child;
 	if (left_foster != NULL) {
-		left_data = InitClusterData();
-		Join(left_foster->data, left_child->data, left_data, true);
+		left_foster_rake = RakeCluster::construct(left_foster, left_child);
+		left = left_foster_rake;
 	}
-	auto right_data = right_child->data;
+	auto right = right_child;
 	if (right_foster != NULL) {
-		right_data = InitClusterData();
-		Join(right_foster->data, right_child->data, right_data, true);
+		right_foster_rake = RakeCluster::construct(right_foster, right_child);
+		right = right_foster_rake;
 	}
 	// 3.2 Normal Join
-	Join(left_data, right_data, data, rakerized); // if rakerized act as Rake cluster during Joining
+	Join(left, right, shared_from_this());
 
 	is_splitted = false;
 }
@@ -138,15 +138,15 @@ void CompressCluster::do_split(std::vector<std::shared_ptr<TopCluster>>* splitte
 
 	// 3. Call user defined method:
 	// 3.1 If there are foster children first prepare virtual rake nodes
-	auto left_data = left_child->data;
-	if (left_foster != NULL) left_data = InitClusterData();
-	auto right_data = right_child->data;
-	if (right_foster != NULL) right_data = InitClusterData();
+	auto left = left_child;
+	if (left_foster != NULL) left = left_foster_rake;
+	auto right = right_child;
+	if (right_foster != NULL) right = right_foster_rake;
 	// 3.2 Normal Split
-	Split(left_data, right_data, data, rakerized); // if rakerized act as Rake cluster during Splitting
+	Split(left, right, shared_from_this());
 	// 3.3 If there are foster children Split virtual rake nodes
-	if (left_foster != NULL) Split(left_foster->data, left_child->data, left_data, true);
-	if (right_foster != NULL) Split(right_foster->data, right_child->data, right_data, true);
+	if (left_foster != NULL) Split(left_foster, left_child, left);
+	if (right_foster != NULL) Split(right_foster, right_child, right);
 
 	is_splitted = true;
 }
@@ -230,7 +230,7 @@ void RakeCluster::do_join() {
 	correct_endpoints();
 
 	// 3. Call user defined method:
-	Join(rake_from->data, rake_to->data, data, true);
+	Join(rake_from, rake_to, shared_from_this());
 
 	is_splitted = false;
 }
@@ -244,7 +244,7 @@ void RakeCluster::do_split(std::vector<std::shared_ptr<TopCluster>>* splitted_cl
 	if (parent != NULL) parent->do_split(splitted_clusters);
 
 	// 3. Call user defined method:
-	Split(left_child->data, right_child->data, data, true);
+	Split(left_child, right_child, shared_from_this());
 
 	is_splitted = true;
 }

@@ -4,20 +4,10 @@
 #ifndef TOP_TREE_INTERFACE_HPP
 #define TOP_TREE_INTERFACE_HPP
 
+#include "ClusterInterface.hpp"
 #include "BaseTree.hpp"
-#include "UserFunctions.hpp"
 
 namespace TopTree {
-
-/**
- * Generic cluster interface returned from Top Trees methods. Its only public accessible field is shared_pointer to the ClusterData object.
- */
-class ICluster {
-public:
-	std::shared_ptr<ClusterData> data = InitClusterData();
-	virtual std::ostream& ToString(std::ostream& o) const = 0;
-};
-
 /**
  * Generic interface for all Top Trees implementations. It provides basic operations (Cut, Join and Expose).
  */

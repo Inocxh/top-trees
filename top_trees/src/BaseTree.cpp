@@ -4,7 +4,6 @@
 #include <string>
 #include <iostream>
 
-#include "BaseTree.hpp"
 #include "BaseTreeInternal.hpp"
 
 namespace TopTree {

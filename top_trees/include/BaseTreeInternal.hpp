@@ -4,7 +4,6 @@
 #include "BaseTree.hpp"
 #include "TopCluster.hpp"
 #include "TopologyCluster.hpp"
-#include "UserFunctions.hpp"
 
 #ifndef BASE_TREE_INTERNAL_HPP
 #define BASE_TREE_INTERNAL_HPP

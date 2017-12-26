@@ -8,7 +8,7 @@ namespace TopTree {
 class TopologyCluster;
 }
 
-#include "TopTreeInterface.hpp"
+#include "ClusterInterface.hpp"
 #include "BaseTreeInternal.hpp"
 #include "TopCluster.hpp"
 
@@ -20,7 +20,6 @@ public:
 
 	TopologyCluster();
 
-	std::shared_ptr<ClusterData> data = InitClusterData();
 	virtual std::ostream& ToString(std::ostream& o) const;
 protected:
 	struct neighbour {
