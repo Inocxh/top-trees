@@ -20,6 +20,7 @@ int BaseTree::AddVertex(std::shared_ptr<VertexData> v) {
 	if (v == NULL) v = std::make_shared<VertexData>();
 	int i = internal->vertices.size();
 	internal->vertices.push_back(std::make_shared<Internal::Vertex>(v));
+	internal->vertices[i]->index = i;
 
 	return i;
 }

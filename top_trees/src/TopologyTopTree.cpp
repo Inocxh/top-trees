@@ -88,6 +88,9 @@ TopologyTopTree::TopologyTopTree(std::shared_ptr<BaseTree> from_base_tree) : Top
 		internal->root_clusters[i]->root_vector_index = i;
 		i++;
 	}
+
+	for (auto c: internal->splitted_clusters) c->do_join();
+	internal->splitted_clusters.clear();
 }
 
 //std::vector<std::shared_ptr<Cluster> > TopologyTopTree::GetTopTrees() {
@@ -147,10 +150,15 @@ void TopologyTopTree::Internal::update_clusters_join_with_neighbour(std::shared_
 		// std::cerr << "... joining " << *cluster << " with neighbour " << *neighbour << std::endl;
 	#endif
 
+	// Ensure that they are already splitted:
+	cluster->do_split(&splitted_clusters);
+	neighbour->do_split(&splitted_clusters);
+
 	neighbour->listed_in_abandon_list = false;
 	if (cluster->parent == NULL && neighbour->parent == NULL) {
 		// Add new cluster to above level
 		auto parent = std::make_shared<TopologyCluster>();
+		splitted_clusters.push_back(parent);
 		parent->set_first_child(cluster);
 		parent->set_second_child(neighbour);
 		to_calculate_outer_edges.push_back(parent);
@@ -187,10 +195,14 @@ void TopologyTopTree::Internal::update_clusters_join_with_neighbour(std::shared_
 }
 
 void TopologyTopTree::Internal::update_clusters_only_child(std::shared_ptr<TopologyCluster> cluster) {
+	// Ensure that it is already splitted:
+	cluster->do_split(&splitted_clusters);
+
 	// This cluster is the only one child of its parent, ensure that parent exists
 	if (cluster->parent == NULL) {
 		// Have to create new parent
 		auto parent = std::make_shared<TopologyCluster>();
+		splitted_clusters.push_back(parent);
 		parent->set_first_child(cluster);
 		parent->vertex = cluster->vertex;
 		to_calculate_outer_edges.push_back(parent);
@@ -254,6 +266,7 @@ void TopologyTopTree::Internal::update_clusters() {
 				// There is another child
 				if (cluster == cluster->parent->first) cluster->parent->first = cluster->parent->second;
 				cluster->parent->second = NULL;
+				cluster->parent->first->do_split(&splitted_clusters); // split it because we need to recompute it after all operations
 
 				#ifdef DEBUG
 					std::cerr << "... another child exists: " << *cluster->parent->first << std::endl;
@@ -271,6 +284,7 @@ void TopologyTopTree::Internal::update_clusters() {
 		}
 		// Remove cluster from list and delete it
 		cluster->parent = NULL;
+		cluster->is_deleted = true; // there may be link from splitted_vertices list, we do not want do join this cluster again
 		// Remove only inner clusters (basic at vertex level should remain)
 		if (cluster->vertex == NULL || cluster->vertex->topology_cluster != cluster) {
 			// if (cluster->vertex != NULL) cluster->vertex->topology_cluster = NULL;
@@ -286,6 +300,7 @@ void TopologyTopTree::Internal::update_clusters() {
 
 		cluster->do_split(&splitted_clusters);
 		auto sibling = (cluster->parent->first == cluster ? cluster->parent->second : cluster->parent->first);
+		sibling->do_split(&splitted_clusters);
 
 		#ifdef DEBUG
 			std::cerr << "Checking cluster " << *cluster << std::endl;
@@ -397,9 +412,6 @@ void TopologyTopTree::Internal::update_clusters() {
 /// Cut and Link
 
 std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr<EdgeData>> TopologyTopTree::Cut(int v_index, int w_index) {
-	// Init array for clusters restoration
-	internal->splitted_clusters.clear();
-
 	// 0. Get vertices
 	auto v = internal->base_tree->internal->vertices[v_index];
 	auto w = internal->base_tree->internal->vertices[w_index];
@@ -507,9 +519,6 @@ std::tuple<std::shared_ptr<TopologyCluster>, std::shared_ptr<TopologyCluster>> T
 }
 
 std::shared_ptr<ICluster> TopologyTopTree::Link(int v_index, int w_index, std::shared_ptr<EdgeData> edge_data) {
-	// Init array for clusters restoration
-	internal->splitted_clusters.clear();
-
 	// 0. Get vertices
 	auto v = internal->base_tree->internal->vertices[v_index];
 	auto w = internal->base_tree->internal->vertices[w_index];
@@ -548,8 +557,10 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::get_verte
 		// Have to add new subvertice, we add at as second subvertice in the chain
 		// 1. Prepare new subvertice
 		auto subvertex = std::make_shared<BaseTree::Internal::Vertex>(std::make_shared<VertexData>());
+		subvertex->index = v->index; // index of the subvertex is the same as index of the superior vertex (from the Join point of view it is the same vertex)
 		subvertex->superior_vertex = v;
 		subvertex->topology_cluster = std::make_shared<TopologyCluster>();
+		splitted_clusters.push_back(subvertex->topology_cluster);
 		subvertex->topology_cluster->vertex = subvertex;
 
 		// 2. Cut between first and second subvertex
@@ -581,12 +592,16 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::get_verte
 
 		// 1. Prepare two subvertices
 		auto subvertexA = std::make_shared<BaseTree::Internal::Vertex>(std::make_shared<VertexData>());
+		subvertexA->index = v->index; // index of the subvertex is the same as index of the superior vertex (from the Join point of view it is the same vertex)
 		auto subvertexB = std::make_shared<BaseTree::Internal::Vertex>(std::make_shared<VertexData>());
+		subvertexB->index = v->index; // index of the subvertex is the same as index of the superior vertex (from the Join point of view it is the same vertex)
 		subvertexA->superior_vertex = v;
 		subvertexB->superior_vertex = v;
 		subvertexA->topology_cluster = std::make_shared<TopologyCluster>();
+		splitted_clusters.push_back(subvertexA->topology_cluster);
 		subvertexA->topology_cluster->vertex = subvertexA;
 		subvertexB->topology_cluster = std::make_shared<TopologyCluster>();
+		splitted_clusters.push_back(subvertexB->topology_cluster);
 		subvertexB->topology_cluster->vertex = subvertexB;
 
 		// 2. Add subvertices to superior vertex's list of subvertices
@@ -709,6 +724,7 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_su
 			// 1. Superior vertex may not have its TopologyCluster, create it
 			if (v->superior_vertex->topology_cluster == NULL) {
 				v->superior_vertex->topology_cluster = std::make_shared<TopologyCluster>();
+				splitted_clusters.push_back(v->superior_vertex->topology_cluster);
 				v->superior_vertex->topology_cluster->vertex = v->superior_vertex;
 				#ifdef DEBUG
 					std::cerr << "Created cluster for superior vertex " << *v->superior_vertex->data << " with " << v->superior_vertex->neighbours.size() << " neighbours" << std::endl;
@@ -838,6 +854,7 @@ std::shared_ptr<ICluster> TopologyTopTree::Expose(int v, int w) {
 std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::split_vertex(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> parent_edge) {
 	// Create subvertices
 	auto current = std::make_shared<BaseTree::Internal::Vertex>(std::make_shared<VertexData>());
+	current->index = v->index; // index of the subvertex is the same as index of the superior vertex (from the Join point of view it is the same vertex)
 	current->superior_vertex = v;
 	v->subvertices.push_back(current);
 	auto vertex_to_return = current; // by default we return the first vertex
@@ -854,6 +871,7 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::split_ver
 				std::cerr << "Creating new subvertex for " << *v->data << std::endl;
 			#endif
 			auto temp = std::make_shared<BaseTree::Internal::Vertex>(std::make_shared<VertexData>());
+			temp->index = v->index; // index of the subvertex is the same as index of the superior vertex (from the Join point of view it is the same vertex)
 			temp->superior_vertex = v;
 			v->subvertices.push_back(temp);
 			temp->superior_vertex_subvertices_iter = std::prev(v->subvertices.end());
@@ -906,6 +924,7 @@ std::shared_ptr<TopologyCluster> TopologyTopTree::Internal::construct_basic_clus
 
 	// 2. Construct basic topology clusters from this vertex and connect with outgoing edges with others
 	auto cluster = std::make_shared<TopologyCluster>();
+	splitted_clusters.push_back(cluster);
 	cluster->vertex = v;
 	v->topology_cluster = cluster;
 	v->used = true;
@@ -984,6 +1003,7 @@ std::shared_ptr<TopologyCluster> TopologyTopTree::Internal::construct_topology_t
 		std::cerr << "Creating new cluster " << cluster->outer_edges_count << std::endl;
 	#endif
 	auto new_cluster = std::make_shared<TopologyCluster>();
+	splitted_clusters.push_back(new_cluster);
 	new_cluster->first = cluster;
 	new_cluster->vertex = cluster->vertex;
 	cluster->parent = new_cluster;

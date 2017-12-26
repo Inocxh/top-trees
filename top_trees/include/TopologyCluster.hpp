@@ -29,6 +29,10 @@ protected:
 
 	int index;
 
+	bool is_top_cluster = true; // if it contains at least one edge (and is therefore valid top cluster)
+	bool is_rake_branch = false; // if had two children and both outer edges are from one child
+	bool is_deleted = false;
+
 	std::shared_ptr<TopologyCluster> parent;
 	std::shared_ptr<TopologyCluster> first;
 	std::shared_ptr<TopologyCluster> second;
@@ -42,8 +46,8 @@ protected:
 	int outer_edges_count = 0;
 
 	// Data of corresponding clusters in the top tree:
-	std::shared_ptr<ClusterData> edge_cluster_data;
-	std::shared_ptr<ClusterData> combined_edge_cluster_data;
+	std::shared_ptr<ICluster> edge_cluster;
+	std::shared_ptr<ICluster> combined_edge_cluster;
 
 	void set_first_child(std::shared_ptr<TopologyCluster> child);
 	void set_second_child(std::shared_ptr<TopologyCluster> child);

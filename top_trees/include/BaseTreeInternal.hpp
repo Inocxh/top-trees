@@ -44,6 +44,7 @@ public:
 	bool deleted;
 	int degree = 0;
 	std::shared_ptr<VertexData> data;
+	int index;
 
 	// Linkage to the other objects
 	std::list<neighbour> neighbours;
