@@ -19,6 +19,7 @@ public:
 	std::shared_ptr<ICluster> Expose(int v, int w);
 	std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr<EdgeData>> Cut(int v, int w);
 	std::shared_ptr<ICluster> Link(int v, int w, std::shared_ptr<EdgeData> edge_data);
+	void Restore();
 
 	// Return roots of the top trees
 	// std::vector<std::shared_ptr<Cluster> > GetTopTrees();

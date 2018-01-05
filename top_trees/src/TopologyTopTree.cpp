@@ -412,6 +412,9 @@ void TopologyTopTree::Internal::update_clusters() {
 /// Cut and Link
 
 std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr<EdgeData>> TopologyTopTree::Cut(int v_index, int w_index) {
+	// Restore previous expose (if needed)
+	Restore();
+
 	// 0. Get vertices
 	auto v = internal->base_tree->internal->vertices[v_index];
 	auto w = internal->base_tree->internal->vertices[w_index];
@@ -519,6 +522,9 @@ std::tuple<std::shared_ptr<TopologyCluster>, std::shared_ptr<TopologyCluster>> T
 }
 
 std::shared_ptr<ICluster> TopologyTopTree::Link(int v_index, int w_index, std::shared_ptr<EdgeData> edge_data) {
+	// Restore previous expose (if needed)
+	Restore();
+
 	// 0. Get vertices
 	auto v = internal->base_tree->internal->vertices[v_index];
 	auto w = internal->base_tree->internal->vertices[w_index];
@@ -847,6 +853,9 @@ std::shared_ptr<ICluster> TopologyTopTree::Expose(int v, int w) {
 	return NULL;
 }
 
+void TopologyTopTree::Restore() {
+	// TODO to be implemented
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Functions for construction:

@@ -20,10 +20,10 @@ public:
 
 	void soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w);
 	std::shared_ptr<TopCluster> hard_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w);
-	void restore_hard_expose();
 	void guarded_splay(std::shared_ptr<TopCluster> node, std::shared_ptr<TopCluster> guard = NULL);
 
 	std::vector<std::shared_ptr<TopCluster>> splitted_clusters;
+	std::vector<std::shared_ptr<CompressCluster>> hard_expose_transformed_clusters;
 
 	// Debug methods:
 	void print_rooted_prefix(const std::shared_ptr<TopCluster> cluster, const std::string prefix = "", bool last_child = true) const;
@@ -38,8 +38,6 @@ private:
 	void splice(std::shared_ptr<TopCluster> node);
 
 	void soft_expose_handle(std::shared_ptr<TopCluster> handle, std::shared_ptr<TopCluster> splay_guard = NULL);
-
-	std::vector<std::shared_ptr<CompressCluster>> hard_expose_transformed_clusters;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -144,7 +142,7 @@ void TopTree::PrintGraphviz(const std::shared_ptr<TopCluster> root, const std::s
 // Soft and hard expose related functions
 
 std::shared_ptr<ICluster> TopTree::Expose(int v, int w) {
-	internal->restore_hard_expose();
+	Restore();
 
 	auto vertexV = internal->base_tree->internal->vertices[v];
 	auto vertexW = internal->base_tree->internal->vertices[w];
@@ -521,13 +519,14 @@ std::shared_ptr<TopCluster> TopTree::Internal::hard_expose(std::shared_ptr<BaseT
 	return Nw;
 }
 
-void TopTree::Internal::restore_hard_expose() {
-	for (auto v: hard_expose_transformed_clusters) {
+// Restore after hard expose
+void TopTree::Restore() {
+	for (auto v: internal->hard_expose_transformed_clusters) {
 		v->do_split();
 		v->rakerized = false;
 	}
-	for (auto v: hard_expose_transformed_clusters) v->do_join();
-	hard_expose_transformed_clusters.clear();
+	for (auto v: internal->hard_expose_transformed_clusters) v->do_join();
+	internal->hard_expose_transformed_clusters.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -535,7 +534,7 @@ void TopTree::Internal::restore_hard_expose() {
 
 std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr<EdgeData>> TopTree::Cut(int v_index, int w_index) {
 	// Restore previous hard expose (if needed)
-	internal->restore_hard_expose();
+	Restore();
 	// Init array for clusters restoration
 	internal->splitted_clusters.clear();
 
@@ -661,7 +660,7 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 
 std::shared_ptr<ICluster> TopTree::Link(int v_index, int w_index, std::shared_ptr<EdgeData> edge_data) {
 	// Restore previous hard expose (if needed)
-	internal->restore_hard_expose();
+	Restore();
 	// Init array for clusters restoration
 	internal->splitted_clusters.clear();
 

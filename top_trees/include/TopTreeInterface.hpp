@@ -55,6 +55,14 @@ public:
 	 * @return shared_ptr to the newly created root's ClusterData or NULL when link cannot be done (if both vertices were in the same top tree)
 	 */
 	virtual std::shared_ptr<ICluster> Link(int v, int w, std::shared_ptr<EdgeData> edge_data) = 0;
+
+	/**
+	 * @brief Restore the top tree to normalized shape after previous operation.
+	 *
+	 * @details It is called internally by all other operations but you may call it independently if you want to
+	 * (for example when switching Cut and Join behaviour for different operations)
+	 */
+	virtual void Restore() = 0;
 };
 
 }
