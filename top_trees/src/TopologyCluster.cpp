@@ -47,6 +47,7 @@ void TopologyCluster::do_join() {
 	is_top_cluster = false; // assume that is not a top cluster (until we notice it bellow)
 
 	if (first == NULL && second == NULL) {
+		is_splitted = false;
 		#ifdef DEBUG
 			std::cerr << "... joined (vertex cluster without edge)" << std::endl;
 		#endif
@@ -68,96 +69,87 @@ void TopologyCluster::do_join() {
 		boundary_right = first->boundary_right;
 		is_top_cluster = first->is_top_cluster;
 		is_rake_branch = first->is_rake_branch;
+		// Ensure that there is no edge cluster (possibly if this cluster lost one of its childs)
+		edge = NULL;
+		edge_cluster = NULL;
 	} else {
 		if (edge == NULL) {
 			std::cerr << "ERROR: Cluster '" << this << "' with both children but without edge between!" << std::endl;
 			exit(1);
 		}
-		if (edge->subvertice_edge) {
+		#ifdef DEBUG
+			if (edge->subvertice_edge)  std::cerr << "... subvertice edge, joining clusters (without this edge)" << std::endl;
+			else std::cerr << "... normal edge, joining around it" << std::endl;
+		#endif
+		// Normal edge - we Join everything with the edge
+		is_top_cluster = !edge->subvertice_edge || first->is_top_cluster || second->is_top_cluster; // if edge or at least one child is top cluster -> this is top cluster too
+
+		// 1. Create base cluster for edge
+		edge_cluster = std::make_shared<SimpleCluster>();
+		edge_cluster->boundary_left = edge->from;
+		edge_cluster->boundary_right = edge->to;
+		if (!edge->subvertice_edge) Create(edge_cluster, edge->data);
+
+		// 2. Join with the first (if there is something to Join)
+		if (first->is_top_cluster) {
 			#ifdef DEBUG
-				std::cerr << "... subvertice edge -> raking" << std::endl;
+				std::cerr << "... joining " << *first << " with edge with endpoints " << *edge_cluster->boundary_left->data << "," << *edge_cluster->boundary_right->data << std::endl;
 			#endif
-			is_top_cluster = first->is_top_cluster || second->is_top_cluster;
-			// Only join both clusters, rake first to the second
-			if (first->is_top_cluster && second->is_top_cluster) {
-				// Will rake first to the second
-				// 1. setup endpoints:
-				boundary_left = second->boundary_left;
-				boundary_right = second->boundary_right;
-				// 2. Rake Join:
-				Join(first, second, shared_from_this());
-			} else if (first->is_top_cluster) {
-				// Just copy up
-				data = first->data;
-				boundary_left = first->boundary_left;
-				boundary_right = first->boundary_right;
-				is_rake_branch = first->is_rake_branch;
-			} else if (second->is_top_cluster) {
-				// Just copy up
-				data = second->data;
-				boundary_left = second->boundary_left;
-				boundary_right = second->boundary_right;
-				is_rake_branch = second->is_rake_branch;
-			}
-		} else {
-			#ifdef DEBUG
-				std::cerr << "... normal edge, joining around it" << std::endl;
-			#endif
-			// Normal edge - we Join everything with the edge
-			is_top_cluster = true; // because we have an edge
-
-			// 1. Create base cluster for edge
-			edge_cluster = std::make_shared<SimpleCluster>();
-			edge_cluster->boundary_left = edge->from;
-			edge_cluster->boundary_right = edge->to;
-			Create(edge_cluster, edge->data);
-
-			// 2. Join with the first (if there is something to Join)
-			if (first->is_top_cluster) {
-				#ifdef DEBUG
-					std::cerr << "... joining " << *first << " with edge" << std::endl;
-				#endif
-				combined_edge_cluster = std::make_shared<SimpleCluster>();
-				if (first->is_rake_branch) {
-					combined_edge_cluster->boundary_left = edge_cluster->boundary_left;
-					combined_edge_cluster->boundary_right = edge_cluster->boundary_right;
-				} else {
-					// It is compress
-					// i) get common vertex
-					auto common_vertex = first->boundary_left;
-					if (common_vertex != edge_cluster->boundary_left && common_vertex != edge_cluster->boundary_right) common_vertex = first->boundary_right;
-					// ii) Get boundary vertices
-					combined_edge_cluster->boundary_left = (common_vertex == first->boundary_left ? first->boundary_right : first->boundary_left);
-					combined_edge_cluster->boundary_right = (common_vertex == edge_cluster->boundary_left ? edge_cluster->boundary_right : edge_cluster->boundary_left);
-				}
-				Join(first, edge_cluster, combined_edge_cluster);
-			} else combined_edge_cluster = edge_cluster;
-
-			// 3. Join with the second (if there is something to Join)
-			if (second->is_top_cluster) {
-				#ifdef DEBUG
-					std::cerr << "... joining " << *second << " with combined edge" << std::endl;
-				#endif
-				if (second->is_rake_branch) {
-					boundary_left = combined_edge_cluster->boundary_left;
-					boundary_right = combined_edge_cluster->boundary_right;
-				} else {
-					// It is compress
-					// i) get common vertex
-					auto common_vertex = second->boundary_left;
-					if (common_vertex != combined_edge_cluster->boundary_left && common_vertex != combined_edge_cluster->boundary_right) common_vertex = second->boundary_right;
-					// ii) Get boundary vertices
-					boundary_left = (common_vertex == second->boundary_left ? second->boundary_right : second->boundary_left);
-					boundary_right = (common_vertex == combined_edge_cluster->boundary_left ? combined_edge_cluster->boundary_right : combined_edge_cluster->boundary_left);
-				}
-				Join(second, combined_edge_cluster, shared_from_this());
+			combined_edge_cluster = std::make_shared<SimpleCluster>();
+			if (first->is_rake_branch) {
+				combined_edge_cluster->boundary_left = edge_cluster->boundary_left;
+				combined_edge_cluster->boundary_right = edge_cluster->boundary_right;
 			} else {
-				// Copy from combined egde cluster into this cluster
-				data = combined_edge_cluster->data;
+				// It is compress
+				// i) get common vertex
+				auto common_vertex = first->boundary_left;
+				if (common_vertex->superior_vertex != NULL) common_vertex = common_vertex->superior_vertex;
+				if (common_vertex != edge_cluster->boundary_left && common_vertex != edge_cluster->boundary_right
+				   && common_vertex != edge_cluster->boundary_left->superior_vertex && common_vertex != edge_cluster->boundary_right->superior_vertex
+				) common_vertex = first->boundary_right;
+				if (common_vertex->superior_vertex != NULL) common_vertex = common_vertex->superior_vertex;
+
+				// ii) Get boundary vertices
+				combined_edge_cluster->boundary_left = (common_vertex == first->boundary_left || common_vertex == first->boundary_left->superior_vertex ? first->boundary_right : first->boundary_left);
+				combined_edge_cluster->boundary_right = (common_vertex == edge_cluster->boundary_left || common_vertex == edge_cluster->boundary_left->superior_vertex ? edge_cluster->boundary_right : edge_cluster->boundary_left);
+			}
+			if (!edge->subvertice_edge) Join(first, edge_cluster, combined_edge_cluster);
+			else combined_edge_cluster->data = first->data;
+			#ifdef DEBUG
+				std::cerr << "... combined edge have endpoints " << *combined_edge_cluster->boundary_left->data << "," << *combined_edge_cluster->boundary_right->data << std::endl;
+			#endif
+		} else combined_edge_cluster = edge_cluster;
+
+		// 3. Join with the second (if there is something to Join)
+		if (second->is_top_cluster) {
+			#ifdef DEBUG
+				std::cerr << "... joining " << *second << " with combined edge" << std::endl;
+			#endif
+			if (second->is_rake_branch) {
 				boundary_left = combined_edge_cluster->boundary_left;
 				boundary_right = combined_edge_cluster->boundary_right;
+			} else {
+				// It is compress
+				// i) get common vertex
+				auto common_vertex = second->boundary_left;
+				//if (common_vertex->superior_vertex != NULL) common_vertex = common_vertex->superior_vertex;
+				if (common_vertex != combined_edge_cluster->boundary_left && common_vertex != combined_edge_cluster->boundary_right) common_vertex = second->boundary_right;
+				//if (common_vertex->superior_vertex != NULL) common_vertex = common_vertex->superior_vertex;
+
+				// ii) Get boundary vertices
+				boundary_left = (common_vertex == second->boundary_left ? second->boundary_right : second->boundary_left);
+				boundary_right = (common_vertex == combined_edge_cluster->boundary_left ? combined_edge_cluster->boundary_right : combined_edge_cluster->boundary_left);
 			}
+			// Join if there is something in the combined edge cluster - either when there is normal edge or there was something in the first cluster
+			if (!edge->subvertice_edge || first->is_top_cluster) Join(second, combined_edge_cluster, shared_from_this());
+			else data = second->data;
+		} else {
+			// Copy from combined egde cluster into this cluster
+			data = combined_edge_cluster->data;
+			boundary_left = combined_edge_cluster->boundary_left;
+			boundary_right = combined_edge_cluster->boundary_right;
 		}
+		//}
 	}
 
 	#ifdef DEBUG
@@ -266,13 +258,16 @@ void TopologyCluster::do_split(std::vector<std::shared_ptr<TopologyCluster>>* sp
 		std::cerr << "Splitting " << *shared_from_this() << std::endl;
 	#endif
 
-	if (first == NULL && second == NULL) return; // it is the basic cluster at vertex level
-
 	// 1. Log that this cluster will be splitted
 	if (splitted_clusters != NULL) splitted_clusters->push_back(shared_from_this());
 
 	// 2. Ensure that parent is splitted:
 	if (parent != NULL) parent->do_split(splitted_clusters);
+
+	if (first == NULL && second == NULL) {
+		is_splitted = true;
+		return; // it is the basic cluster at vertex level
+	}
 
 	// 3. Series of Splits itself
 	if (second == NULL) {
@@ -316,6 +311,16 @@ void TopologyCluster::do_split(std::vector<std::shared_ptr<TopologyCluster>>* sp
 	#endif
 
 	is_splitted = true;
+}
+
+bool TopologyCluster::is_external_boundary_vertex(std::shared_ptr<BaseTree::Internal::Vertex> v) {
+	if (boundary_left != v && boundary_right != v) return false; // v isn't either boundary vertex, it cannot be external boundary vertex
+
+	for (auto n: outer_edges) {
+		if (n.edge->from == v || n.edge->to == v) return true;
+	}
+
+	return false;
 }
 
 }

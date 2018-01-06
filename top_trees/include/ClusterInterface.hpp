@@ -18,11 +18,12 @@ extern std::shared_ptr<ClusterData> InitClusterData();
  */
 class ICluster {
 friend class TopologyCluster;
+friend class TopologyTopTree;
 public:
 	std::shared_ptr<ClusterData> data = InitClusterData();
 
 	int getLeftBoundary() { return boundary_left->index; }
-	int getRightBoundary() { return boundary_right->index; };
+	int getRightBoundary() { return boundary_right->index; }
 
 	virtual std::ostream& ToString(std::ostream& o) const = 0;
 protected:

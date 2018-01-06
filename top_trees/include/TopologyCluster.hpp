@@ -62,6 +62,8 @@ protected:
 	void do_split(std::vector<std::shared_ptr<TopologyCluster>>* splitted_clusters = NULL);
 	void do_join();
 
+	bool is_external_boundary_vertex(std::shared_ptr<BaseTree::Internal::Vertex> v);
+
 	void calculate_outer_edges(bool check_neighbours = false);
 	void remove_all_outer_edges();
 };
