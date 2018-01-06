@@ -9,6 +9,7 @@ struct MyClusterData: public TopTree::ClusterData {
 	int weight;
 	int total_weight;
 	std::string label;
+	std::string total_label;
 };
 
 class MyVertexData: public TopTree::VertexData {
@@ -41,16 +42,19 @@ void TopTree::Join(std::shared_ptr<ICluster> leftChild, std::shared_ptr<ICluster
 
 	if (isLeftRake(leftChild, rightChild, parent)) {
 		parent_data->weight = right_data->weight;
+		parent_data->label = right_data->label;
 	} else if (isRightRake(leftChild, rightChild, parent)) {
 		parent_data->weight = left_data->weight;
+		parent_data->label = left_data->label;
 	} else {
 		parent_data->weight = left_data->weight + right_data->weight;
+		parent_data->label = left_data->label + "," + right_data->label;
 	}
 
 	parent_data->total_weight = left_data->total_weight + right_data->total_weight;
+	parent_data->total_label = left_data->total_label + "," + right_data->total_label;
 
 	// For debug:
-	parent_data->label = left_data->label + "," + right_data->label;
 	std::cerr << "Joining " << left_data->total_weight << "(" << left_data->label << ") + " << right_data->total_weight << "(" << right_data->label << ")" << std::endl;
 }
 void TopTree::Split(std::shared_ptr<ICluster> leftChild, std::shared_ptr<ICluster> rightChild, std::shared_ptr<ICluster> parent) {
@@ -64,6 +68,7 @@ void TopTree::Create(std::shared_ptr<ICluster> cluster, std::shared_ptr<EdgeData
 	data->weight = 10;
 	data->total_weight = 10;
 	data->label = edge_data->label;
+	data->total_label = edge_data->label;
 }
 void TopTree::Destroy(std::shared_ptr<ICluster> cluster, std::shared_ptr<EdgeData> edge) {
 	// Nothing
@@ -137,6 +142,8 @@ int main(int argc, char const *argv[]) {
 
 	auto result2 = TT->Link(b, p, std::make_shared<MyEdgeData>("B-P"));
 	print_node(result2);
+
+	TT->Expose(h, c);
 
 	/*
 	auto T = std::make_shared<TopTree::TopTree>(baseTree);
