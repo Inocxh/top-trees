@@ -288,7 +288,7 @@ void TopologyTopTree::Internal::update_clusters() {
 				cluster->parent->edge = NULL;
 
 				// Test another child (which is now the first child of parent)
-				if (!cluster->parent->first->listed_in_change_list && cluster->parent->first->listed_in_delete_list) {
+				if (!cluster->parent->first->listed_in_change_list && !cluster->parent->first->listed_in_delete_list) {
 					change_list.push_back(cluster->parent->first);
 					cluster->parent->first->listed_in_change_list = true;
 				}
@@ -323,7 +323,7 @@ void TopologyTopTree::Internal::update_clusters() {
 		std::shared_ptr<BaseTree::Internal::Edge> common_edge = NULL;
 		for (auto o: cluster->outer_edges) if (o.cluster == sibling) common_edge = o.edge;
 		// Test parent
-		if (common_edge != NULL && cluster->parent->outer_edges.size() <= 2) {
+		if (common_edge != NULL && (cluster->outer_edges.size() + sibling->outer_edges.size()) <= 4) {
 			#ifdef DEBUG
 				std::cerr << "... connected with sibling " << *sibling << " by edge " << *common_edge->data << std::endl;
 			#endif
@@ -384,10 +384,13 @@ void TopologyTopTree::Internal::update_clusters() {
 		} else if (cluster->outer_edges.size() >= 1) {
 			// Find if there is neighbour with degree <= (4 - #outer_edges)
 			std::shared_ptr<TopologyCluster> neighbour = NULL;
-			for (auto o: cluster->outer_edges) if (o.cluster->outer_edges.size() <= (4 - cluster->outer_edges.size())) neighbour = o.cluster;
+			for (auto o: cluster->outer_edges) {
+				// Test if neighbour have low degree and if it have no sibling - if yes choose it
+				if (o.cluster->outer_edges.size() <= (4 - cluster->outer_edges.size()) && (o.cluster->parent == NULL || o.cluster->parent->second == NULL)) neighbour = o.cluster;
+			}
+			std::cerr << neighbour << std::endl;
 
-			if (neighbour != NULL && (neighbour->parent == NULL || neighbour->parent->second == NULL))
-				update_clusters_join_with_neighbour(cluster, neighbour); // Join with neighbour as in the first case
+			if (neighbour != NULL) update_clusters_join_with_neighbour(cluster, neighbour); // Join with neighbour as in the first case
 			else update_clusters_only_child(cluster);
 		} else {
 			//0 outer edges -> it is root and nothing is needed
