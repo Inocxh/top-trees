@@ -36,7 +36,7 @@ public:
 
 	// Debug methods:
 	void print_graphviz(std::shared_ptr<TopologyCluster> node, const std::string title="", bool full = false) const;
-	void print_graphviz_recursive(std::shared_ptr<TopologyCluster> cluster, std::shared_ptr<BaseTree::Internal::Edge> parent_edge = NULL, std::shared_ptr<TopologyCluster> parent = NULL, bool edges_to_childs = false) const;
+	void print_graphviz_recursive(std::shared_ptr<TopologyCluster> cluster, std::shared_ptr<BaseTree::Internal::Edge> parent_edge = NULL, std::shared_ptr<TopologyCluster> parent = NULL, bool edges_to_childs = false, bool gray = false) const;
 private:
 	// Used in update_clusters() and helper methods
 	// it is declared globally to easier sharing between helper methods
@@ -83,7 +83,6 @@ TopologyTopTree::TopologyTopTree(std::shared_ptr<BaseTree> from_base_tree) : Top
 			//	internal->print_graphviz(root_cluster, "One level up");
 			//#endif
 		}
-		internal->print_graphviz(root_cluster, "Full", true);
 		internal->root_clusters.push_back(root_cluster);
 		internal->root_clusters[i]->root_vector_index = i;
 		i++;
@@ -91,6 +90,8 @@ TopologyTopTree::TopologyTopTree(std::shared_ptr<BaseTree> from_base_tree) : Top
 
 	for (auto c: internal->splitted_clusters) c->do_join();
 	internal->splitted_clusters.clear();
+
+	for (auto root_cluster: internal->root_clusters) internal->print_graphviz(root_cluster, "Full", true);
 }
 
 //std::vector<std::shared_ptr<Cluster> > TopologyTopTree::GetTopTrees() {
@@ -101,12 +102,15 @@ TopologyTopTree::TopologyTopTree(std::shared_ptr<BaseTree> from_base_tree) : Top
 ////////////////////////////////////////////////////////////////////////////////
 // Debug output - Graphviz
 
-void TopologyTopTree::Internal::print_graphviz_recursive(std::shared_ptr<TopologyCluster> cluster, std::shared_ptr<BaseTree::Internal::Edge> parent_edge, std::shared_ptr<TopologyCluster> parent, bool edges_to_childs) const {
+void TopologyTopTree::Internal::print_graphviz_recursive(std::shared_ptr<TopologyCluster> cluster, std::shared_ptr<BaseTree::Internal::Edge> parent_edge, std::shared_ptr<TopologyCluster> parent, bool edges_to_childs, bool gray) const {
 	if (cluster == NULL) return;
 
 	auto shape = (cluster->first == NULL ? "triangle" : (cluster->second == NULL ? "circle" : "Msquare"));
+	auto fillcolor = gray ? "gray" : "white";
+	if (cluster->outer_edges.size() > 3) fillcolor = "red";
+	else if (cluster->outer_edges.size() == 3 && cluster->second != NULL) fillcolor = "orange";
 
-	std::cout << "\t\"" << cluster << "\" [label=\"" << *cluster << "\", shape=" << shape << "]" << std::endl;
+	std::cout << "\t\"" << cluster << "\" [label=\"" << *cluster << "\", shape=" << shape << ", style=filled, fillcolor=\"" << fillcolor << "\"]" << std::endl;
 	if (parent_edge != NULL) {
 		std::cout << "\t\"" << parent << "\" -> \"" << cluster << "\" [label=\"" << *parent_edge->data << "\"";
 		if (parent_edge->subvertice_edge) std::cout << ", style=dashed";
@@ -117,7 +121,7 @@ void TopologyTopTree::Internal::print_graphviz_recursive(std::shared_ptr<Topolog
 		if (cluster->second != NULL) std::cout << "\t\"" << cluster << "\" -> \"" << cluster->second << "\" [color=orange, weight=0.5]" << std::endl;
 	}
 	for (auto o: cluster->outer_edges) {
-		if (o.edge != parent_edge) print_graphviz_recursive(o.cluster, o.edge, cluster, edges_to_childs);
+		if (o.edge != parent_edge) print_graphviz_recursive(o.cluster, o.edge, cluster, edges_to_childs, gray);
 	}
 
 	// Parent test
@@ -131,12 +135,14 @@ void TopologyTopTree::Internal::print_graphviz(const std::shared_ptr<TopologyClu
 	if (full) {
 		int level = 0;
 		auto cluster = root;
+		bool gray = false;
 		while (cluster != NULL) {
 			std::cout << "subgraph cluster_level_" << level << " {" << std::endl << "\tlabel=\"Level " << level << "\"" << std::endl << "\tgraph [style=dotted]" << std::endl;
-			print_graphviz_recursive(cluster, NULL, NULL, true);
+			print_graphviz_recursive(cluster, NULL, NULL, true, gray);
 			std::cout << "}" << std::endl;
 			level++;
 			cluster = cluster->first;
+			gray = !gray;
 		}
 	} else print_graphviz_recursive(root);
 	std::cout << "}" << std::endl;
@@ -147,7 +153,7 @@ void TopologyTopTree::Internal::print_graphviz(const std::shared_ptr<TopologyClu
 
 void TopologyTopTree::Internal::update_clusters_join_with_neighbour(std::shared_ptr<TopologyCluster> cluster, std::shared_ptr<TopologyCluster> neighbour) {
 	#ifdef DEBUG
-		// std::cerr << "... joining " << *cluster << " with neighbour " << *neighbour << std::endl;
+		std::cerr << "... joining " << *cluster << " with neighbour " << *neighbour << std::endl;
 	#endif
 
 	// Ensure that they are already splitted:
@@ -166,7 +172,7 @@ void TopologyTopTree::Internal::update_clusters_join_with_neighbour(std::shared_
 		next_abandon.push_back(parent);
 		parent->listed_in_abandon_list = true;
 		#ifdef DEBUG
-			// std::cerr << "... constructing new parent " << *parent << std::endl;
+			std::cerr << "... constructing new parent " << *parent << std::endl;
 		#endif
 	} else {
 		if (cluster->parent == NULL) {
@@ -174,12 +180,15 @@ void TopologyTopTree::Internal::update_clusters_join_with_neighbour(std::shared_
 			if (neighbour->parent->second != NULL) std::cerr << "ERROR: Expecting that neighbour's parent would have only one child, but it have both children" << std::endl;
 			neighbour->parent->set_second_child(cluster);
 			#ifdef DEBUG
-				// std::cerr << "..." << *neighbour->parent << " set childs " << *neighbour->parent->first << " and " << *neighbour->parent->second << std::endl;
+				std::cerr << "..." << *neighbour->parent << " set childs " << *neighbour->parent->first << " and " << *neighbour->parent->second << std::endl;
 			#endif
 		} else if (neighbour->parent == NULL) {
 			// Add neighbour into cluster's parent
 			if (cluster->parent->second != NULL) std::cerr << "ERROR: Expecting that cluster's parent would have only one child, but it have both children" << std::endl;
 			cluster->parent->set_second_child(neighbour);
+			#ifdef DEBUG
+				std::cerr << "..." << *cluster->parent << " set childs " << *cluster->parent->first << " and " << *cluster->parent->second << std::endl;
+			#endif
 		} else {
 			// Both have parents, use cluster's parent and delete neighbours parent
 			neighbour->parent->first = NULL;
@@ -187,6 +196,9 @@ void TopologyTopTree::Internal::update_clusters_join_with_neighbour(std::shared_
 			neighbour->parent->listed_in_delete_list = true;
 			neighbour->parent = cluster->parent;
 			cluster->parent->second = neighbour;
+			#ifdef DEBUG
+				std::cerr << "... joined under one parent " << *cluster->parent << " with childs " << *cluster->parent->first << " and " << *cluster->parent->second << std::endl;
+			#endif
 		}
 		to_calculate_outer_edges.push_back(cluster->parent);
 		next_change.push_back(cluster->parent);
@@ -323,7 +335,8 @@ void TopologyTopTree::Internal::update_clusters() {
 			to_calculate_outer_edges.push_back(cluster->parent);
 		} else {
 			#ifdef DEBUG
-				std::cerr << "... not connected with sibling " << *sibling << " by edge, parent " << *cluster->parent << " will be deleted" << std::endl;
+				if (common_edge == NULL) std::cerr << "... not connected with sibling " << *sibling << " by edge, parent " << *cluster->parent << " will be deleted" << std::endl;
+				else std::cerr << "... with sibling " << *sibling << " it is no longer valid cluster, parent (too many outer edges) " << *cluster->parent << " will be deleted" << std::endl;
 			#endif
 			// Parent goes into next delete list
 			cluster->parent->first = NULL;
@@ -398,6 +411,9 @@ void TopologyTopTree::Internal::update_clusters() {
 			std::cerr << "Computing outer edges for " << *c << std::endl;
 		#endif
 		c->calculate_outer_edges(true); // with checking neighbours (neighbours may not be on this list and we need to add new edges into them)
+		#ifdef DEBUG
+			std::cerr << "Outer edges for " << *c << " computed" << std::endl;
+		#endif
 	}
 
 	// Continue with above level
@@ -553,7 +569,9 @@ std::shared_ptr<ICluster> TopologyTopTree::Link(int v_index, int w_index, std::s
 }
 
 std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::get_vertex_to_link(std::shared_ptr<BaseTree::Internal::Vertex> v) {
-	std::cerr << "Getting vertex for link for vertex " << *v->data << std::endl;
+	#ifdef DEBUG
+		std::cerr << "Getting vertex for link for vertex " << *v->data << std::endl;
+	#endif
 
 	if (!v->subvertices.empty()) {
 		#ifdef DEBUG
@@ -573,9 +591,9 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::get_verte
 		auto first = v->subvertices.begin();
 		auto second = std::next(first);
 		std::shared_ptr<BaseTree::Internal::Edge> edge;
-		std::cerr << "First subvertex is " << *(*first)->topology_cluster << " and second " << *(*second)->topology_cluster << std::endl;
+		//std::cerr << "First subvertex is " << *(*first)->topology_cluster << " and second " << *(*second)->topology_cluster << std::endl;
 		for (auto n: (*first)->neighbours) if (n.vertex.lock() == *second) edge = n.edge.lock();
-		std::cerr << "Edge: " << edge << std::endl;
+		//std::cerr << "Edge: " << edge << std::endl;
 		cut(*first, *second, edge);
 
 		// 3. Link first-new-second
@@ -664,6 +682,7 @@ std::shared_ptr<TopologyCluster> TopologyTopTree::Internal::link(std::shared_ptr
 	auto cluster_w = w->topology_cluster;
 
 	#ifdef DEBUG
+		std::cerr << "==========" << std::endl;
 		std::cerr << "Linking " << *v->data << " and " << *w->data << std::endl;
 	#endif
 

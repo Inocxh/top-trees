@@ -21,6 +21,8 @@ std::ostream& TopologyCluster::ToString(std::ostream& o) const {
 	o << index;
 	if (edge != NULL) o << *edge->data;
 	else if (vertex != NULL) o << *vertex->data;
+	if (boundary_left != NULL) o << " (" << *boundary_left->data << "," << *boundary_right->data << ")";
+	if (is_rake_branch) o << "R";
 	return o;
 }
 std::ostream& operator<<(std::ostream& o, const TopologyCluster& c) { return c.ToString(o); }
