@@ -22,8 +22,8 @@ friend class TopologyTopTree;
 public:
 	std::shared_ptr<ClusterData> data = InitClusterData();
 
-	int getLeftBoundary() { return boundary_left->index; }
-	int getRightBoundary() { return boundary_right->index; }
+	int getLeftBoundary() { return (boundary_left->superior_vertex != NULL ? boundary_left->superior_vertex->index : boundary_left->index); }
+	int getRightBoundary() { return (boundary_right->superior_vertex != NULL ? boundary_right->superior_vertex->index : boundary_right->index); }
 
 	virtual std::ostream& ToString(std::ostream& o) const = 0;
 protected:
