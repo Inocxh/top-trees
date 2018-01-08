@@ -6,12 +6,36 @@
 
 namespace TopTree {
 
-int TopologyCluster::global_index = 0;
+////////////////////////////////////////////////////////////////////////////////
+/// SimpleCluster
 
-class SimpleCluster: public ICluster {
-public:
-	std::ostream& ToString(std::ostream& o) const { return o; }
-};
+void SimpleCluster::do_split() {
+	if (was_splitted) return;
+
+	if (parent != NULL) parent->do_split();
+	if (edge != NULL) Destroy(shared_from_this(), edge->data);
+	else Split(first, second, shared_from_this());
+
+	was_splitted = true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// TopologyCluster
+
+std::shared_ptr<BaseTree::Internal::Vertex> TopologyCluster::get_common_vertex(std::shared_ptr<ICluster> cluster_a, std::shared_ptr<ICluster> cluster_b, bool get_superior) {
+	auto common_vertex = cluster_a->boundary_left;
+
+	if (get_superior && common_vertex->superior_vertex != NULL) common_vertex = common_vertex->superior_vertex;
+
+	if (common_vertex != cluster_b->boundary_left && common_vertex != cluster_b->boundary_right
+	   && common_vertex != cluster_b->boundary_left->superior_vertex && common_vertex != cluster_b->boundary_right->superior_vertex) common_vertex = cluster_a->boundary_right;
+
+	if (get_superior && common_vertex->superior_vertex != NULL) common_vertex = common_vertex->superior_vertex;
+
+	return common_vertex;
+}
+
+int TopologyCluster::global_index = 0;
 
 TopologyCluster::TopologyCluster() {
 	index = global_index++;

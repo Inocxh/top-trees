@@ -66,8 +66,25 @@ protected:
 
 	void calculate_outer_edges(bool check_neighbours = false);
 	void remove_all_outer_edges();
+
+	static std::shared_ptr<BaseTree::Internal::Vertex> get_common_vertex(std::shared_ptr<ICluster> cluster_a, std::shared_ptr<ICluster> cluster_b, bool get_superior = true);
 };
 std::ostream& operator<<(std::ostream& o, const TopologyCluster& v);
+
+class SimpleCluster: public ICluster, std::enable_shared_from_this<SimpleCluster> {
+friend class TopologyTopTree;
+public:
+	std::ostream& ToString(std::ostream& o) const { return o; }
+protected:
+	std::shared_ptr<BaseTree::Internal::Edge> edge = NULL;
+
+	std::shared_ptr<SimpleCluster> parent = NULL;
+	std::shared_ptr<ICluster> first = NULL;
+	std::shared_ptr<ICluster> second = NULL;
+
+	void do_split();
+	bool was_splitted = false;
+};
 
 }
 

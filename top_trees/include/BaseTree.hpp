@@ -35,6 +35,7 @@ friend class CompressCluster;
 friend class RakeCluster;
 friend class TopologyTopTree;
 friend class TopologyCluster;
+friend class SimpleCluster;
 public:
 	BaseTree();
 	~BaseTree();
