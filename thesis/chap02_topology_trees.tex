@@ -177,12 +177,12 @@ cuts and joins.
 Let's have a vertex of degree $D\ge4$. It could be splitted into chain of
 multiple vertices with maximal degree 3 by these simple steps:
 \begin{itemize}
-\item Create $D - 2$ subvertices.
-\item Connect them by edges into one chain (first and last vertex will have one
-edge used, inner will have two edges used)
+\item Create $D - 2$ {\I subvertices} and set their {\I superior vertex} as the
+original vertex.
+\item Connect subvertices by edges (called {\I subvertice edges}) into one chain (first
+and last vertex will have one edge used, inner will have two edges used)
 \item Disconnect neighbours from the original vertex and connect them to these
-subvertices (there are exactly the right number of free neighbour slots) and
-remove the original vertex.
+subvertices (there are exactly the right number of free neighbour slots).
 \end{itemize}
 
 But the Cut and Link operations in the Top trees works with the original
@@ -266,37 +266,50 @@ in topology clusters outgoing edges are not parts of topology clusters, but
 top trees clusters are based on these edges. Even that this is a major
 difference the mapping could be done quite easily.
 
-Base top tree clusters are those first level topology clusters (two vertices
-connected by an edge) plus one base cluster per each edge not it any topology
-cluster (all outer edges joining topology clusters).
+But before mapping we have to deal with fake subvertices and subvertice edges
+added by ternarization.
 
-\penalty-3000
+\subsection{Subvertices and subvertice edges from the Top trees perspective}
 
-\todo{Revise mapping of topology cluster to top trees clusters (after completing
-implementation)}
+During ternarization we added additional subvertices and subvertice edges
+into into the graph. That is needed by topology trees but it may be problem for
+the top trees operations.
 
-Then when joining two topology clusters into one we need to do at most two
-top tree Joins:
-\begin{enumerate}
-\item Top tree Join on the first joined topology cluster plus on the edge
-between joined topology clusters $\rightarrow$ Compress cluster.
-\item Top tree Join on the Compress cluster from the previous step plus the second
-joined topology cluster $\rightarrow$ Compress or Rake cluster (depending on
-positions of the outgoing edges).
-\end{enumerate}
+Firstly how to deal with subvertices: When performing top trees join or split
+and joined cluster has subvertex as it's endpoint, we pass the superior vertex
+of this endpoint to the join/split user function instead of the original
+endpoint. From the user's points of view all subvertices are represented by the
+original superior vertex.
 
-When a topology cluster has only one child nothing is done (and top tree cluster
-of this topology cluster is the same as the top tree cluster of the only child).
+And how to deal with subvertice edges? Just ignore them -- there are no top
+clusters associated with them and when joining topology cluster with subvertice
+edge we just rake it's children ignoring the edge.
+
+\subsection{Associated top clusters}
+
+With each topology cluster may be associated at most three top clusters:
+\begin{itemize}
+\item {\I Edge cluster} -- when there is an normal edge inside the topology cluster.
+\item {\I Combined edge cluster} -- joined {\I edge cluster} and cluster from
+the first child (when the first child has it's own top cluster).
+\item {\I Top cluster} for the whole topology cluster (joining {\I combined edge
+cluster} and cluster from the second child if there is any).
+\end{itemize}
+
+If topology cluster (or recursive it's children) contains at least one normal
+edge we call it {\I topology top cluster} (because it has it's associated top
+cluster). Otherwise we will call it {\I empty topology cluster}.
+
+Originally all vertices of the original tree are empty topology clusters and by
+joining them we create topology top clusters.
 
 \subsection{Joins and Splits}
 
 Mechanism of the joining and splitting of the topology cluster is similar as the
-mechanism for original Top trees. When operating on some cluster (during the
-update procedure) we have to firstly ensure that this cluster is splitted.
-Splitting is done recursively in the top-down manner and all splitted clusters
-have to be joined after completing all operations in the bottom-up manner.
+mechanism for original Top trees but with respect to the clusters mapping.
+Details of Join and Split operations are included in the \Cref{chap:ImplementationTopology}.
 
-\section{Implementation of Expose}
+\section{Expose}
 
 \todo{Implementation of Expose in topology trees}
 

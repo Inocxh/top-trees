@@ -1,2 +1,72 @@
 \chapter{Implementation of Top Trees using Topology Trees}
 \label{chap:ImplementationTopology}
+
+\section{Joins and Splits}
+
+Like in the first implementation when operating on some cluster (during the
+update procedure) we have to firstly ensure that this cluster is splitted.
+Splitting is done recursively in the top-down manner and all splitted clusters
+have to be joined after completing all operations in the bottom-up manner.
+
+This is done by logging all splitted topology clusters into some list and
+joining all of them after completing current operation.
+
+\subsection{Join}
+
+We will recall that if the topology cluster $C$ is not base cluster on the
+lowest level it could have one or two children (mark them as $C_1$ and $C_2$).
+Also we will remind that each topology cluster could have up to three associated
+top clusters (called {\I edge cluster}, {\I combined edge cluster} and the
+overall {\I top cluster}), for more details see the \Cref{chap:TopologyTrees}.
+
+When joining the $C$ we have to do these operations:
+\begin{enumerate}
+
+\item If $C$ has only one child $\rightarrow$ Just copy $C_1$'s {\I top cluster}
+(with endpoints) into the $C$'s {\I top cluster} and end.
+
+\item If there is a normal edge between $C_1$ and $C_2$ $\rightarrow$ Create new
+{\I edge cluster} from this edge (otherwise initialize dummy one).
+
+\item If the $C_1$ is a topology top cluster:
+\begin{itemize}
+\item If we created an {\I edge cluster} $\rightarrow$ Join $C_1$'s {\I top
+cluster} with the {\I edge cluster} into {\I combined egde cluster} (depending
+on $C_1$'s shape set new cluster's endpoints as rake or compress cluster).
+\item Otherwise copy $C_1$'s {\I top cluster} into {\I combined edge cluster}
+(with updating endpoints).
+\end{itemize}
+Otherwise just copy {\I edge cluster} into {\I combined edge cluster}.
+
+\item If the $C_2$ is a topology top cluster:
+\begin{itemize}
+\item If there is valid {\I combined edge cluster} (if $C_1$ is a topology top
+cluster or there is a normal edge) $\rightarrow$ Join $C_2$'s {\I top cluster}
+with the {\I combined edge cluster} into $C$'s {\I top cluster} (depending
+on $C_2$'s shape set new cluster's endpoints as rake or compress cluster).
+\item Otherwise copy $C_2$'s {\I top cluster} into $C$'s {\I top cluster}.
+\end{itemize}
+Otherwise just copy {\I combined edge cluster} into $C$'s {\I top cluster}.
+
+\end{enumerate}
+
+We have done at most two calls to the Join user function and one to the Create
+user function.
+
+\subsection{Split}
+
+Split operation is opposite to the Join operation. Endpoints of all top clusters
+are correctly set by the Join operation so we have to only do Split and Destroy
+operations in the opposite way.
+
+If there is a normal edge in the topology cluster we firstly Split $C$'s
+{\I top cluster} into {\I combined edge cluster} and $C_2$'s {\I top cluster}
+and then Split {\I combined edge cluster} into {\I edge cluster} and $C_1$'s
+{\I top cluster}. Finally just Destroy the {\I edge cluster}.
+
+When there was a subvertice edge just Split $C$'s {\I top cluster} into children
+{\I top clusters}.
+
+If some of the children is not a topology top cluster just do copying instead of
+splitting (like in the Join procedure). We have done at most two calls to the
+Split user function and one to the Create user function.
