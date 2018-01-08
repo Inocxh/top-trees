@@ -71,7 +71,7 @@ protected:
 };
 std::ostream& operator<<(std::ostream& o, const TopologyCluster& v);
 
-class SimpleCluster: public ICluster, std::enable_shared_from_this<SimpleCluster> {
+class SimpleCluster: public ICluster, public std::enable_shared_from_this<SimpleCluster> {
 friend class TopologyTopTree;
 public:
 	std::ostream& ToString(std::ostream& o) const { return o; }

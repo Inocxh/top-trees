@@ -121,17 +121,17 @@ void TopologyCluster::do_join() {
 			#endif
 			combined_edge_cluster = std::make_shared<SimpleCluster>();
 			if (first->is_rake_branch) {
-				combined_edge_cluster->boundary_left = edge_cluster->boundary_left;
-				combined_edge_cluster->boundary_right = edge_cluster->boundary_right;
+				if (edge->subvertice_edge) {
+					combined_edge_cluster->boundary_left = first->boundary_left;
+					combined_edge_cluster->boundary_right = first->boundary_right;
+				} else {
+					combined_edge_cluster->boundary_left = edge_cluster->boundary_left;
+					combined_edge_cluster->boundary_right = edge_cluster->boundary_right;
+				}
 			} else {
 				// It is compress
 				// i) get common vertex
-				auto common_vertex = first->boundary_left;
-				if (common_vertex->superior_vertex != NULL) common_vertex = common_vertex->superior_vertex;
-				if (common_vertex != edge_cluster->boundary_left && common_vertex != edge_cluster->boundary_right
-				   && common_vertex != edge_cluster->boundary_left->superior_vertex && common_vertex != edge_cluster->boundary_right->superior_vertex
-				) common_vertex = first->boundary_right;
-				if (common_vertex->superior_vertex != NULL) common_vertex = common_vertex->superior_vertex;
+				auto common_vertex = get_common_vertex(first, edge_cluster, !edge->subvertice_edge);
 
 				// ii) Get boundary vertices
 				combined_edge_cluster->boundary_left = (common_vertex == first->boundary_left || common_vertex == first->boundary_left->superior_vertex ? first->boundary_right : first->boundary_left);
@@ -152,17 +152,15 @@ void TopologyCluster::do_join() {
 			if (second->is_rake_branch) {
 				boundary_left = combined_edge_cluster->boundary_left;
 				boundary_right = combined_edge_cluster->boundary_right;
+				is_rake_branch = (edge->subvertice_edge && first->is_top_cluster && first->is_rake_branch);
 			} else {
 				// It is compress
 				// i) get common vertex
-				auto common_vertex = second->boundary_left;
-				//if (common_vertex->superior_vertex != NULL) common_vertex = common_vertex->superior_vertex;
-				if (common_vertex != combined_edge_cluster->boundary_left && common_vertex != combined_edge_cluster->boundary_right) common_vertex = second->boundary_right;
-				//if (common_vertex->superior_vertex != NULL) common_vertex = common_vertex->superior_vertex;
+				auto common_vertex = get_common_vertex(second, combined_edge_cluster, !edge->subvertice_edge);
 
 				// ii) Get boundary vertices
-				boundary_left = (common_vertex == second->boundary_left ? second->boundary_right : second->boundary_left);
-				boundary_right = (common_vertex == combined_edge_cluster->boundary_left ? combined_edge_cluster->boundary_right : combined_edge_cluster->boundary_left);
+				boundary_left = (common_vertex == second->boundary_left || common_vertex == second->boundary_left->superior_vertex ? second->boundary_right : second->boundary_left);
+				boundary_right = (common_vertex == combined_edge_cluster->boundary_left || common_vertex == combined_edge_cluster->boundary_left->superior_vertex ? combined_edge_cluster->boundary_right : combined_edge_cluster->boundary_left);
 			}
 			// Join if there is something in the combined edge cluster - either when there is normal edge or there was something in the first cluster
 			if (!edge->subvertice_edge || first->is_top_cluster) Join(second, combined_edge_cluster, shared_from_this());

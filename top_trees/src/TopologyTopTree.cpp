@@ -26,6 +26,8 @@ public:
 	std::tuple<std::shared_ptr<TopologyCluster>, std::shared_ptr<TopologyCluster>> cut(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w, std::shared_ptr<BaseTree::Internal::Edge> edge);
 	std::shared_ptr<TopologyCluster> link(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w, std::shared_ptr<BaseTree::Internal::Edge> edge);
 
+	std::list<std::shared_ptr<ICluster>> expose_get_clusters(std::shared_ptr<BaseTree::Internal::Vertex> v, bool continue_above_common);
+
 	//void soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w);
 	//std::shared_ptr<Cluster> hard_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w);
 	//void restore_hard_expose();
@@ -33,6 +35,7 @@ public:
 
 	std::vector<std::shared_ptr<TopologyCluster>> splitted_clusters;
 	std::vector<std::shared_ptr<TopologyCluster>> to_calculate_outer_edges;
+	std::vector<std::shared_ptr<SimpleCluster>> expose_simple_clusters;
 
 	// Debug methods:
 	void print_graphviz(std::shared_ptr<TopologyCluster> node, const std::string title="", bool full = false) const;
@@ -388,7 +391,6 @@ void TopologyTopTree::Internal::update_clusters() {
 				// Test if neighbour have low degree and if it have no sibling - if yes choose it
 				if (o.cluster->outer_edges.size() <= (4 - cluster->outer_edges.size()) && (o.cluster->parent == NULL || o.cluster->parent->second == NULL)) neighbour = o.cluster;
 			}
-			std::cerr << neighbour << std::endl;
 
 			if (neighbour != NULL) update_clusters_join_with_neighbour(cluster, neighbour); // Join with neighbour as in the first case
 			else update_clusters_only_child(cluster);
@@ -870,13 +872,264 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_su
 ////////////////////////////////////////////////////////////////////////////////
 /// Expose
 
-std::shared_ptr<ICluster> TopologyTopTree::Expose(int v, int w) {
-	// Not implemented yet
-	return NULL;
+std::list<std::shared_ptr<ICluster>> TopologyTopTree::Internal::expose_get_clusters(std::shared_ptr<BaseTree::Internal::Vertex> v, bool continue_above_common) {
+	std::list<std::shared_ptr<ICluster>> list;
+
+	auto last_cluster = v->topology_cluster;
+	auto cluster = last_cluster->parent; // we starts one level above base cluster
+	bool was_added = false;
+	while (cluster != NULL) {
+		#ifdef DEBUG
+			std::cerr << "Testing cluster " << *cluster << std::endl;
+		#endif
+		if (!cluster->is_external_boundary_vertex(v)) {
+			if (cluster->edge != NULL) {
+				if (!was_added && last_cluster->is_top_cluster) {
+					#ifdef DEBUG
+						std::cerr << "    Adding first cluster " << *last_cluster << std::endl;
+					#endif
+					list.push_back(last_cluster);
+				}
+				was_added = true;
+
+				// If we are in the same area as the other run exit
+				if (!continue_above_common && (
+					(last_cluster == cluster->first && cluster->second->is_splitted) || (last_cluster == cluster->second && cluster->first->is_splitted)
+				)) return list;
+
+				std::shared_ptr<SimpleCluster> edge_cluster = NULL;
+				if (!cluster->edge->subvertice_edge) {
+					edge_cluster = std::make_shared<SimpleCluster>();
+					edge_cluster->boundary_left = cluster->edge->from;
+					edge_cluster->boundary_right = cluster->edge->to;
+					edge_cluster->edge = cluster->edge;
+					expose_simple_clusters.push_back(edge_cluster); // to allow splitting it in Restore operation
+					Create(edge_cluster, cluster->edge->data);
+				}
+
+				std::shared_ptr<TopologyCluster> sibling_cluster = NULL;
+				if (last_cluster == cluster->first && cluster->second->is_top_cluster && !cluster->second->is_splitted) sibling_cluster = cluster->second;
+				else if (last_cluster == cluster->second && cluster->first->is_top_cluster && !cluster->first->is_splitted) sibling_cluster = cluster->first;
+
+				std::shared_ptr<ICluster> new_cluster = NULL;
+				if (edge_cluster != NULL && sibling_cluster != NULL) {
+					#ifdef DEBUG
+						std::cerr << "    Joining edge with endpoints " << *edge_cluster->boundary_left->data << "-" << *edge_cluster->boundary_right->data
+							  << " with cluster " << *sibling_cluster << " with endpoints " << *sibling_cluster->boundary_left->data << "-" << *sibling_cluster->boundary_right->data << std::endl;
+					#endif
+					// Combine them into one newly created SimpleCluster
+					auto new_simple_cluster = std::make_shared<SimpleCluster>();
+					if (sibling_cluster->is_rake_branch) {
+						new_simple_cluster->boundary_left = edge_cluster->boundary_left;
+						new_simple_cluster->boundary_right = edge_cluster->boundary_right;
+					} else {
+						// Find common vertex and construct compress cluster around it
+						auto common_vertex = TopologyCluster::get_common_vertex(sibling_cluster, edge_cluster, !cluster->edge->subvertice_edge);
+
+						new_simple_cluster->boundary_left = (common_vertex == edge_cluster->boundary_left || common_vertex == edge_cluster->boundary_left->superior_vertex ? edge_cluster->boundary_right : edge_cluster->boundary_left);
+						new_simple_cluster->boundary_right = (common_vertex == sibling_cluster->boundary_left || common_vertex == sibling_cluster->boundary_left->superior_vertex ? sibling_cluster->boundary_right : sibling_cluster->boundary_left);
+					}
+					new_simple_cluster->first = edge_cluster;
+					edge_cluster->parent = new_simple_cluster;
+					new_simple_cluster->second = sibling_cluster;
+					Join(edge_cluster, sibling_cluster, new_simple_cluster);
+					expose_simple_clusters.push_back(new_simple_cluster); // to allow splitting it in Restore operation
+					new_cluster = new_simple_cluster;
+				} else if (edge_cluster != NULL) new_cluster = edge_cluster;
+				else if (sibling_cluster != NULL) new_cluster = sibling_cluster;
+
+				if (new_cluster != NULL) {
+					#ifdef DEBUG
+						std::cerr << "    Adding cluster new cluster with endpoints " << *new_cluster->boundary_left->data << "-" << *new_cluster->boundary_right->data << std::endl;
+					#endif
+					list.push_back(new_cluster);
+				}
+			}
+		}
+		last_cluster = cluster;
+		cluster = cluster->parent;
+	}
+	return list;
+}
+
+std::shared_ptr<ICluster> TopologyTopTree::Expose(int v_index, int w_index) {
+	// Restore previous expose (if needed)
+	Restore();
+
+	// 0. Get vertices and their clusters
+	auto v = internal->base_tree->internal->vertices[v_index];
+	auto w = internal->base_tree->internal->vertices[w_index];
+
+	#ifdef DEBUG
+		std::cerr << "Starting Expose of path between " << *v->data << " and " << *w->data << std::endl;
+	#endif
+
+	// If vertex is splitted into subvertices choose some
+	if (!v->subvertices.empty()) v = v->subvertices.front();
+	if (!w->subvertices.empty()) w = w->subvertices.front();
+	// Get clusters
+	auto cluster_v = v->topology_cluster;
+	auto cluster_w = w->topology_cluster;
+
+	// 1. Split from both base clusters
+	cluster_v->do_split(&internal->splitted_clusters);
+	cluster_w->do_split(&internal->splitted_clusters);
+
+	// 2. Get all clusters that contains v/w as non-boundary vertex and save them into two lists
+	auto clusters_list = internal->expose_get_clusters(v, true);
+	auto second_list = internal->expose_get_clusters(w, false);
+	// 2.1 Join lists
+	for (auto it = second_list.rbegin(); it != second_list.rend(); ++it) clusters_list.push_back(*it);
+
+	#ifdef DEBUG
+		std::cerr << "Clusters before inner raking: ";
+		for (auto c: clusters_list) std::cerr << *c->boundary_left->data << "-" << *c->boundary_right->data << ", ";
+		std::cerr << std::endl;
+	#endif
+
+	// 3. Join all clusters that must be raked
+	auto vertex = v;
+	auto it = clusters_list.begin();
+	while (it != clusters_list.end()) {
+		auto next_it = std::next(it); // because we may erase this iterator when joining clusters
+		if (vertex->superior_vertex != NULL) vertex = vertex->superior_vertex;
+		auto cluster = *it;
+		// If cluster can be connected leave this cluster there and only update next join vertex
+		if (vertex == cluster->boundary_left || vertex == cluster->boundary_left->superior_vertex) vertex = cluster->boundary_right;
+		else if (vertex == cluster->boundary_right || vertex == cluster->boundary_right->superior_vertex) vertex = cluster->boundary_left;
+		else {
+			// Cannot join with previous cluster, previous cluster must be raked onto this vertex
+			if (it == clusters_list.begin()) {
+				std::cerr << "ERROR: cannot match first cluster in exposed list" << std::endl;
+				exit(1);
+			}
+			auto prev_cluster = *std::prev(it);
+			#ifdef DEBUG
+				std::cerr << " - Raking cluster with endpoint " << *prev_cluster->boundary_left->data << "," << *prev_cluster->boundary_right->data
+				<< " onto cluster " << *cluster->boundary_left->data << "," << *cluster->boundary_right->data << std::endl;
+			#endif
+
+			// 0. Get common vertex (will be next join vertex)
+			auto common_vertex = TopologyCluster::get_common_vertex(prev_cluster, cluster);
+			// 0.1 Get other side vertex than common vertex from this cluster
+			if (cluster->boundary_left == common_vertex || cluster->boundary_left->superior_vertex == common_vertex) vertex = cluster->boundary_right;
+			else vertex = cluster->boundary_left;
+
+			// 1. Prepare new cluster
+			auto new_cluster = std::make_shared<SimpleCluster>();
+			// 1.1 Set parents (if they are simple clusters)
+			new_cluster->first = prev_cluster;
+			auto prev_cluster_simple = std::dynamic_pointer_cast<SimpleCluster>(prev_cluster);
+			if (prev_cluster_simple != NULL) prev_cluster_simple->parent = new_cluster;
+			new_cluster->second = cluster;
+			auto cluster_simple = std::dynamic_pointer_cast<SimpleCluster>(cluster);
+			if (cluster_simple != NULL) cluster_simple->parent = new_cluster;
+			// 1.2 Set boundaries (raked onto current cluster) and Join
+			new_cluster->boundary_left = cluster->boundary_left;
+			new_cluster->boundary_right = cluster->boundary_right;
+			Join(prev_cluster, cluster, new_cluster);
+
+			// 2. Remove old clusters and add new one to the list
+			// 2.1 Remove previous cluster from list
+			clusters_list.erase(std::prev(it));
+			// 2.2 Insert new cluster previously to the current cluster
+			clusters_list.insert(it, new_cluster);
+			// 2.3 Remove current cluster
+			clusters_list.erase(it);
+		}
+		it = next_it;
+	}
+
+	#ifdef DEBUG
+		std::cerr << "Clusters before rake joining of end: ";
+		for (auto c: clusters_list) std::cerr << *c->boundary_left->data << "-" << *c->boundary_right->data << ", ";
+		std::cerr << std::endl;
+	#endif
+
+	// 4. Ensure that it ends with w (otherwise rake last cluster)
+	while (vertex != w && vertex != w->superior_vertex) {
+		// 1. Get clusters
+		auto cluster_last = std::dynamic_pointer_cast<SimpleCluster>(clusters_list.back());
+		clusters_list.pop_back();
+		auto cluster_prev = std::dynamic_pointer_cast<SimpleCluster>(clusters_list.back());
+		clusters_list.pop_back();
+
+		// 2. Construct cluster
+		auto cluster = std::make_shared<SimpleCluster>();
+		cluster->first = cluster_prev;
+		cluster_prev->parent = cluster;
+		cluster->second = cluster_last;
+		cluster_last->parent = cluster;
+		// 2.1 Set boundaries (rake onto prev cluster) and Join
+		cluster->boundary_left = cluster_prev->boundary_left;
+		cluster->boundary_right = cluster_prev->boundary_right;
+		Join(cluster_prev, cluster_last, cluster);
+
+		// 3. calculate new end vertex - opposite vertex than common vertex with previous cluster
+		auto common_vertex = v;
+		if (!clusters_list.empty()) common_vertex = TopologyCluster::get_common_vertex(clusters_list.back(), cluster);
+		if (common_vertex->superior_vertex != NULL) common_vertex = common_vertex->superior_vertex;
+
+		if (cluster->boundary_left == common_vertex || cluster->boundary_left->superior_vertex == common_vertex) vertex = cluster->boundary_right;
+		else vertex = cluster->boundary_left;
+		if (vertex->superior_vertex != NULL) vertex = vertex->superior_vertex;
+
+		// 4. Push new cluster into list
+		clusters_list.push_back(cluster);
+	}
+
+	#ifdef DEBUG
+		std::cerr << "Clusters before compressing: ";
+		for (auto c: clusters_list) std::cerr << *c->boundary_left->data << "-" << *c->boundary_right->data << ", ";
+		std::cerr << std::endl;
+	#endif
+
+	// 5. Compress join all remaining clusters
+	while (clusters_list.size() > 1) {
+		// 1. Get clusters
+		auto cluster_a = std::dynamic_pointer_cast<SimpleCluster>(clusters_list.back());
+		clusters_list.pop_back();
+		auto cluster_b = std::dynamic_pointer_cast<SimpleCluster>(clusters_list.back());
+		clusters_list.pop_back();
+
+		// 2. Construct cluster
+		auto cluster = std::make_shared<SimpleCluster>();
+		cluster->first = cluster_a;
+		cluster_a->parent = cluster;
+		cluster->second = cluster_b;
+		cluster_b->parent = cluster;
+
+		// 3. Find common vertex
+		auto common_vertex = TopologyCluster::get_common_vertex(cluster_a, cluster_b);
+
+		// 4. Set boundaries
+		cluster->boundary_left = (cluster_a->boundary_left == common_vertex || cluster_a->boundary_left->superior_vertex == common_vertex ? cluster_a->boundary_right : cluster_a->boundary_left);
+		cluster->boundary_right = (cluster_b->boundary_left == common_vertex || cluster_b->boundary_left->superior_vertex == common_vertex ? cluster_b->boundary_right : cluster_b->boundary_left);
+
+		// 5. Join and push new cluster into list
+		Join(cluster_a, cluster_b, cluster);
+		clusters_list.push_back(cluster);
+	}
+
+	// 6. Return resulting cluster
+	return clusters_list.back();
 }
 
 void TopologyTopTree::Restore() {
-	// TODO to be implemented
+	if (internal->expose_simple_clusters.empty()) return; // no need to restore anything
+
+	// Split temporary clusters
+	for (auto c: internal->expose_simple_clusters) c->do_split();
+	internal->expose_simple_clusters.clear();
+
+	// Join original clusters
+	for (auto c: internal->splitted_clusters) {
+		while (c != NULL && c->is_splitted) {
+			c->do_join();
+			c = c->parent;
+		}
+	}
+	internal->splitted_clusters.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
