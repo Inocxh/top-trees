@@ -19,10 +19,10 @@ that they are not connected) in $\O(\log N)$ time.
 
 \begin{itemize}
 
-\item {\sc Create} creates cluster length equivalent to the length of the
+\item $\Create$ creates cluster length equivalent to the length of the
 underlying edge.
 
-\item {\sc Join} of clusters $C_1$ and $C_2$ into $C$ depends on the type of the $C$:
+\item $\Join$ of clusters $C_1$ and $C_2$ into $C$ depends on the type of the $C$:
 	\begin{itemize}
 	\item If $C$ is a compress cluster of $C_1$ and $C_2$:
 	Set length of the $C$'s path as sum of the lengths of $C_1$ and $C_2$.
@@ -31,13 +31,13 @@ underlying edge.
 	versa if $C_2$ is raked onto $C_1$).
 	\end{itemize}
 
-\item {\sc Split} and {\sc Destroy} does nothing.
+\item $\Split$ and $\Destroy$ does nothing.
 
 \end{itemize}
 
 After that we could easily get length of the $(u,v)$-path by calling
-{\sc Expose}$(u,v)$ and reading length from this cluster. Because operations
-in user functions are in constant time and {\sc Expose} takes $\O(\log N)$
+$\Expose(u,v)$ and reading length from this cluster. Because operations
+in user functions are in constant time and \Expose{} takes $\O(\log N)$
 operations, we could answer on any such question in $\O(\log N)$ time.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -59,10 +59,10 @@ cluster's path and $w_{extra}$ as weight added to each edge on this path.
 
 \begin{itemize}
 
-\item {\sc Create} creates cluster with $w_{max}=w(e)$ where $e$ is the edge for
+\item $\Create$ creates cluster with $w_{max}=w(e)$ where $e$ is the edge for
 which is this cluster created. There is no extra weight yet, so $w_{extra}=0$.
 
-\item {\sc Join} of clusters $C_1$ and $C_2$ into $C$ depends on the type of the $C$:
+\item $\Join$ of clusters $C_1$ and $C_2$ into $C$ depends on the type of the $C$:
 	\begin{itemize}
 	\item If $C$ is a compress cluster of $C_1$ and $C_2$:
 	Set $w_{max}$ as maximum of $w_{max}$ from clusters $C_1$ and $C_2$.
@@ -71,7 +71,7 @@ which is this cluster created. There is no extra weight yet, so $w_{extra}=0$.
 	Copy $w_{max}$ from the $C_2$. There is no extra weigh, so $w_{extra}=0$.
 	\end{itemize}
 
-\item {\sc Split} have to distribute $w_{extra}$ to the children. For $C_i$ children
+\item $\Split$ have to distribute $w_{extra}$ to the children. For $C_i$ children
 of splitted $C$ will operations depends on the type of the $C$:
 	\begin{itemize}
 	\item If $C$ is a compress cluster of $C_1$ and $C_2$:
@@ -85,12 +85,11 @@ of splitted $C$ will operations depends on the type of the $C$:
 	\end{itemize}
 
 
-
-\item {\sc Destroy} sets weight of the underlying edge: $w(e)=w_{max}+w_{extra}$.
+\item $\Destroy$ sets weight of the underlying edge: $w(e)=w_{max}+w_{extra}$.
 
 \end{itemize}
 
-Then we could just call {\sc Expose}$(u,v)$ and read $w_{max}$ or add to $w_{extra}$
+Then we could just call $\Expose(u,v)$ and read $w_{max}$ or add to $w_{extra}$
 of the root cluster representing the $(u,v)$-path. Everything in time complexity
 of an {\sc Expose} operation, which is $\O(\log N)$.
 

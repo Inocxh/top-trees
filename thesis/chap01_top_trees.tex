@@ -17,18 +17,22 @@ some of them called {\I root clusters} (which represents whole trees of the
 underlying forest) could be directly accessed by the user.
 
 User defines format of the data stored in these clusters and four basic
-functions {\sc Create}, {\sc Destroy}, {\sc Join} and {\sc Split} used to
+{\I user functions} \Create, \Destroy, \Join{} and \Split{} used to
 manipulate with clusters data. Above that user could define fifth function
-{\sc Choose} which is needed for some use cases but it is not needed for basic
+\Choose{} which is needed for some use cases but it is not needed for basic
 usage.
 
-Then user controls the Top Trees structure by using operations $\cut{u,v}$,
-$\link{u,v}$ and $\expose{u,v}$. Last of them
+Then user controls the Top Trees structure by using {\I operations} $\Cut(u,v)$,
+$\Link(u,v)$ and $\Expose(u,v)$. Last of them
 makes cluster representing the path between vertices $u$ and $v$ a root cluster
 (because root clusters are the only clusters of the top tree, whose could be
 accessed by the user). The Top Trees structure dynamically updates stored data
 in clusters by using user defined functions.
 
+{\I Notation: We will use capitalize form to denote situations where we refer
+directly to the defined user functions or to the top trees operations called by
+users. When referring to the generic process of joining, splitting or to the
+internal procedures related to these processes we will use normal font style.}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -150,7 +154,7 @@ compress cluster constructed from this part of the path.
 
 \todo{Image of rake trees around path}
 
-During computation ({\sc Join} and {\sc Split} operations) there is need to use
+During computation (\Join{} and \Split{} operations) there is need to use
 virtual rake clusters, but it is only $\O(1)$ time complexity per one compress
 cluster. We will discuss it later in the first implementation for which this
 extended model is used.
@@ -165,26 +169,26 @@ be implemented by users of the Top Trees structure. Then user uses public Top
 Trees structure operations and these user functions are used internally when
 constructing, destroying or reorganizing clusters.
 
-If user wants to use the {\I Search} operation, he has to implement fifth user
-function {\I Choose} to traverse around the path by choosing children.
+If user wants to use the \Search{} operation, he has to implement fifth user
+function \Choose{} to traverse around the path by choosing children.
 
 Examples of the functions and related problems are given in the \Cref{chap:Problems}.
 
-\subsection{Create}
+\subsection{\sc Create}
 
 This function is called when new base cluster is created. It gets reference to
 the underlying edge and to the newly created base cluster, populates base
 cluster's data based on the underlying edge and runs other user defined
 operations according to logic of given problem.
 
-\subsection{Destroy}
+\subsection{\sc Destroy}
 
-Opposite of the Create function. This function is called just before deleting
+Opposite of the \Create{} function. This function is called just before deleting
 base cluster. It gets reference to the underlying edge and to the base cluster
 which would be destroyed and it could perform some end-of-life operations (like
 saving computed data from the cluster).
 
-\subsection{Join}
+\subsection{\sc Join}
 
 This function is called during contraction of two clusters into one (compress or
 rake) cluster. In the general view it should populate parent cluster with the
@@ -200,16 +204,16 @@ the logic of given problem.
 
 \subsection{Split}
 
-Opposite of the Join function. It is called just before removing connection
+Opposite of the \Join{} function. It is called just before removing connection
 among parent cluster and its children. This function gets reference to the
 parent cluster and both of its children with information about their boundary
 vertices. It should distribute data from the parent into children -- notice that
 no data could be stored in the parent cluster after the Split operation (because
 the parent cluster is deleted after this operation).
 
-The Join and Split operations are frequently called during reorganization of the
-Top trees structure -- common pattern is to Split everything around changed path
-in the top-down manner, reorganize the structure and then Join everything in the
+The \Join{} and \Split{} operations are frequently called during reorganization of the
+Top trees structure -- common pattern is to split everything around changed path
+in the top-down manner, reorganize the structure and then join everything in the
 bottom-up manner.
 
 \subsection{Choose}
@@ -217,7 +221,7 @@ bottom-up manner.
 This operation for given cluster with full information (all clusters above it
 are splitted -- efficiently this is a root cluster) selects one of its child
 clusters. It gets reference to the cluster and its children and returns
-reference to one of them. It is used internally by the {\I Search} operation.
+reference to one of them. It is used internally by the \Search{} operation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -237,7 +241,7 @@ normalized shape.
 
 Some operations may corrupt this normalized shape and in that case the correct
 shape must be restored prior to the next operation. For both following
-implementations an example of such operation is the expose operation (see
+implementations an example of such operation is the \Expose{} operation (see
 implementation details).
 
 We cannot restore the correct shape right after finishing the operation because
@@ -281,45 +285,45 @@ $N_v$.
 With handles we could transform operations with vertices into operations with
 clusters.
 
-\subsection{Expose}
+\subsection{\sc Expose}
 
-Expose is one of the most basic operation. Calling $\expose{u,v}$ will result in
+Expose is one of the most basic operation. Calling $\Expose(u,v)$ will result in
 exposing the $u\dots v$ path (if exists) in the root cluster, which the user
 could modify.
 
 Implementation of the expose slightly differs in the first and the second
 implementation (first implementation uses splays and splices and the second one
 does expose through several splits and joins), but result of both is the
-same cluster (but with possibly different decomposition to subclusters).
+same root cluster (but with possibly different decomposition to subclusters).
 
 See details of both implementations for more information.
 
-\subsection{Restore}
+\subsection{\sc Restore}
 
 As we mentioned before we may need to keep the Top Trees structure in some
-normalized shape. Purpose of the Restore operation is to restore the structure
+normalized shape. Purpose of this operation is to restore the structure
 in such form. Because some operation may corrupt this normalized shape we
-use the Restore operation at beginning of all others operations.
+call the \Restore{} operation at beginning of all others operations.
 
-To allow the user to modify user functions (cut, join, \dots) for each operation
-we will enable the Restore operation to be called independently.
+To allow the user to modify user functions (\Split, \Join, \dots) for each
+operation we will make the \Restore{} callable by the user independently.
 
 In the second implementation we will use this functionality to turn off
-expensive updates during the expose operation, restore the structure back to the
+expensive updates during the \Expose{} operation, \Restore{} the structure back to the
 correct form and before next operation turn the expensive updates back on.
 
-\subsection{Cut}
+\subsection{\sc Cut}
 
-Operation $\cut{u,v}$ deletes edge between vertices $u$ and $v$ and reorganizes
+Operation $\Cut(u,v)$ deletes edge between vertices $u$ and $v$ and reorganizes
 the Top Trees structure to reflect this change. Precondition for this operation
 is that $u\ne v$ and there exists edge $(u,v)$.
 
 Both implementations user different approaches, but the result is the same --
 they remove the $(u,v)$ edge and return root of two new top trees.
 
-\subsection{Link}
+\subsection{\sc Link}
 
-The Link operation is an opposite to the Cut operation. Calling $\link{u,v}$ on
+The Link operation is an opposite to the \Cut{} operation. Calling $\Link(u,v)$ on
 two disconnected vertices joins them by the new edge $(u,v)$. Precondition for
 this operation is that $u$ and $v$ are disconnected.
 
@@ -327,9 +331,9 @@ Both implementations user different approaches, but the result is the same --
 both top trees are joined by the new edge $(u,v)$ and the cluster of resulting
 top tree is returned.
 
-\subsection{Search}
+\subsection{\sc Search}
 
-When defined the {\I Choose} user function this operation could be used to find
+When defined the \Choose{} user function this operation could be used to find
 and return specific base cluster.
 
 \todo{Example of search.}

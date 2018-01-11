@@ -1,7 +1,7 @@
 \chapter{Implementation of Top Trees using self adjusting trees}
 \label{chap:ImplementationSelfAdjusting}
 
-This implementation is based on article Self-Adjusting Top Trees
+This implementation is based on article {\I Self-Adjusting Top Trees}
 \cite{SelfAdjustingTT} by Tarjan and Werneck and uses the extended clusters
 model with foster children discussed in the \Cref{chap:TopTrees}.
 
@@ -46,9 +46,9 @@ in binary tree structure of compress clusters to obtain lower top tree.
 Expose in this implementation is based on splaying and splicing whose are used
 to bring handles of given vertices to the top of theirs top trees.
 
-Implementation of the Expose operation has two parts: soft and hard expose. Soft
+Implementation of the \Expose{} operation has two parts: soft and hard expose. Soft
 expose is used internally by others operations, hard expose is used only in the
-Expose itself.
+\Expose{} itself.
 
 Before moving forward we will recall some internal structure of top trees with
 extended clusters model.
@@ -174,8 +174,8 @@ checking and flipping is needed.
 
 \subsection{Soft expose}
 
-Soft expose is the first part of the Expose operation. It is called as
-{\I soft\_expose(u,v)} and its target is to bring path $u\dots v$ as subpath into
+Soft expose is the first part of the \Expose{} operation. When it is called as
+{\I soft\_expose(u,v)} its target is to bring path $u\dots v$ as subpath into
 the root cluster of corresponding top tree (so after soft expose there should
 be some path $a\dots u\dots v\dots b$ in the root cluster). Truncating the root
 cluster to contain only $u\dots v$ path is quest for the hard expose operation.
@@ -272,7 +272,7 @@ hard expose operation.
 
 \subsection{Hard expose}
 
-Hard expose is the second part of the expose procedure, it follows the soft
+Hard expose is the second part of the \Expose{} operation, it follows the soft
 expose and its job is to truncate the path in the root cluster that it contains
 only the exposed subpath.
 
@@ -306,15 +306,15 @@ or Search) we have to undone this and return the top tree into its original
 form, otherwise the amortization arguments would not work.
 
 When rakerizing we save all rakerized compress clusters into some list and
-before any other operation (Cut, Link or Expose) we call the Restore operation.
-The Restore operation checks this list and if there are some vertices it changes
+before any other operation (\Cut, \Link or \Expose) we call the \Restore{} operation.
+The \Restore{} operation checks this list and if there are some vertices it changes
 them back to compress clusters. All that we could do in constant time at start
 of every operation.
 
 \section{Cut}
 
-Implementing cut operation is quite easy thanks to the soft expose operation.
-First step of the $cut(u,v)$ operation is to do $soft\_expose(u,v)$ which brings
+Implementing \Cut{} operation is quite easy thanks to the soft expose operation.
+First step of the $\Cut(u,v)$ operation is to do $soft\_expose(u,v)$ which brings
 the top tree into state described at the end of the soft expose subsection
 -- depending on the degrees of $u$ and $v$ the cluster representing
 $(u,v)$ edge will be the rightmost child or grandchild of the root cluster of the
@@ -358,8 +358,8 @@ top trees after cutting the $u,v$ edge.
 
 \section{Link}
 
-Link is similar to the cut operation but in the opposite way. First step during
-the $link(u,v)$ operation is bringing both $u$ and $v$ to the top in
+$\Link$ is similar to the \Cut{} operation but in the opposite way. First step
+during the $\Link(u,v)$ operation is bringing both $u$ and $v$ to the top in
 corresponding top trees. This could be simply done by calling
 $soft\_expose(u,v)$.
 
