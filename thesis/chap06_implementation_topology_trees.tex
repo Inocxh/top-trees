@@ -10,18 +10,62 @@ that chapter, there we will introduce some details of joining, splitting and the
 \Expose{} operation (\Link{} and \Cut{} operations have been described in the
 mentioned chapter).
 
+\section{Mapping top trees clusters}
+
+Usage of Topology trees as backend for Top trees was described by Alstrup, Holm,
+Lichtenberg and Thorup in \cite{TopTrees}. They described the need of
+ternarization and how to transform operations with the topology clusters to
+\Split{} and \Join{} functions used in the Top trees structure.
+
+Outgoing edges acts differently in topology clusters and top trees clusters --
+in topology clusters outgoing edges are not parts of topology clusters, but
+top trees clusters are based on these edges. Even that this is a major
+difference the mapping could be done quite easily.
+
+But before mapping we have to deal with fake subvertices and subvertice edges
+added by ternarization.
+
+\subsection{Subvertices and subvertice edges from the Top trees perspective}
+
+During ternarization in the \Cref{chap:TopologyTrees} we added additional
+subvertices and subvertice edges into into the graph. That is needed by topology
+trees but it may be problem for the top trees operations.
+
+Firstly how to deal with subvertices: When performing top trees \Join{} or
+\Split{} and joined cluster has subvertex as its endpoint, we use the superior
+vertex of this endpoint instead of the original endpoint when passing endpoint
+to the \Join/\Split{} user function. From the user's points of view all
+subvertices are represented by the original superior vertex.
+
+And how to deal with subvertice edges? Just ignore them -- there are no top
+clusters associated with them and when joining topology cluster with subvertice
+edge and two children we just rake these children ignoring the edge.
+
+\subsection{Associated top clusters}
+
+With each topology cluster may be associated at most three top clusters:
+\begin{itemize}
+\item {\I Edge cluster} -- when there is an normal edge inside the topology cluster.
+\item {\I Combined edge cluster} -- joined {\I edge cluster} and cluster from
+the first child (when the first child has its own top cluster).
+\item {\I Top cluster} for the whole topology cluster (joining {\I combined edge
+cluster} and cluster from the second child if there is any).
+\end{itemize}
+
+If topology cluster (or recursive its children) contains at least one normal
+edge we call it {\I topology top cluster} (because it has associated top
+cluster). Otherwise we will call it {\I empty topology cluster}. Originally all
+vertices of the original tree are empty topology clusters and by joining them we
+create topology top clusters.
+
+
 \section{Joins and Splits}
 
 $\Join$ and \Split{} (and \Create{} and \Destroy{} for base clusters) are user
 defined functions that are called on top clusters with defined endpoints. We
 cannot call them directly on topology clusters, so we need to split topology
-clusters to corresponding top clusters like we showed in the
-\Cref{chap:TopologyTrees} and call user defined function on these top clusters.
-
-We will remind that each topology cluster could have up to three associated
-top clusters called {\I edge cluster}, {\I combined edge cluster} (edge cluster
-plus one child) and the overall {\I top cluster} (combined edge cluster plus
-the second child).
+clusters to associated top clusters and call user defined function on these top
+clusters.
 
 The external view of the topology clusters during splitting and joining is
 similar as in the first implementation -- when operating on some topology
@@ -89,3 +133,166 @@ We have done at most two calls to the \Split{} user function and one to the
 
 
 \section{Expose}
+
+The mechanism of the $\Expose(u,v)$ is slightly tricky. Basic idea of the
+\Expose{} in the Top trees structure based on topology trees is to leave the
+topology trees intact. We only need to split some topology clusters and then
+take their inner top clusters and join them into a new structure.
+
+This procedure was basically described by Alstrup et al. in \cite{TopTrees} but
+without any details. Here I describe it will all necessary details.
+
+We split all topology clusters in the paths from both exposed vertices to the
+root of corresponding topology tree, which gave us $\O(\log N)$ top clusters
+splitted around this path (because of the maximal height of a topology tree for
+$N$ vertices).
+
+Then we join all these top clusters to construct {\I auxiliary top tree} such
+that the root cluster of this auxiliary top free would be a compress cluster
+with two given vertices as its endpoints (and all other clusters raked on its
+path).
+
+After finishing \Expose{} we serve the root cluster to the user and he could do
+modifications on this root cluster. When it is over we split the auxiliary top
+tree, which distributes information from the modified root cluster into splitted
+clusters in the original topology tree. Finally we join all splitted clusters
+in the topology tree and the operation is finished.
+
+\subsection{Splitting}
+
+Firstly we start will recursive splitting from both given vertices -- better
+said from base topology clusters that contains these vertices. We need to split
+all clusters that not contain them but not as {\I external vertices} and to save
+these splitted vertices into {\I chains} whose we will join in the next step.
+
+We have to make clear that boundary vertices (or endpoints) that we defined for
+top trees are different that external vertices, more precisely external vertices
+are subset of boundary vertices. We defined that each top cluster has two
+boundary vertices because we defined top clusters as generalized edges. But
+external vertices are only those boundary vertices that are connected to others
+clusters.
+
+With definition of external vertices the splitting part is straightforward --
+for each cluster (starting from given vertex's base cluster) we check that given
+vertex is external vertex (by checking outgoing edges) and if no we split this
+cluster.
+
+Notice that all clusters above the first splitted clusters will be splitted too,
+because once the vertex stops be external it will never be external again. To
+have the full coverage of the tree we have to add the last not splitted cluster
+to the chain (it will be the first cluster in the chain).
+
+Splitted cluster is divided (by at most two call to the \Split{} user function
+and one to the \Destroy{} user function) into at most two topology clusters (one
+from which we climbed up and second as its sibling) and one edge.
+
+If there is sibling cluster, this sibling has its top cluster and there is a
+normal edge, we \Create{} top cluster for this edge, \Join{} this top cluster
+with sibling's top cluster (according to previous situation of both siblings we
+join them as rake or compress cluster) and then we add them into chain of top
+clusters for the next operation. If there is only edge or only sibling's top
+cluster (when there is only a subvertice edge) we just add it into chain
+directly without joining.
+
+We only need to care not to add sibling that is on the second vertex's path.
+For the second vertex the only difference would be that we will stop this
+process when we reach already splitted cluster (otherwise we would add some
+clusters twice). Splitted clusters for the second vertex will be saved into
+separate chain.
+
+\todo{Image of the splitted chains}
+
+\subsection{Chain joining}
+
+During splitting we saved splitted clusters along the paths from both given
+vertices and we saved those splitted vertices into two chains. Firstly we join
+both chains into one by reversing one of them and concatenating them.
+
+Now we have chain that starts by cluster that have first given vertex as it's
+external vertex and similarly ends by cluster that have the second given vertex
+as it's external vertex. Now we have to join this chain.
+
+Some clusters in the chain have to be raked, some compressed. Our first task is
+to construct sequence of clusters $(v_0,v_1),(v_1,v_2),\dots,(v_{n-1},v_n)$
+where $u=v_0$ and $v=v_n$. The first problem is that cluster's endpoint may be
+in reverse order, but this is easy to fix. The second problem it that there may
+be places where it looks like $(v_{i-1}, v_i),(v_i, x),(v_i,v_{i+1})$. We need
+to rake these clusters to one of their neighbours.
+
+After that we just need to compress all clusters in the chain to obtain the
+final root cluster with endpoints $(u,v)$. It represents the $(u,v)$ path with
+all others parts of the tree raked.
+
+The whole algorithm would work as:
+\begin{enumerate}
+
+\item Start by choosing $x=u$.
+
+\item Rake all clusters that needs to be raked. Go through all clusters and do:
+\begin{itemize}
+\item If one of the cluster's endpoints is $x$ $\rightarrow$ Leave this cluster
+there and set $x$ as it's second endpoint.
+\item Otherwise we cannot join this cluster after the previous $\rightarrow$ The
+previous cluster is a branch and needs to be raked. From the way how the
+clusters in the chain were constructed this previous cluster's second endpoint
+(other than $x$) is one of this cluster's endpoint.
+
+We remove the previous and the current clusters from the chain and we construct
+a new top cluster as a rake \Join{} of the previous cluster onto the current
+one. Finally we add this new top cluster into the chain and we set $x$ as the
+current cluster's second endpoint. \end{itemize}
+
+\item Check that we end with $x=v$. If no rake the last cluster onto the
+previous one until $x=v$.
+
+\item Compress \Join{} any two neighbour clusters until there is only one
+cluster.
+
+\end{enumerate}
+
+The last cluster is returned to the user. Because paths from both given vertices
+to the root cluster has length at most $\O(\log N)$ there were at most $\O(\log
+N)$ clusters. Thus constructing of chains and their joining takes $\O(\log N)$
+calls to the \Join{} user function.
+
+Now the structure is in a degraded form and before any other operation it must
+be restored.
+
+\subsection{Restore}
+
+Restore is called manually by the user or automatically by all others
+operations. If the structure was modified by the \Expose{} there is a topology
+tree in the right shape, but with splitted clusters. And also there is an
+auxiliary top tree which could contain modified information that should be
+distributed into original clusters.
+
+Firstly we need to \Split{} all the clusters in the auxiliary top tree (there
+is at most $\O(\log N)$ clusters). Clusters on the last level of the auxiliary
+top tree distributes information to the clusters in the original tree.
+
+Now we can delete the auxiliary top tree and then join all the splitted clusters
+in the original tree. Because the initial splitting takes $\O(\log N)$ calls to
+the \Split{} user function the joining would take the same amount of calls to
+the \Join{} user function.
+
+\subsection{Keeping original clusters during \Expose}
+
+Because the original shape of the underlying topology tree remains intact during
+the \Expose{} operation we may use it for our benefit. From the user's point of
+view we \Split{} some clusters, then we build from them a new top tree and
+finally we destroy this new top tree and \Join{} again the same clusters as were
+before.
+
+In some use cases there are a lot of informations in the clusters used for
+structural changes in the underlying clusters -- for example in the 2-edge
+connectivity that we will use as one of our experiments. In that cases if may be
+good to turn off some expensive updates during \Join/\Split{} and to turn them
+again after the top tree is returned into its original shape.
+
+But for that we need to remember the original values somewhere. User may do this
+on it's own (by saving this information for example in edges), but there is an
+better approach. Because our interface for all user functions pass them pointers
+to the clusters (and the data is stored inside them) we may keep these original
+clusters intact after the \Split{} and then pass them to the \Join{} (instead of
+newly created empty clusters). We will use this functionality on our experiment
+with the 2-edge connectivity.

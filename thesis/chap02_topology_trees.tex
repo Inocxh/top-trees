@@ -22,10 +22,26 @@ without edges to neighbours) and with maximally three neighbours, better
 definition will conclude below. Nodes not connected by edge cannot be in common
 cluster, thus clusters represents some contracted subtrees of the original tree.
 
-Note that clusters in topology trees are slightly different than clusters in
-top trees. In top trees clusters are generalized edges (with two endpoints)
+\section{User interaction}
+
+User of the topology trees could interact with them by using \Cut{} and \Link{}
+operations like in the Top trees structure, but there is no \Expose{} operation.
+To use it as base for the Top trees structure we will have to implement
+\Expose{} differently.
+
+Also note that clusters in topology trees are slightly different than clusters
+in top trees. In top trees clusters are generalized edges (with two endpoints)
 representing contracted subtree between two vertices, but clusters in topology
 trees are generalized vertices (with maximally three outgoing edges).
+
+We will build the Top trees structure based on topology trees in
+the \Cref{chap:ImplementationTopology}, now let's introduce details of topology
+trees.
+
+{\it Notation: Like in the first chapter we will use capitalize form of the
+\Cut{} and \Link{} operations to denote that they are called directly by the
+user. Also we will use terms {\sl internal cut} and {\sl internal link} to
+denote internal operations that works on a ternarized tree.}
 
 \section{Definition and properties}
 
@@ -76,7 +92,10 @@ vertices of the original tree (denote it as $N$) and at $k$-th level there are
 at most $N\cdot(5/6)^k$ clusters. Therefore the height of the topology tree for
 tree with $N$ vertices could be estimated as $\O(\log N)$.
 
-\section{Updates -- cuts and links}
+\section{Updates -- internal cuts and links}
+
+In this section we will assume that we work on a ternarized tree, generic \Cut{}
+and \Link{} operations will be discussed below in the ternarization section.
 
 After a change in the underlying forest (adding or removing an edge) we must
 update the whole topology trees structure -- after {\I link} (adding edge) two
@@ -190,7 +209,7 @@ and last vertex will have one edge used, inner will have two edges used)
 subvertices (there are exactly the right number of free neighbour slots).
 \end{itemize}
 
-But the Cut and Link operations in the Top trees works with the original
+But the \Cut{} and \Link{} operations in the Top trees works with the original
 vertices, we have to build some mapping on internal Topology trees cuts and link
 operations.
 
@@ -256,66 +275,3 @@ In each case we have to do only constant number of inner cuts and links. All
 these inner operations works in the $\O(\log N)$ time so the time complexity of
 the whole \Link{} operation is $\O(\log N)$ (but as in the \Cut's case the
 multiplicative constant could be really large).
-
-\section{Mapping Top trees clusters}
-
-Usage of Topology trees as backend for Top trees was described by Alstrup, Holm,
-Lichtenberg and Thorup in \cite{TopTrees}. They described the need of
-ternarization and how to make operations with the topology clusters to Split and
-Join operations on Top trees clusters.
-
-Outgoing edges acts differently in topology clusters and top trees clusters --
-in topology clusters outgoing edges are not parts of topology clusters, but
-top trees clusters are based on these edges. Even that this is a major
-difference the mapping could be done quite easily.
-
-But before mapping we have to deal with fake subvertices and subvertice edges
-added by ternarization.
-
-\subsection{Subvertices and subvertice edges from the Top trees perspective}
-
-During ternarization we added additional subvertices and subvertice edges
-into into the graph. That is needed by topology trees but it may be problem for
-the top trees operations.
-
-Firstly how to deal with subvertices: When performing top trees join or split
-and joined cluster has subvertex as its endpoint, we pass the superior vertex
-of this endpoint to the join/split user function instead of the original
-endpoint. From the user's points of view all subvertices are represented by the
-original superior vertex.
-
-And how to deal with subvertice edges? Just ignore them -- there are no top
-clusters associated with them and when joining topology cluster with subvertice
-edge we just rake its children ignoring the edge.
-
-\subsection{Associated top clusters}
-
-With each topology cluster may be associated at most three top clusters:
-\begin{itemize}
-\item {\I Edge cluster} -- when there is an normal edge inside the topology cluster.
-\item {\I Combined edge cluster} -- joined {\I edge cluster} and cluster from
-the first child (when the first child has its own top cluster).
-\item {\I Top cluster} for the whole topology cluster (joining {\I combined edge
-cluster} and cluster from the second child if there is any).
-\end{itemize}
-
-If topology cluster (or recursive its children) contains at least one normal
-edge we call it {\I topology top cluster} (because it has associated top
-cluster). Otherwise we will call it {\I empty topology cluster}.
-
-Originally all vertices of the original tree are empty topology clusters and by
-joining them we create topology top clusters.
-
-\subsection{Joins, Splits and Expose}
-
-Mechanism of the joining and splitting of the topology cluster is similar as the
-mechanism for original Top trees but with respect to the clusters mapping. When
-splitting some cluster we firstly need to split all clusters above it (in
-top-down manner) and when joining we firstly need to recursively join children
-of joined cluster (in bottom-up manner).
-
-Details of joining and splitting are included in the \Cref{chap:ImplementationTopology}.
-
-\section{Expose}
-
-TODO
