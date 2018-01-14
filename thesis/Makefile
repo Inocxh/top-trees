@@ -1,4 +1,5 @@
-all: top_trees.pdf
+name=top_trees
+all: $(name).pdf
 
 .PHONY: FORCE
 
@@ -8,4 +9,4 @@ all: top_trees.pdf
 clean:
 	latexmk -C
 	rm -f *.acn *.bbl *.ist *.lod
-
+	rm -f $(name)-*.pdf $(name)-*.asy
