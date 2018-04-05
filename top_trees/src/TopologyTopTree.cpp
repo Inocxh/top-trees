@@ -26,7 +26,7 @@ public:
 	std::tuple<std::shared_ptr<TopologyCluster>, std::shared_ptr<TopologyCluster>> cut(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w, std::shared_ptr<BaseTree::Internal::Edge> edge);
 	std::shared_ptr<TopologyCluster> link(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w, std::shared_ptr<BaseTree::Internal::Edge> edge);
 
-	std::list<std::shared_ptr<ICluster>> expose_get_clusters(std::shared_ptr<BaseTree::Internal::Vertex> v, bool continue_above_common);
+	std::list<std::shared_ptr<ICluster>> expose_get_clusters(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> second_v, bool continue_above_common);
 
 	//void soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w);
 	//std::shared_ptr<Cluster> hard_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w);
@@ -872,7 +872,7 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_su
 ////////////////////////////////////////////////////////////////////////////////
 /// Expose
 
-std::list<std::shared_ptr<ICluster>> TopologyTopTree::Internal::expose_get_clusters(std::shared_ptr<BaseTree::Internal::Vertex> v, bool continue_above_common) {
+std::list<std::shared_ptr<ICluster>> TopologyTopTree::Internal::expose_get_clusters(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> second_v, bool continue_above_common) {
 	std::list<std::shared_ptr<ICluster>> list;
 
 	auto last_cluster = v->topology_cluster;
@@ -880,15 +880,22 @@ std::list<std::shared_ptr<ICluster>> TopologyTopTree::Internal::expose_get_clust
 	bool was_added = false;
 	while (cluster != NULL) {
 		#ifdef DEBUG
-			std::cerr << "Testing cluster " << *cluster << std::endl;
+			std::cerr << "Testing cluster " << *cluster << " - vertex " << *v->data << " external: " << cluster->is_external_boundary_vertex(v) << std::endl;
 		#endif
-		if (!cluster->is_external_boundary_vertex(v)) {
+		if (was_added || !cluster->is_external_boundary_vertex(v) || (cluster->edge != NULL && (cluster->edge->from == second_v || cluster->edge->to == second_v))) {
 			if (cluster->edge != NULL) {
 				if (!was_added && last_cluster->is_top_cluster) {
 					#ifdef DEBUG
 						std::cerr << "    Adding first cluster " << *last_cluster << std::endl;
 					#endif
-					list.push_back(last_cluster);
+					auto new_simple_cluster = std::make_shared<SimpleCluster>();
+					new_simple_cluster->boundary_left = last_cluster->boundary_left;
+					new_simple_cluster->boundary_right = last_cluster->boundary_right;
+					new_simple_cluster->first = last_cluster->first;
+					new_simple_cluster->second = last_cluster->second;
+					new_simple_cluster->data = last_cluster->data;
+					expose_simple_clusters.push_back(new_simple_cluster); // to allow splitting it in Restore operation
+					list.push_back(new_simple_cluster);
 				}
 				was_added = true;
 
@@ -940,7 +947,7 @@ std::list<std::shared_ptr<ICluster>> TopologyTopTree::Internal::expose_get_clust
 
 				if (new_cluster != NULL) {
 					#ifdef DEBUG
-						std::cerr << "    Adding cluster new cluster with endpoints " << *new_cluster->boundary_left->data << "-" << *new_cluster->boundary_right->data << std::endl;
+						std::cerr << "    Adding new cluster with endpoints " << *new_cluster->boundary_left->data << "-" << *new_cluster->boundary_right->data << std::endl;
 					#endif
 					list.push_back(new_cluster);
 				}
@@ -976,8 +983,8 @@ std::shared_ptr<ICluster> TopologyTopTree::Expose(int v_index, int w_index) {
 	cluster_w->do_split(&internal->splitted_clusters);
 
 	// 2. Get all clusters that contains v/w as non-boundary vertex and save them into two lists
-	auto clusters_list = internal->expose_get_clusters(v, true);
-	auto second_list = internal->expose_get_clusters(w, false);
+	auto clusters_list = internal->expose_get_clusters(v, w, true);
+	auto second_list = internal->expose_get_clusters(w, v, false);
 	// 2.1 Join lists
 	for (auto it = second_list.rbegin(); it != second_list.rend(); ++it) clusters_list.push_back(*it);
 
@@ -998,44 +1005,95 @@ std::shared_ptr<ICluster> TopologyTopTree::Expose(int v_index, int w_index) {
 		if (vertex == cluster->boundary_left || vertex == cluster->boundary_left->superior_vertex) vertex = cluster->boundary_right;
 		else if (vertex == cluster->boundary_right || vertex == cluster->boundary_right->superior_vertex) vertex = cluster->boundary_left;
 		else {
-			// Cannot join with previous cluster, previous cluster must be raked onto this vertex
-			if (it == clusters_list.begin()) {
-				std::cerr << "ERROR: cannot match first cluster in exposed list" << std::endl;
+			// Cannot join with previous cluster, previous cluster must be raked onto this cluster
+			// or this cluster must be raked on the following cluster
+
+			// 0. Choose variant, get other cluster and common vertex
+			bool prev_join = false;
+			bool next_join = false;
+			std::shared_ptr<ICluster> other_cluster;
+			std::shared_ptr<BaseTree::Internal::Vertex> common_vertex;
+			// a) Try previous cluster
+			if (it != clusters_list.begin()) {
+				other_cluster = *std::prev(it);
+				common_vertex = TopologyCluster::get_common_vertex(other_cluster, cluster);
+				if (common_vertex != NULL) {
+					#ifdef DEBUG
+						std::cerr << " - Raking PREVIOUS cluster with endpoint " << *other_cluster->boundary_left->data << "," << *other_cluster->boundary_right->data
+						<< " onto cluster " << *cluster->boundary_left->data << "," << *cluster->boundary_right->data << std::endl;
+					#endif
+					prev_join = true;
+				}
+			}
+			// b) otherwise join with next cluster
+			if (!prev_join && it != std::prev(clusters_list.end())) {
+				other_cluster = *std::next(it);
+				common_vertex = TopologyCluster::get_common_vertex(other_cluster, cluster);
+				if (common_vertex != NULL) {
+					#ifdef DEBUG
+						std::cerr << " - Raking cluster with endpoint " << *cluster->boundary_left->data << "," << *cluster->boundary_right->data
+						<< " onto NEXT cluster " << *other_cluster->boundary_left->data << "," << *other_cluster->boundary_right->data << std::endl;
+					#endif
+					next_join = true;
+				}
+			}
+
+			if (!prev_join && !next_join) {
+				std::cerr << "ERROR: cannot join this cluster with previous or next cluster in the exposed list" << std::endl;
 				exit(1);
 			}
-			auto prev_cluster = *std::prev(it);
-			#ifdef DEBUG
-				std::cerr << " - Raking cluster with endpoint " << *prev_cluster->boundary_left->data << "," << *prev_cluster->boundary_right->data
-				<< " onto cluster " << *cluster->boundary_left->data << "," << *cluster->boundary_right->data << std::endl;
-			#endif
 
-			// 0. Get common vertex (will be next join vertex)
-			auto common_vertex = TopologyCluster::get_common_vertex(prev_cluster, cluster);
-			// 0.1 Get other side vertex than common vertex from this cluster
-			if (cluster->boundary_left == common_vertex || cluster->boundary_left->superior_vertex == common_vertex) vertex = cluster->boundary_right;
-			else vertex = cluster->boundary_left;
+			// When raking previous onto this one the new join vertex have to be found
+			// (when raking this one onto the next this cycle would run once one and no changes to the join vertex are needed)
+			if (prev_join) {
+				// Get other side vertex than common vertex from this cluster
+				if (cluster->boundary_left == common_vertex || cluster->boundary_left->superior_vertex == common_vertex) vertex = cluster->boundary_right;
+				else vertex = cluster->boundary_left;
+			}
 
 			// 1. Prepare new cluster
 			auto new_cluster = std::make_shared<SimpleCluster>();
 			// 1.1 Set parents (if they are simple clusters)
-			new_cluster->first = prev_cluster;
-			auto prev_cluster_simple = std::dynamic_pointer_cast<SimpleCluster>(prev_cluster);
-			if (prev_cluster_simple != NULL) prev_cluster_simple->parent = new_cluster;
+			new_cluster->first = other_cluster;
+			auto other_cluster_simple = std::dynamic_pointer_cast<SimpleCluster>(other_cluster);
+			if (other_cluster_simple != NULL) other_cluster_simple->parent = new_cluster;
 			new_cluster->second = cluster;
 			auto cluster_simple = std::dynamic_pointer_cast<SimpleCluster>(cluster);
 			if (cluster_simple != NULL) cluster_simple->parent = new_cluster;
 			// 1.2 Set boundaries (raked onto current cluster) and Join
-			new_cluster->boundary_left = cluster->boundary_left;
-			new_cluster->boundary_right = cluster->boundary_right;
-			Join(prev_cluster, cluster, new_cluster);
+			if (prev_join) {
+				// a) Rake previous onto this one
+				new_cluster->boundary_left = cluster->boundary_left;
+				new_cluster->boundary_right = cluster->boundary_right;
+			} else {
+				// b) Rake this one onto the next one
+				new_cluster->boundary_left = other_cluster->boundary_left;
+				new_cluster->boundary_right = other_cluster->boundary_right;
+			}
+
+			Join(other_cluster, cluster, new_cluster);
+			#ifdef DEBUG
+				std::cerr << " -> Joined into " << *new_cluster->boundary_left->data << "," << *new_cluster->boundary_right->data << std::endl;
+			#endif
 
 			// 2. Remove old clusters and add new one to the list
-			// 2.1 Remove previous cluster from list
-			clusters_list.erase(std::prev(it));
-			// 2.2 Insert new cluster previously to the current cluster
-			clusters_list.insert(it, new_cluster);
-			// 2.3 Remove current cluster
-			clusters_list.erase(it);
+			if (prev_join) {
+				// 2.1 Remove previous cluster from list
+				clusters_list.erase(std::prev(it));
+				// 2.2 Insert new cluster previously to the current cluster
+				clusters_list.insert(it, new_cluster);
+				// 2.3 Remove current cluster
+				clusters_list.erase(it);
+			} else {
+				// 2.1 Remove next cluster from list
+				clusters_list.erase(std::next(it));
+				// 2.2 Insert new cluster previously to the current cluster
+				clusters_list.insert(it, new_cluster);
+				// 2.3 Next iterator will be newly inserted
+				next_it = std::prev(it);
+				// 2.4 Remove current cluster
+				clusters_list.erase(it);
+			}
 		}
 		it = next_it;
 	}

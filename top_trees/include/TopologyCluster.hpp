@@ -67,6 +67,15 @@ protected:
 	void calculate_outer_edges(bool check_neighbours = false);
 	void remove_all_outer_edges();
 
+	/**
+	 * @brief Tries to find common vertex of two given IClusters.
+	 *
+	 * @param cluster_a Shared pointer to the first ICluster to compare.
+	 * @param cluster_b Shared pointer to the second ICluster to compare.
+	 * @param get_superior True if do comparison on the superior vertices of boundary vertices of given clusters, true by default.
+	 *
+	 * @return shared_ptr to the common vertex of two given IClusters or NULL when they have no common vertex
+	 */
 	static std::shared_ptr<BaseTree::Internal::Vertex> get_common_vertex(std::shared_ptr<ICluster> cluster_a, std::shared_ptr<ICluster> cluster_b, bool get_superior = true);
 };
 std::ostream& operator<<(std::ostream& o, const TopologyCluster& v);

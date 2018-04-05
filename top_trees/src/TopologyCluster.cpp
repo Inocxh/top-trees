@@ -32,6 +32,10 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyCluster::get_common_vertex(s
 
 	if (get_superior && common_vertex->superior_vertex != NULL) common_vertex = common_vertex->superior_vertex;
 
+	// Second test
+	if (common_vertex != cluster_b->boundary_left && common_vertex != cluster_b->boundary_right
+	   && common_vertex != cluster_b->boundary_left->superior_vertex && common_vertex != cluster_b->boundary_right->superior_vertex) common_vertex = NULL;
+
 	return common_vertex;
 }
 
@@ -335,11 +339,17 @@ void TopologyCluster::do_split(std::vector<std::shared_ptr<TopologyCluster>>* sp
 	is_splitted = true;
 }
 
+// Test if the v is external boundary vertex of the cluster (with respect to superior vertices)
 bool TopologyCluster::is_external_boundary_vertex(std::shared_ptr<BaseTree::Internal::Vertex> v) {
-	if (boundary_left != v && boundary_right != v) return false; // v isn't either boundary vertex, it cannot be external boundary vertex
+	if (v->superior_vertex != NULL) v = v->superior_vertex;
+
+	if (boundary_left != v && boundary_right != v
+	  && (boundary_left == NULL || boundary_left->superior_vertex != v)
+	  && (boundary_right == NULL || boundary_right->superior_vertex != v)
+	) return false; // v isn't either boundary vertex, it cannot be external boundary vertex
 
 	for (auto n: outer_edges) {
-		if (n.edge->from == v || n.edge->to == v) return true;
+		if (n.edge->from == v || n.edge->to == v || n.edge->from->superior_vertex == v || n.edge->to->superior_vertex == v) return true;
 	}
 
 	return false;
