@@ -75,7 +75,7 @@ real layout(int level, Cluster node ) {
 		sumWidth += w + treeNodeStep;
 	}
 	if (node.left != null) {
-		if (node.foster_left != null) sumWidth -= treeNodeStep;
+		if (node.foster_left != null) sumWidth -= treeNodeStep/2;
 		real w = layout(level+1, node.left);
 		node.left.pos = (sumWidth + w/2, -level*treeLevelStep);
 		sumWidth += w + treeNodeStep;
@@ -86,7 +86,7 @@ real layout(int level, Cluster node ) {
 		sumWidth += w + treeNodeStep;
 	}
 	if (node.right != null) {
-		if (node.foster_right != null) sumWidth -= treeNodeStep;
+		if (node.foster_right != null) sumWidth -= treeNodeStep/2;
 		real w = layout(level+1, node.right);
 		node.right.pos = (sumWidth + w/2, -level*treeLevelStep);
 		sumWidth += w + treeNodeStep;
