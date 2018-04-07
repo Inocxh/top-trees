@@ -38,8 +38,8 @@ to the \Join/\Split{} user function. From the user's points of view all
 subvertices are represented by the original superior vertex.
 
 And how to deal with subvertice edges? Just ignore them -- there are no top
-clusters associated with them and when joining topology cluster with subvertice
-edge and two children we just rake these children ignoring the edge.
+clusters associated with them. When joining topology cluster with subvertice
+edge and two children, we just rake these children ignoring the edge.
 
 \subsection{Associated top clusters}
 
@@ -148,7 +148,7 @@ splitted around this path (because of the maximal height of a topology tree for
 $N$ vertices).
 
 Then we join all these top clusters to construct {\I auxiliary top tree} such
-that the root cluster of this auxiliary top free would be a compress cluster
+that the root cluster of this auxiliary top tree would be a compress cluster
 with two given vertices as its endpoints (and all other clusters raked on its
 path).
 
@@ -162,15 +162,15 @@ in the topology tree and the operation is finished.
 
 Firstly we start will recursive splitting from both given vertices -- better
 said from base topology clusters that contains these vertices. We need to split
-all clusters that not contain them but not as {\I external vertices} and to save
+all clusters that contain them but not as {\I external vertices} and to save
 these splitted vertices into {\I chains} whose we will join in the next step.
 
-We have to make clear that boundary vertices (or endpoints) that we defined for
-top trees are different that external vertices, more precisely external vertices
-are subset of boundary vertices. We defined that each top cluster has two
-boundary vertices because we defined top clusters as generalized edges. But
-external vertices are only those boundary vertices that are connected to others
-clusters.
+We have to make clear that {\I boundary vertices} (or endpoints) that we defined
+for top trees may be different that {\I external vertices}. More precisely
+external vertices are subset of boundary vertices. We defined that each top
+cluster has two boundary vertices because we defined top clusters as generalized
+edges. But external vertices are only those boundary vertices that are connected
+to others clusters.
 
 With definition of external vertices the splitting part is straightforward --
 for each cluster (starting from given vertex's base cluster) we check that given
@@ -180,7 +180,7 @@ cluster.
 Notice that all clusters above the first splitted clusters will be splitted too,
 because once the vertex stops be external it will never be external again. To
 have the full coverage of the tree we have to add the last not splitted cluster
-to the chain (it will be the first cluster in the chain).
+to the chain too (it will be the first cluster in the chain).
 
 Splitted cluster is divided (by at most two call to the \Split{} user function
 and one to the \Destroy{} user function) into at most two topology clusters (one
@@ -200,53 +200,128 @@ process when we reach already splitted cluster (otherwise we would add some
 clusters twice). Splitted clusters for the second vertex will be saved into
 separate chain.
 
-\todo{Image of the splitted chains}
+\subsubsection{Example of splitted chains}
+
+We will take topology tree from the figure \ref{fig:topology_tree_construction}
+(page \pageref{fig:topology_tree_construction}) and let us \Expose(b,f). We will
+start splitting clusters from base clusters containing these vertices as you
+can see on the figure \ref{fig:chain_clusters_example}.
+
+Firstly we split all clusters above vertices $b$ and $f$. Then starting from the
+vertex $b$ we continue up to the moment, when $b$ stops be an external vertex
+-- it is in the cluster $c$-$e_2$ where we add the previous cluster ($c$-$b$)
+into the chain. Also we should add our sibling $e_1$-$e_2$, but this cluster is
+splitted (because it is on the path from $f$ to the root) so we add only the
+edge cluster $b$-$e_1$.
+
+Continuing above we add sibling cluster $g$-$h$ combined with edge (so we will
+push cluster $e_2$-$h$ into the chain) and that is all for the first vertex.
+For the second vertex we continue up until reaching cluster $e_1$-$e_2$, where
+$f$ stops be an external vertex. We add previous cluster $e_2$-$f$ and sibling
+$e_1$-$d$ to the second chain (notice that we ignore subvertice edge because it
+is not a cluster). Above this cluster we hit the path processed by the first run
+and thus we end.
+
+\begin{figure}[h]
+\centering
+\asyinclude{pic/chap06_expose_splitting.asy}
+\caption{Splitting from vertices b and f. Marked clusters will be added into
+chains -- notice that they cover all vertices of the underlying tree and with
+connecting edges they cover all edges too.}
+\label{fig:chain_clusters_example}
+\end{figure}
+
+We ended with two chains of clusters: [$c$-$b$; $b$-$e_1$; $e_2$-$h$] and
+[$f$-$e_2$; $e_1$-$d$], that have to be joined together. Subvertices
+of the same vertex acts from this point of view as the same vertex and therefore
+we may act like all occurrences of the $e_1$ or $e_2$ are $e$ (from this point
+we will not act with topology tree structure and ternarization is not needed).
 
 \subsection{Chain joining}
 
 During splitting we saved splitted clusters along the paths from both given
-vertices and we saved those splitted vertices into two chains. Firstly we join
-both chains into one by reversing one of them and concatenating them.
+vertices and we saved those splitted vertices into two chains. We can reverse
+one chain and append it to the other one to make complete chain.
 
-Now we have chain that starts by cluster that have first given vertex as it's
-external vertex and similarly ends by cluster that have the second given vertex
-as it's external vertex. Now we have to join this chain.
+This chain starts by cluster that have first given vertex as it's external vertex and
+similarly ends by cluster that have the second given vertex as it's external
+vertex. In the chain there are clusters representing path between these two
+external vertices and clusters that represent rest of the tree. We need to rake
+non-path clusters onto path clusters and then compress all path clusters into
+one.
 
-Some clusters in the chain have to be raked, some compressed. Our first task is
-to construct sequence of clusters $(v_0,v_1),(v_1,v_2),\dots,(v_{n-1},v_n)$
-where $u=v_0$ and $v=v_n$. The first problem is that cluster's endpoint may be
-in reverse order, but this is easy to fix. The second problem it that there may
-be places where it looks like $(v_{i-1}, v_i),(v_i, x),(v_i,v_{i+1})$. We need
-to rake these clusters to one of their neighbours.
+From the mechanism of the construction there cannot be any long branch from the
+path (we added only one neighbour cluster per level during splitting). Therefore
+we could imagine clusters in the chain as ``domino bricks'' where some of them
+have to be turned (raked) to make the chain continuous.
+
+Our task is to construct sequence of clusters
+$(v_0,v_1),(v_1,v_2),\dots,(v_{n-1},v_n)$ where $u=v_0$ and $v=v_n$. The first
+problem is that clusters (bricks in the chain) may be in reversed, but this is
+easy to fix. The second problem it that there may be places where it looks like
+$(v_{i-1}, v_i),(v_i, x),(v_i,v_{i+1})$. We need to rake these clusters to one
+of their neighbours.
+
+We will be going through the chain from one side and doing repair when we could
+not connect current cluster.
+
+\begin{figure}[h]
+\centering
+\asyinclude{pic/chap06_domino.asy}
+\caption{Clusters chain between given vertices $a-e$ displayed as ``domino bricks''
+with two rakes operations. In the first and second row there are highlighted
+clusters that cannot be joined to the previous cluster and therefore some raking
+must be done -- see the following algorithm.}
+\end{figure}
 
 After that we just need to compress all clusters in the chain to obtain the
 final root cluster with endpoints $(u,v)$. It represents the $(u,v)$ path with
 all others parts of the tree raked.
 
-The whole algorithm would work as:
+The whole algorithm would be:
 \begin{enumerate}
 
 \item Start by choosing $x=u$.
 
-\item Rake all clusters that needs to be raked. Go through all clusters and do:
+\item Rake all clusters that needs to be raked. Go through all clusters:
 \begin{itemize}
-\item If one of the cluster's endpoints is $x$ $\rightarrow$ Leave this cluster
-there and set $x$ as it's second endpoint.
-\item Otherwise we cannot join this cluster after the previous $\rightarrow$ The
-previous cluster is a branch and needs to be raked. From the way how the
-clusters in the chain were constructed this previous cluster's second endpoint
-(other than $x$) is one of this cluster's endpoint.
+\item {\I If one of the current cluster's endpoints is $x$:} This cluster
+could be connected after the previous in the chain. Leave this cluster intact
+and set $x$ as its opposite endpoint.
+\item {\I Otherwise:} We cannot join this cluster to the previous and we need to
+do some raking. There may be two options depending on the endpoint of neighbour
+clusters (one of them must occur):
+\begin{enumerate}
 
-We remove the previous and the current clusters from the chain and we construct
-a new top cluster as a rake \Join{} of the previous cluster onto the current
-one. Finally we add this new top cluster into the chain and we set $x$ as the
-current cluster's second endpoint. \end{itemize}
+	\item {\I The previous cluster in the chain has common vertex (second
+	row in the figure with domino bricks):} The previous cluster is a~branch
+	in the wrong direction and thus it has to be raked.
 
-\item Check that we end with $x=v$. If no rake the last cluster onto the
-previous one until $x=v$.
+	We remove the previous and the current clusters from the chain. Then we
+	construct a new top cluster as a rake \Join{} of the previous cluster
+	onto the current one. Finally we add this new top cluster into the chain
+	and we set $x$ as the current cluster's second endpoint. Then we advance
+	to the following cluster.
 
-\item Compress \Join{} any two neighbour clusters until there is only one
-cluster.
+	\item {\I The following cluster in the chain has common vertex (first
+	row in the figure with domino bricks):} Current cluster is a~branch and
+	it has to be raked on the following cluster.
+
+	We remove current cluster and the following one from the chain and then
+	we construct and add a new top cluster as a rake \Join{} of the current
+	cluster onto the following one. We left $x$ intact (because we still
+	does not found cluster that could be joined after the previous one) and
+	advance to the newly inserted cluster.
+
+\end{enumerate}
+
+\end{itemize}
+
+\item After raking inner clusters in the chain check that we end with $x=v$. If
+no rake the last cluster onto the previous one until $x=v$.
+
+\item Compress \Join{} any two neighbour clusters in the chain until there is
+only one cluster.
 
 \end{enumerate}
 
@@ -287,10 +362,10 @@ In some use cases there are a lot of informations in the clusters used for
 structural changes in the underlying clusters -- for example in the 2-edge
 connectivity that we will use as one of our experiments. In that cases if may be
 good to turn off some expensive updates during \Join/\Split{} and to turn them
-again after the top tree is returned into its original shape.
+on after the top tree is returned into its original shape.
 
-But for that we need to remember the original values somewhere. User may do this
-on it's own (by saving this information for example in edges), but there is an
+For that behaviour we need to remember the original values somewhere. User may do this
+on it's own (for example by saving this information in edges), but there is an
 better approach. Because our interface for all user functions pass them pointers
 to the clusters (and the data is stored inside them) we may keep these original
 clusters intact after the \Split{} and then pass them to the \Join{} (instead of

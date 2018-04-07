@@ -81,6 +81,9 @@ lowest level each of the original vertices is an independent basic cluster.
 These clusters are joined in the first level of topology clusterization,
 resulting clusters are contracted and acts as nodes for above level and so on.
 
+Example of topology tree construction and yielding topology tree is on following
+figures \ref{fig:topology_tree_construction} and \ref{fig:topology_tree_example}.
+
 Each inner cluster has at most two children on the level below (the clusters
 from which is it contracted) and at most one parent (topology clusters without
 parent are roots of topology trees). Among these tree edges each topology
@@ -95,6 +98,22 @@ level. Number of clusters on the lowest level corresponds to the number of
 vertices of the original tree (denote it as $N$) and at $k$-th level there are
 at most $N\cdot(5/6)^k$ clusters. Therefore the height of the topology tree for
 tree with $N$ vertices could be estimated as $\O(\log N)$.
+
+\begin{figure}[h]
+\centering
+\scalebox{1.3}{\asyinclude{pic/chap02_tree_construction.asy}}
+\caption{Example of the topology tree construction. On the bottom level there is
+original underlying tree with ternarized vertex $\,e$ (ternarization has no effect
+on the construction, for more details see subsection Ternarization).}
+\label{fig:topology_tree_construction}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\asyinclude{pic/chap02_tree_example.asy}
+\caption{Resulting topology tree from the previous construction.}
+\label{fig:topology_tree_example}
+\end{figure}
 
 \section{Updates -- internal cuts and links}
 

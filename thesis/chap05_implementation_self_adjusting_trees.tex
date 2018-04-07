@@ -134,7 +134,12 @@ one half of the original path (for example $a,v$), connect it into rake tree,
 removing node representing path $c,v$ from the rake tree and changing the
 compress cluster that it now represents path $c,b$.
 
-\todo{Picture of splice}
+\begin{figure}[h]
+\centering
+\asyinclude{pic/chap05_splice.asy}
+\caption{Splice around vertex $v$ and changing $v,b$ for $v,c$ (grayed clusters
+are rake clusters).}
+\end{figure}
 
 Splicing is used after splaying and its task is to move cluster, which is leaf
 of some rake tree, to the compress tree above it.
@@ -243,8 +248,14 @@ connected as foster children -- in standard top tree model there could be
 intermediate rake clusters and the cluster with path $u\dots v$ could be located
 deeper):
 
-\todo{Pictures of all three cases}
-\begin{itemize}
+\begin{figure}[h]
+\centering
+\asyinclude{pic/chap05_soft_expose_cases.asy}
+\caption{Three possible cases where cluster with endpoints $u,v$ could be located
+after {\I soft\_expose(u,v)}.}
+\end{figure}
+
+\begin{enumerate}
 
 \item Root cluster itself -- When both vertices has degree one, they are endpoints
 of the root cluster and so their handles are represented in the root cluster.
@@ -265,7 +276,7 @@ The grandchild of the root cluster is limited from the second cluster and so it
 represents our path (let again assume it is the right child, otherwise flip
 children).
 
-\end{itemize}
+\end{enumerate}
 
 To ensure that the root cluster represents only the path $u\dots v$ we need the
 hard expose operation.
@@ -320,7 +331,12 @@ the top tree into state described at the end of the soft expose subsection
 $(u,v)$ edge will be the rightmost child or grandchild of the root cluster of the
 corresponding top tree.
 
-\todo{Picture of cut}
+\begin{figure}[h]
+\centering
+\asyinclude{pic/chap05_cut.asy}
+\caption{Example of cut. Cluster $(u,x)$ is the rightmost cluster from $B$ and
+$B'$ is $B$ without this cluster (cluster $(v,y)$ and $D'$ in the same way).}
+\end{figure}
 
 We have to destroy the base node representing $(u,v)$ and remove connection
 between these two handles. After that we have to reorganize clusters to ensure
@@ -374,7 +390,12 @@ is simple, otherwise we just construct new rake cluster connecting the existing
 rake tree as one of its child and the former right child of the current compress
 cluster as its another child.
 
-\todo{Picture of link}
+\begin{figure}[h]
+\centering
+\asyinclude{pic/chap05_link.asy}
+\caption{Example of link. Subtree $B'$ is $B$ with the $(u,x)$ cluster connected
+as its rightmost child. Subtree $D'$ and cluster $(v,y)$ similarly.}
+\end{figure}
 
 After this move we simply connect the new $u,v$ base cluster as right child and we
 are done with this (lower) compress cluster. For the root compress cluster we
