@@ -8,6 +8,7 @@
 
 //#define DEBUG
 //#define DEBUG_GRAPHVIZ
+//#define DEBUG_GRAPHVIZ_VERBOSE
 
 namespace TopTree {
 
@@ -37,9 +38,10 @@ public:
 	std::vector<std::shared_ptr<TopologyCluster>> to_calculate_outer_edges;
 	std::vector<std::shared_ptr<SimpleCluster>> expose_simple_clusters;
 
-	// Debug methods:
-	void print_graphviz(std::shared_ptr<TopologyCluster> node, const std::string title="", bool full = false) const;
-	void print_graphviz_recursive(std::shared_ptr<TopologyCluster> cluster, std::shared_ptr<BaseTree::Internal::Edge> parent_edge = NULL, std::shared_ptr<TopologyCluster> parent = NULL, bool edges_to_childs = false, bool gray = false) const;
+	#ifdef DEBUG_GRAPHVIZ
+		void print_graphviz(std::shared_ptr<TopologyCluster> node, const std::string title="", bool full = false) const;
+		void print_graphviz_recursive(std::shared_ptr<TopologyCluster> cluster, std::shared_ptr<BaseTree::Internal::Edge> parent_edge = NULL, std::shared_ptr<TopologyCluster> parent = NULL, bool edges_to_childs = false, bool gray = false) const;
+	#endif
 private:
 	// Used in update_clusters() and helper methods
 	// it is declared globally to easier sharing between helper methods
@@ -75,16 +77,13 @@ TopologyTopTree::TopologyTopTree(std::shared_ptr<BaseTree> from_base_tree) : Top
 			std::cerr << "Constructing basic clusters from vertex " << *v->data << std::endl;
 		#endif
 		auto root_cluster = internal->construct_basic_clusters(v);
-		internal->print_graphviz(root_cluster, "Basic clusters");
+		#ifdef DEBUG_GRAPHVIZ
+			internal->print_graphviz(root_cluster, "Basic clusters");
+		#endif
 		while (root_cluster->outer_edges.size() > 0) {
 			root_cluster = internal->construct_topology_tree(root_cluster);
 			for (auto c: internal->to_calculate_outer_edges) c->calculate_outer_edges();
 			internal->to_calculate_outer_edges.clear();
-
-			//#ifdef DEBUG
-			//	std::cerr << "Actual size of the root cluster: " << root_cluster->outer_edges.size() << std::endl;
-			//	internal->print_graphviz(root_cluster, "One level up");
-			//#endif
 		}
 		internal->root_clusters.push_back(root_cluster);
 		internal->root_clusters[i]->root_vector_index = i;
@@ -94,7 +93,9 @@ TopologyTopTree::TopologyTopTree(std::shared_ptr<BaseTree> from_base_tree) : Top
 	for (auto c: internal->splitted_clusters) c->do_join();
 	internal->splitted_clusters.clear();
 
-	for (auto root_cluster: internal->root_clusters) internal->print_graphviz(root_cluster, "Full", true);
+	#ifdef DEBUG_GRAPHVIZ
+		for (auto root_cluster: internal->root_clusters) internal->print_graphviz(root_cluster, "Full", true);
+	#endif
 }
 
 //std::vector<std::shared_ptr<Cluster> > TopologyTopTree::GetTopTrees() {
@@ -102,6 +103,7 @@ TopologyTopTree::TopologyTopTree(std::shared_ptr<BaseTree> from_base_tree) : Top
 //}
 
 
+#ifdef DEBUG_GRAPHVIZ
 ////////////////////////////////////////////////////////////////////////////////
 // Debug output - Graphviz
 
@@ -150,6 +152,7 @@ void TopologyTopTree::Internal::print_graphviz(const std::shared_ptr<TopologyClu
 	} else print_graphviz_recursive(root);
 	std::cout << "}" << std::endl;
 }
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Update procedure:
@@ -482,8 +485,10 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 	for (auto c: internal->splitted_clusters) c->do_join();
 	internal->splitted_clusters.clear();
 
-	internal->print_graphviz(root_v, "Result A", true);
-	internal->print_graphviz(root_w, "Result B", true);
+	#ifdef DEBUG_GRAPHVIZ
+		internal->print_graphviz(root_v, "Cut - Result A", true);
+		internal->print_graphviz(root_w, "Cut - Result B", true);
+	#endif
 
 	return std::make_tuple(root_v, root_w, edge->data);
 }
@@ -568,7 +573,9 @@ std::shared_ptr<ICluster> TopologyTopTree::Link(int v_index, int w_index, std::s
 	for (auto c: internal->splitted_clusters) c->do_join();
 	internal->splitted_clusters.clear();
 
-	internal->print_graphviz(result, "Link result", true);
+	#ifdef DEBUG_GRAPHVIZ
+		internal->print_graphviz(result, "Link result", true);
+	#endif
 
 	return result;
 }
@@ -770,7 +777,7 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_su
 				auto next_n = std::next(n);
 				if (auto vv = (*n).vertex.lock()) if (auto ee = (*n).edge.lock()) {
 					auto result = cut(v, vv, ee);
-					#ifdef DEBUG_GRAPHVIZ
+					#ifdef DEBUG_GRAPHVIZ_VERBOSE
 						print_graphviz(std::get<0>(result), "Consolidating subvertices - After A cut 1/2", true);
 						print_graphviz(std::get<1>(result), "Consolidating subvertices - After A cut 2/2", true);
 					#endif
@@ -790,7 +797,7 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_su
 				auto next_n = std::next(n);
 				if (auto vv = (*n).vertex.lock()) if (auto ee = (*n).edge.lock()) {
 					auto result = cut(first_neighbour, vv, ee);
-					#ifdef DEBUG_GRAPHVIZ
+					#ifdef DEBUG_GRAPHVIZ_VERBOSE
 						print_graphviz(std::get<0>(result), "Consolidating subvertices - After B cut 1/2", true);
 						print_graphviz(std::get<1>(result), "Consolidating subvertices - After B cut 2/2", true);
 					#endif
@@ -817,7 +824,7 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_su
 				if (auto vv = n.vertex.lock()) if (auto ee = n.edge.lock()) {
 					if (!ee->subvertice_edge) {
 						auto result = cut(first_neighbour, vv, ee);
-						#ifdef DEBUG_GRAPHVIZ
+						#ifdef DEBUG_GRAPHVIZ_VERBOSE
 							print_graphviz(std::get<0>(result), "Stealing from neighbour - After cut 1/2", true);
 							print_graphviz(std::get<1>(result), "Stealing from neighbour - After cut 2/2", true);
 						#endif
@@ -836,7 +843,7 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_su
 							else if (*std::next(old_iter) == v) (*ee->superior_to_iter).subvertice_iter = std::next(old_iter);
 							else std::cerr << "ERROR: Cannot find updated subvertice iter for edge after steal operation" << std::endl;
 						}
-						#ifdef DEBUG_GRAPHVIZ
+						#ifdef DEBUG_GRAPHVIZ_VERBOSE
 							print_graphviz(result2, "Stealing from neighbour - After link", true);
 						#endif
 						// edge is reused, nothing to do about edges
@@ -849,18 +856,18 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_su
 	} else {
 		// It is vertex inside "chain" -> remove it and join neighbours
 		auto result = cut(first_neighbour, v, first_neighbour_edge);
-		#ifdef DEBUG_GRAPHVIZ
+		#ifdef DEBUG_GRAPHVIZ_VERBOSE
 			print_graphviz(std::get<0>(result), "After first chain cut 1/2", true);
 			print_graphviz(std::get<1>(result), "After first chain cut 2/2", true);
 		#endif
 		v->superior_vertex->subvertice_edges.erase(first_neighbour_edge->subvertice_edges_iterator); // erase first subvertice edge
 		result = cut(second_neighbour, v, second_neighbour_edge);
-		#ifdef DEBUG_GRAPHVIZ
+		#ifdef DEBUG_GRAPHVIZ_VERBOSE
 			print_graphviz(std::get<0>(result), "After second chain cut 1/2", true);
 			print_graphviz(std::get<1>(result), "After second chain cut 2/2", true);
 		#endif
 		auto result2 = link(first_neighbour, second_neighbour, second_neighbour_edge); // reuse second subvertice edge
-		#ifdef DEBUG_GRAPHVIZ
+		#ifdef DEBUG_GRAPHVIZ_VERBOSE
 			print_graphviz(result2, "After chain link", true);
 		#endif
 		// Delete vertex from supervertice's subvertices list

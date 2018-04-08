@@ -81,18 +81,14 @@ std::shared_ptr<CompressCluster> CompressCluster::construct(std::shared_ptr<TopC
 	auto cluster = std::make_shared<CompressCluster>();
 
 	// Basic connections (needed by do_join):
-	cluster->left_child = left;
-	cluster->right_child = right;
-	left->parent = cluster;
-	right->parent = cluster;
+	cluster->set_left_child(left);
+	cluster->set_right_child(right);
 
 	cluster->correct_endpoints();
 
 	// Foster children (if there are any)
-	cluster->left_foster = cluster->common_vertex->rake_tree_left;
-	cluster->right_foster = cluster->common_vertex->rake_tree_right;
-	if (cluster->left_foster != NULL) cluster->left_foster->parent = cluster;
-	if (cluster->right_foster != NULL) cluster->right_foster->parent = cluster;
+	cluster->set_left_foster(cluster->common_vertex->rake_tree_left);
+	cluster->set_right_foster(cluster->common_vertex->rake_tree_right);
 
 	cluster->do_join();
 
@@ -114,12 +110,12 @@ void CompressCluster::do_join() {
 	// 3.1 If there are foster children first do Join into virtual rake nodes
 	auto left = left_child;
 	if (left_foster != NULL) {
-		left_foster_rake = RakeCluster::construct(left_foster, left_child);
+		left_foster_rake = RakeCluster::construct(left_foster, left_child, true);
 		left = left_foster_rake;
 	}
 	auto right = right_child;
 	if (right_foster != NULL) {
-		right_foster_rake = RakeCluster::construct(right_foster, right_child);
+		right_foster_rake = RakeCluster::construct(right_foster, right_child, true);
 		right = right_foster_rake;
 	}
 	// 3.2 Normal Join
@@ -202,14 +198,18 @@ std::ostream& CompressCluster::_short_name(std::ostream& o) const {
 }
 
 
-std::shared_ptr<RakeCluster> RakeCluster::construct(std::shared_ptr<TopCluster> rake_from, std::shared_ptr<TopCluster> rake_to) {
+std::shared_ptr<RakeCluster> RakeCluster::construct(std::shared_ptr<TopCluster> rake_from, std::shared_ptr<TopCluster> rake_to, bool virtual_cluster) {
 	auto cluster = std::make_shared<RakeCluster>();
 
 	// Basic connections (needed by do_join):
-	cluster->left_child = rake_from;
-	cluster->right_child = rake_to;
-	rake_from->parent = cluster;
-	rake_to->parent = cluster;
+	if (virtual_cluster) {
+		// If virtual rake node (in extended clusters model) only set oneside links
+		cluster->left_child = rake_from;
+		cluster->right_child = rake_to;
+	} else {
+		cluster->set_left_child(rake_from);
+		cluster->set_right_child(rake_to);
+	}
 
 	cluster->do_join();
 

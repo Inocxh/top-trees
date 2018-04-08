@@ -6,7 +6,8 @@
 #include "TopTree.hpp"
 #include "BaseTreeInternal.hpp"
 
-//#define DEBUG
+// #define DEBUG
+// #define DEBUG_GRAPHVIZ
 
 namespace TopTree {
 
@@ -26,10 +27,14 @@ public:
 	std::vector<std::shared_ptr<CompressCluster>> hard_expose_transformed_clusters;
 
 	// Debug methods:
-	void print_rooted_prefix(const std::shared_ptr<TopCluster> cluster, const std::string prefix = "", bool last_child = true) const;
-	void print_graphviz(std::shared_ptr<TopCluster> node, const std::string title="") const;
-	void print_graphviz_recursive(std::shared_ptr<TopCluster> parent, std::shared_ptr<TopCluster> node, const char* edge_label="") const;
-	void print_graphviz_child(std::shared_ptr<TopCluster> from, std::shared_ptr<TopCluster> to, const char* edge_label="") const;
+	#ifdef DEBUG
+		void print_rooted_prefix(const std::shared_ptr<TopCluster> cluster, const std::string prefix = "", bool last_child = true) const;
+	#endif
+	#ifdef DEBUG_GRAPHVIZ
+		void print_graphviz(std::shared_ptr<TopCluster> node, const std::string title="") const;
+		void print_graphviz_recursive(std::shared_ptr<TopCluster> parent, std::shared_ptr<TopCluster> node, const char* edge_label="") const;
+		void print_graphviz_child(std::shared_ptr<TopCluster> from, std::shared_ptr<TopCluster> to, const char* edge_label="") const;
+	#endif
 private:
 	void adjust_parent(std::shared_ptr<TopCluster> parent, std::shared_ptr<TopCluster> old_child, std::shared_ptr<TopCluster> new_child);
 	void rotate_left(std::shared_ptr<TopCluster> x);
@@ -56,12 +61,17 @@ TopTree::TopTree(std::shared_ptr<BaseTree> from_base_tree) : TopTree() {
 		internal->root_clusters[i]->root_vector_index = i;
 		i++;
 	}
+
+	#ifdef DEBUG_GRAPHVIZ
+		for (auto root_cluster: internal->root_clusters) internal->print_graphviz(root_cluster, "Full");
+	#endif
 }
 
 std::vector<std::shared_ptr<TopCluster> > TopTree::GetTopTrees() {
 	return internal->root_clusters;
 }
 
+#ifdef DEBUG
 ////////////////////////////////////////////////////////////////////////////////
 // Debug output - console
 
@@ -87,6 +97,7 @@ void TopTree::Internal::print_rooted_prefix(const std::shared_ptr<TopCluster> cl
 	}
 }
 
+/*
 void TopTree::PrintRooted(const std::shared_ptr<TopCluster> root) const {
 	internal->print_rooted_prefix(root);
 
@@ -96,7 +107,10 @@ void TopTree::PrintRooted(const std::shared_ptr<TopCluster> root) const {
 		else std::cout << *v->data << ": NONE" << std::endl;
 	}
 }
+*/
+#endif
 
+#ifdef DEBUG_GRAPHVIZ
 ////////////////////////////////////////////////////////////////////////////////
 // Debug outpu - Graphviz
 
@@ -108,7 +122,7 @@ void TopTree::Internal::print_graphviz_child(std::shared_ptr<TopCluster> from, s
 	std::cout << "]" << std::endl;
 
 	// Debug (show broken parent links):
-	if (to->parent != from) std::cout << "\t\"" << to << "\" -> \"" << to->parent << "\" [style=bold]" << std::endl;
+	if (to->parent != from && to->parent->parent != from) std::cout << "\t\"" << to << "\" -> \"PARENT: " << to->parent << "\" [style=bold]" << std::endl;
 
 	// Edge
 	if (from == NULL) return;
@@ -134,9 +148,7 @@ void TopTree::Internal::print_graphviz(const std::shared_ptr<TopCluster> root, c
 	std::cout << "}" << std::endl;
 }
 
-void TopTree::PrintGraphviz(const std::shared_ptr<TopCluster> root, const std::string title) const {
-	internal->print_graphviz(root, title);
-}
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // Soft and hard expose related functions
@@ -383,7 +395,9 @@ void TopTree::Internal::soft_expose_handle(std::shared_ptr<TopCluster> N, std::s
 		for (auto root : root_clusters) {
 			std::ostringstream ss;
 			ss << "after normalization from " << *N;
-			print_graphviz(root, ss.str());
+			#ifdef DEBUG_GRAPHVIZ
+				print_graphviz(root, ss.str());
+			#endif
 		}
 	#endif
 
@@ -420,7 +434,9 @@ void TopTree::Internal::soft_expose_handle(std::shared_ptr<TopCluster> N, std::s
 		for (auto root : root_clusters) {
 			std::ostringstream ss;
 			ss << "after splaying from " << *N;
-			print_graphviz(root, ss.str());
+			#ifdef DEBUG_GRAPHVIZ
+				print_graphviz(root, ss.str());
+			#endif
 		}
 	#endif
 
@@ -435,7 +451,9 @@ void TopTree::Internal::soft_expose_handle(std::shared_ptr<TopCluster> N, std::s
 		for (auto root : root_clusters) {
 			std::ostringstream ss;
 			ss << "after splicing from " << *N;
-			print_graphviz(root, ss.str());
+			#ifdef DEBUG_GRAPHVIZ
+				print_graphviz(root, ss.str());
+			#endif
 		}
 	#endif
 
@@ -761,6 +779,12 @@ std::shared_ptr<TopCluster> TopTree::Internal::construct_cluster(std::shared_ptr
 	std::queue<std::shared_ptr<TopCluster>> path;
 	std::queue<std::shared_ptr<TopCluster>> rake_list;
 
+	auto v_backup = v;
+
+	// #ifdef DEBUG
+	// 	std::cerr << "Constructing path from vertex " << *v->data << std::endl;
+	// #endif
+
 	auto next_v = v;
 	auto next_e = e;
 
@@ -845,6 +869,10 @@ std::shared_ptr<TopCluster> TopTree::Internal::construct_cluster(std::shared_ptr
 		}
 		path.swap(path_new);
 	}
+
+	// #ifdef DEBUG
+	// 	std::cerr << "Construction of path from vertex " << *v_backup->data << " ended" << std::endl;
+	// #endif
 
 	return path.front();
 }

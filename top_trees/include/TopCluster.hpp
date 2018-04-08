@@ -74,7 +74,7 @@ class RakeCluster : public TopCluster {
 friend class TopTree;
 public:
 	virtual std::ostream& ToString(std::ostream& o) const;
-	static std::shared_ptr<RakeCluster> construct(std::shared_ptr<TopCluster> rake_from, std::shared_ptr<TopCluster> rake_to);
+	static std::shared_ptr<RakeCluster> construct(std::shared_ptr<TopCluster> rake_from, std::shared_ptr<TopCluster> rake_to, bool virtual_cluster = false);
 protected:
 
 	virtual bool isRake() { return true; }
@@ -94,8 +94,8 @@ public:
 	static std::shared_ptr<CompressCluster> construct(std::shared_ptr<TopCluster> left, std::shared_ptr<TopCluster> right);
 protected:
 
-	std::shared_ptr<RakeCluster> left_foster_rake;
-	std::shared_ptr<RakeCluster> right_foster_rake;
+	std::shared_ptr<RakeCluster> left_foster_rake = NULL;
+	std::shared_ptr<RakeCluster> right_foster_rake = NULL;
 
 	virtual bool isCompress() { return !rakerized; }
 	virtual bool isRake() { return rakerized; }
