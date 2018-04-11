@@ -1,2 +1,56 @@
 \chapter{Experiments}
 \label{chap:Experiments}
+
+Comparison of both implementations is an important part of the whole thesis
+and for objective results multiple tests were needed.
+
+I choose two different problems mentioned in the \cref{chap:Problems}.
+First of them is a problem of maximum edge weight between given vertices with
+interval update (described in section \ref{sec:maximum_edge_weight}), which uses
+Top trees directly and aims to work in time $\O(\log N)$ per operation. Second
+problem is an edge 2-connectivity (described in section \ref{sec:edge_2_connectivity}),
+which uses Top trees ``under the hood'' and aims to work in time $\O(\log^4 N)$
+per operation. Both problems uses Top trees in different ways.
+
+Another necessary condition of good comparison is to have various input data. In
+our case of investigating Top trees behaviour with given problems input data
+consist of two things:
+\begin{itemize}
+\item Size and type of the underlying graph (number of edges, degrees of vertices)
+\item Strategy of data structure usage (portion of affected edges, ration of
+operation types, \dots)
+\end{itemize}
+
+\section{Experiments strategy}
+
+Common scenario for all experiments were introduced. Each experiment was done
+for both implementations with the same input data and with increasing input
+size:
+
+\begin{itemize}
+\item Choose input size sampling
+\item For each chosen input size choose 10 random seeds to generate input data
+and sequence of operations
+\item For every implementation and every seed run test and measure elapsed time
+\item Compute average elapsed time for each implementation and save it
+\end{itemize}
+
+Python wrapper was used to generate random seeds and to execute testing utilities.
+Testing utilities written in \Cpp{} firstly generates all the input data and
+sequence of operations, initializes data structures and then began to measure
+time and execute the operations.
+
+This procedure was chosen to minimize influence of test functions and to measure
+only the time used by Top trees implementations.
+
+\section{Maximum edge weight experiments}
+
+\subsection{Experiment 1}
+
+\subsection{Experiment 2}
+
+\section{Edge 2-connectivity experiments}
+
+\subsection{Experiment 1}
+
+\subsection{Experiment 2}
