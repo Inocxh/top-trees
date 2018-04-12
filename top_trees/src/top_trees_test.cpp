@@ -5,6 +5,8 @@
 #include "TopTree.hpp"
 #include "TopologyTopTree.hpp"
 
+//#define DEBUG
+
 struct MyClusterData: public TopTree::ClusterData {
 	int weight;
 	int total_weight;
@@ -54,8 +56,9 @@ void TopTree::Join(std::shared_ptr<ICluster> leftChild, std::shared_ptr<ICluster
 	parent_data->total_weight = left_data->total_weight + right_data->total_weight;
 	parent_data->total_label = left_data->total_label + "," + right_data->total_label;
 
-	// For debug:
-	std::cerr << "Joining " << left_data->total_weight << "(" << left_data->label << ") + " << right_data->total_weight << "(" << right_data->label << ")" << std::endl;
+	#ifdef DEBUG
+		std::cerr << "Joining " << left_data->total_weight << "(" << left_data->label << "/" << left_data->total_label << ") + " << right_data->total_weight << "(" << right_data->label << "/" << right_data->total_label << ")" << std::endl;
+	#endif
 }
 void TopTree::Split(std::shared_ptr<ICluster> leftChild, std::shared_ptr<ICluster> rightChild, std::shared_ptr<ICluster> parent) {
 	// Nothing
@@ -134,16 +137,24 @@ int main(int argc, char const *argv[]) {
 	////////////////
 
 	auto TT = std::make_shared<TopTree::TopologyTopTree>(baseTree);
+	//auto TT = std::make_shared<TopTree::TopTree>(baseTree);
 	std::cerr << "Top Tree builded" << std::endl;
 
 	auto result = TT->Cut(c, w);
+	std::cerr << "Two trees after cut:" << std::endl;
 	print_node(std::get<0>(result));
 	print_node(std::get<1>(result));
 
 	auto result2 = TT->Link(b, p, std::make_shared<MyEdgeData>("B-P"));
+	std::cerr << "After link:" << std::endl;
 	print_node(result2);
 
-	TT->Expose(h, c);
+	result2 = TT->Expose(z, r);
+	//result2 = TT->Expose(h, c);
+	//result2 = TT->Expose(c, b);
+	std::cerr << "After expose:" << std::endl;
+	print_node(result2);
+	TT->Restore();
 
 	/*
 	auto T = std::make_shared<TopTree::TopTree>(baseTree);

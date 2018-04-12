@@ -1,10 +1,13 @@
-PROG=top_trees_test
+TESTER=top_trees_test
+BINARIES=${TESTER} experiment_edge_weight
+
+TARGETS=${addprefix bin/,${BINARIES}}
 CLASSES=BaseTree TopTree TopCluster TopologyCluster TopologyTopTree
 OTHER=
-DIRECTORIES=obj
+DIRECTORIES=bin obj
 
-OBJS=$(addprefix obj/,${OTHER} $(addsuffix .o,${CLASSES} ${PROG}))
-DEPS=$(OBJS:.o=.d)
+OBJS=$(addprefix obj/,${OTHER} $(addsuffix .o,${CLASSES}))
+DEPS=$(wildcard obj/*.d)
 
 INC=-Isrc -Iinclude
 
@@ -12,10 +15,10 @@ CFLAGS=-Wall -g -std=c++14 -c
 LDFLAGS=-Wall
 CC=g++
 
-all: directories ${PROG}
+all: directories ${TARGETS}
 
-test: ${PROG}
-	./${PROG} > test.dot
+test: bin/${TESTER}
+	./$< > test.dot
 	make test.pdf
 
 # Dependencies:
@@ -24,7 +27,7 @@ test: ${PROG}
 obj/%.o: src/%.cpp
 	${CC} ${CFLAGS} ${INC} -MMD -o $@ $<
 
-${PROG}: ${OBJS}
+bin/%: obj/%.o ${OBJS}
 	${CC} ${LDFLAGS} ${INC} -o $@ $^
 
 directories: ${DIRECTORIES}
@@ -41,7 +44,8 @@ ${DIRECTORIES}:
 	rm -f $**.ps
 
 clean:
-	rm -f ${PROG} ${OBJS} ${DEPS}
+	rm -f ${TARGETS} ${OBJS} ${DEPS}
+	rm -r ${DIRECTORIES}
 
 .PHONY: clean all depend directories test
 
