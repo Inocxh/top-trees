@@ -15,6 +15,8 @@ public:
 	TopologyTopTree(std::shared_ptr<BaseTree> baseTree); // Construct from underlying tree
 	~TopologyTopTree();
 
+	void InitFromBaseTree(std::shared_ptr<BaseTree> baseTree);
+
 	// User operations (documented in the ITopTree interface)
 	std::shared_ptr<ICluster> Expose(int v, int w);
 	std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr<EdgeData>> Cut(int v, int w);

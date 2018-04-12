@@ -64,8 +64,12 @@ private:
 
 TopologyTopTree::TopologyTopTree() : internal{std::make_unique<Internal>()} {}
 
-TopologyTopTree::TopologyTopTree(std::shared_ptr<BaseTree> from_base_tree) : TopologyTopTree() {
-	internal->base_tree = from_base_tree;
+TopologyTopTree::TopologyTopTree(std::shared_ptr<BaseTree> baseTree) : TopologyTopTree() {
+	InitFromBaseTree(baseTree);
+}
+
+void TopologyTopTree::InitFromBaseTree(std::shared_ptr<BaseTree> baseTree) {
+	internal->base_tree = baseTree;
 
 	for (auto v : internal->base_tree->internal->vertices) v->used = false;
 
@@ -484,6 +488,13 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 	// 6. Restore all splitted clusters
 	for (auto c: internal->splitted_clusters) c->do_join();
 	internal->splitted_clusters.clear();
+
+	// Remove edge from underlying Base tree
+	edge->from->neighbours.erase(edge->from_iter);
+	edge->to->neighbours.erase(edge->to_iter);
+	v->degree--;
+	w->degree--;
+	// Node will be deleted by garbage collector
 
 	#ifdef DEBUG_GRAPHVIZ
 		internal->print_graphviz(root_v, "Cut - Result A", true);

@@ -15,6 +15,8 @@ class ITopTree {
 public:
 	virtual ~ITopTree() {}
 
+	virtual void InitFromBaseTree(std::shared_ptr<BaseTree> base_tree) = 0;
+
 	// User operations
 
 	/**

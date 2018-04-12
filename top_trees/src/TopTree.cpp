@@ -49,8 +49,12 @@ private:
 
 TopTree::TopTree() : internal{std::make_unique<Internal>()} {}
 
-TopTree::TopTree(std::shared_ptr<BaseTree> from_base_tree) : TopTree() {
-	internal->base_tree = from_base_tree;
+TopTree::TopTree(std::shared_ptr<BaseTree> baseTree) : TopTree() {
+	InitFromBaseTree(baseTree);
+}
+
+void TopTree::InitFromBaseTree(std::shared_ptr<BaseTree> baseTree) {
+	internal->base_tree = baseTree;
 
 	for (auto v : internal->base_tree->internal->vertices) v->used = false;
 
@@ -703,16 +707,9 @@ std::shared_ptr<ICluster> TopTree::Link(int v_index, int w_index, std::shared_pt
 	}
 
 	// 2. Make new base cluster
-	v->degree++;
-	w->degree++;
 	auto edge = std::make_shared<BaseTree::Internal::Edge>(v, w, edge_data);
+	edge->register_at_vertices();
 	auto edge_cluster = BaseCluster::construct(edge);
-	// Add new edge into vertices neighbors lists
-	v->neighbours.push_back(BaseTree::Internal::neighbour{w, edge});
-	edge->from_iter = std::prev(v->neighbours.end());
-
-	w->neighbours.push_back(BaseTree::Internal::neighbour{v, edge});
-	edge->to_iter = std::prev(w->neighbours.end());
 
 	// 2. If joining solitary nodes return only the new cluster
 	if (v->degree == 1 && w->degree == 1) {
