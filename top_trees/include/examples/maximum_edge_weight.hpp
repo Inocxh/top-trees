@@ -53,6 +53,12 @@ public:
 		return index;
 	}
 
+	bool remove_edge(int a, int b) {
+		if (!initialized) return false;
+		auto cluster = top_tree->Cut(vertices[a].index, vertices[b].index);
+		return (std::get<2>(cluster) != NULL); // if is NULL -> not cut happens
+	}
+
 	void initialize() {
 		top_tree->InitFromBaseTree(base_tree);
 		initialized = true;
@@ -61,7 +67,7 @@ public:
 	// Functions that could be used after initialization:
 
 	bool add_weight_on_path(int a, int b, int extra_weight) {
-		auto cluster = top_tree->Expose(a, b);
+		auto cluster = top_tree->Expose(vertices[a].index, vertices[b].index);
 		if (cluster == NULL) return false;
 
 		auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
@@ -76,7 +82,7 @@ public:
 		int edge_index;
 	};
 	struct max_weight_result get_max_weight_on_path(int a, int b) {
-		auto cluster = top_tree->Expose(a, b);
+		auto cluster = top_tree->Expose(vertices[a].index, vertices[b].index);
 		if (cluster == NULL) return max_weight_result{false, 0, 0};
 
 		auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
@@ -167,5 +173,3 @@ void TopTree::Destroy(std::shared_ptr<ICluster> cluster, std::shared_ptr<EdgeDat
 std::shared_ptr<TopTree::ClusterData> TopTree::InitClusterData() {
 	return std::make_shared<MyClusterData>();
 }
-
-////////////////////////////////////////////////////////////////////////////////
