@@ -80,23 +80,23 @@ std::vector<std::shared_ptr<TopCluster> > TopTree::GetTopTrees() {
 // Debug output - console
 
 void TopTree::Internal::print_rooted_prefix(const std::shared_ptr<TopCluster> cluster, const std::string prefix, bool last_child) const {
-	std::cout << *cluster << std::endl;
+	std::cerr << *cluster << std::endl;
 	auto prefix_child = prefix + (last_child ? "   " : "|  ");
 
 	if (cluster->left_foster != NULL) {
-		std::cout << prefix_child << "|-Foster left: ";
+		std::cerr << prefix_child << "|-Foster left: ";
 		print_rooted_prefix(cluster->left_foster, prefix_child, false);
 	}
 	if (cluster->left_child != NULL) {
-		std::cout << prefix_child << "|-Left: ";
+		std::cerr << prefix_child << "|-Left: ";
 		print_rooted_prefix(cluster->left_child, prefix_child, false);
 	}
 	if (cluster->right_child != NULL) {
-		std::cout << prefix_child << "|-Right: ";
+		std::cerr << prefix_child << "|-Right: ";
 		print_rooted_prefix(cluster->right_child, prefix_child, (cluster->right_foster == NULL));
 	}
 	if (cluster->right_foster != NULL) {
-		std::cout << prefix_child << "|-Foster right: ";
+		std::cerr << prefix_child << "|-Foster right: ";
 		print_rooted_prefix(cluster->right_foster, prefix_child, true);
 	}
 }
@@ -107,8 +107,8 @@ void TopTree::PrintRooted(const std::shared_ptr<TopCluster> root) const {
 
 	for (auto v: internal->base_tree->internal->vertices) {
 		if (v->handle != NULL)
-			std::cout << *v->data << ": " << *v->handle << std::endl;
-		else std::cout << *v->data << ": NONE" << std::endl;
+			std::cerr << "HANDLE " << *v->data << ": " << *v->handle << std::endl;
+		else std::cerr << "HANDLE " << *v->data << ": NONE" << std::endl;
 	}
 }
 */
@@ -160,8 +160,17 @@ void TopTree::Internal::print_graphviz(const std::shared_ptr<TopCluster> root, c
 std::shared_ptr<ICluster> TopTree::Expose(int v, int w) {
 	Restore();
 
+	if (v == w) {
+		std::cerr << "ERROR: Cannot expose one vertex" << std::endl;
+		return NULL;
+	}
+
 	auto vertexV = internal->base_tree->internal->vertices[v];
 	auto vertexW = internal->base_tree->internal->vertices[w];
+
+	#ifdef DEBUG
+		std::cerr << "[Exposing " << *vertexV->data << "," << *vertexW->data << "]" << std::endl;
+	#endif
 
 	internal->soft_expose(vertexV, vertexW);
 	return internal->hard_expose(vertexV, vertexW);
@@ -237,6 +246,11 @@ void TopTree::Internal::rotate_right(std::shared_ptr<TopCluster> x) {
 }
 
 void TopTree::Internal::guarded_splay(std::shared_ptr<TopCluster> node, std::shared_ptr<TopCluster> guard) {
+	#ifdef DEBUG
+		std::cerr << "Splaying " << *node;
+		if (guard != NULL) std::cerr << " with guard " << *guard;
+		std::cerr << std::endl;
+	#endif
 	if (node->isBase()) {
 		// Not splay base clusters
 		if (node->parent != NULL && node->parent != guard && node->parent->isCompress()) guarded_splay(node->parent, guard);
@@ -324,6 +338,7 @@ void TopTree::Internal::splice(std::shared_ptr<TopCluster> node) {
 	if (!left_nodes.empty()) {
 		new_left_foster = left_nodes.back();
 		left_nodes.pop_back();
+		new_left_foster->correct_endpoints();
 
 		#ifdef DEBUG
 			std::cerr << "L- First left rake is " << *new_left_foster << std::endl;
@@ -332,6 +347,7 @@ void TopTree::Internal::splice(std::shared_ptr<TopCluster> node) {
 		while (!left_nodes.empty()) {
 			auto right = left_nodes.back();
 			left_nodes.pop_back();
+			right->correct_endpoints();
 
 			#ifdef DEBUG
 				std::cerr << " - next left rake is " << *right << std::endl;
@@ -356,6 +372,7 @@ void TopTree::Internal::splice(std::shared_ptr<TopCluster> node) {
 	if (!right_nodes.empty()) {
 		new_right_foster = right_nodes.back();
 		right_nodes.pop_back();
+		new_right_foster->correct_endpoints();
 
 		#ifdef DEBUG
 			std::cerr << "R- First right rake is " << *new_right_foster << std::endl;
@@ -364,6 +381,7 @@ void TopTree::Internal::splice(std::shared_ptr<TopCluster> node) {
 		while (!right_nodes.empty()) {
 			auto left = right_nodes.back();
 			right_nodes.pop_back();
+			left->correct_endpoints();
 
 			#ifdef DEBUG
 				std::cerr << " - next right rake is " << *left << std::endl;
@@ -393,6 +411,11 @@ void TopTree::Internal::splice(std::shared_ptr<TopCluster> node) {
 // C. Soft expose itself
 void TopTree::Internal::soft_expose_handle(std::shared_ptr<TopCluster> N, std::shared_ptr<TopCluster> extern_splay_guard) {
 	if (N == NULL) return;
+
+	#ifdef DEBUG
+		std::cerr << "Soft expose handle: " << *N << std::endl;
+	#endif
+
 	// 0. Normalize from given node
 	N->normalize_for_splay();
 	#ifdef DEBUG
@@ -411,10 +434,14 @@ void TopTree::Internal::soft_expose_handle(std::shared_ptr<TopCluster> N, std::s
 		// 1.1 Make node the root of its compress tree (and leaf of a rake tree)
 		// Get guard
 		auto guard = node->parent;
+		auto last = node;
 		while (guard != extern_splay_guard && guard != NULL
 			&& !guard->isRake()
-			&& node != guard->left_foster && node != guard->right_foster
-		) guard = guard->parent;
+			&& last != guard->left_foster && last != guard->right_foster
+		) {
+			last = guard;
+			guard = guard->parent;
+		}
 		// Splay within this compress tree
 		guarded_splay(node, guard);
 
@@ -431,7 +458,8 @@ void TopTree::Internal::soft_expose_handle(std::shared_ptr<TopCluster> N, std::s
 		if (node->parent != orig_parent && node->parent != extern_splay_guard) guarded_splay(node->parent, orig_parent);
 
 		// For next run - node in above compress tree under which N is
-		node = orig_parent -> parent;
+		if (orig_parent->isRake()) node = orig_parent->parent;
+		else node = orig_parent;
 	}
 
 	#ifdef DEBUG
@@ -446,7 +474,8 @@ void TopTree::Internal::soft_expose_handle(std::shared_ptr<TopCluster> N, std::s
 
 	// 2. Perform a series of splices from N to the root, making N part of the topmost compress subtree
 	node = N;
-	while (node->parent != NULL && node->parent != extern_splay_guard) {
+	//while (node->parent != NULL && node->parent != extern_splay_guard) {
+	while (node->parent != NULL) {
 		splice(node);
 		node = node->parent;
 	}
@@ -472,6 +501,11 @@ void TopTree::Internal::soft_expose_handle(std::shared_ptr<TopCluster> N, std::s
 void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w) {
 	// Init array for clusters restoration
 	splitted_clusters.clear();
+
+	#ifdef DEBUG
+		std::cerr << "Soft expose of " << *v->data << ", " << *w->data << std::endl;
+		std::cerr << "with handles: " << *v->handle << ", " << *w->handle << std::endl;
+	#endif
 
 	// A. Making handle of w root node of its top tree
 	auto Nw = w->handle;
@@ -518,6 +552,10 @@ void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> 
 
 // D. Hard expose
 std::shared_ptr<TopCluster> TopTree::Internal::hard_expose(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w) {
+	#ifdef DEBUG
+		std::cerr << "Hard expose of path " << *v->data << "," << *w->data << std::endl;
+	#endif
+
 	auto Nw = w->handle;
 	auto Nv = v->handle;
 	if (Nw != Nv && Nw->parent == NULL && Nv->parent == NULL) return NULL; // They are in different top trees
@@ -557,12 +595,21 @@ void TopTree::Restore() {
 std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr<EdgeData>> TopTree::Cut(int v_index, int w_index) {
 	// Restore previous hard expose (if needed)
 	Restore();
+
+	if (v_index == w_index) {
+		std::cerr << "Cannot cut edge from vertex to the same vertex" << std::endl;
+		return std::make_tuple((std::shared_ptr<ICluster>)NULL, (std::shared_ptr<ICluster>)NULL, (std::shared_ptr<EdgeData>)NULL);
+	}
+
 	// Init array for clusters restoration
 	internal->splitted_clusters.clear();
 
 	// 1. Soft expose
 	auto v = internal->base_tree->internal->vertices[v_index];
 	auto w = internal->base_tree->internal->vertices[w_index];
+	#ifdef DEBUG
+		std::cerr << "[Cut of " << *v->data << ", " << *w->data << "]" << std::endl;
+	#endif
 	internal->soft_expose(v, w);
 	auto Nw = w->handle;
 	auto Nv = v->handle;
@@ -574,7 +621,13 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 	}
 	// Check if it is really an edge:
 	auto node = Nw;
-	while ((node->boundary_left != v || node->boundary_right != w) && (node->boundary_left != w || node->boundary_right != v)) node = node->right_child;
+	while ((node->boundary_left != v || node->boundary_right != w) && (node->boundary_left != w || node->boundary_right != v)) {
+		if (node->isBase()) {
+			std::cerr << "ERROR: There is no cluster with endpoint " << *v->data << ", " << *w->data << " (edge with these endpoints does not exists)" << std::endl;
+			return std::make_tuple(Nw, Nv, (std::shared_ptr<EdgeData>)NULL);
+		}
+		node = node->right_child;
+	}
 	if (!node->isBase()) {
 		std::cerr << "ERROR: It is not Base cluster: " << *node << std::endl;
 		return std::make_tuple(Nw, Nv, (std::shared_ptr<EdgeData>)NULL);
@@ -683,6 +736,12 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 std::shared_ptr<ICluster> TopTree::Link(int v_index, int w_index, std::shared_ptr<EdgeData> edge_data) {
 	// Restore previous hard expose (if needed)
 	Restore();
+
+	if (v_index == w_index) {
+		std::cerr << "Cannot link vertex to itself" << std::endl;
+		return NULL;
+	}
+
 	// Init array for clusters restoration
 	internal->splitted_clusters.clear();
 
@@ -694,15 +753,19 @@ std::shared_ptr<ICluster> TopTree::Link(int v_index, int w_index, std::shared_pt
 		v = w;
 		w = temp;
 	}
+	#ifdef DEBUG
+		std::cerr << "[Link of " << *v->data << ", " << *w->data << "]" << std::endl;
+	#endif
 
 	// 1. Soft expose handles
 	internal->soft_expose(v, w);
 	auto Nv = v->handle;
 	auto Nw = w->handle;
+
 	// 1.1 Checks
 	if (Nv == Nw || Nw == Nv->parent) {
 		std::cerr << "ERROR: They are already in the same top tree" << std::endl;
-		std::cerr << *Nw << "---" << *Nv << std::endl;
+		// std::cerr << *Nw << "---" << *Nv << std::endl;
 		return NULL;
 	}
 

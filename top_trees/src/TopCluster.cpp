@@ -150,7 +150,12 @@ void CompressCluster::correct_endpoints() {
 	// 1. Correct endpoints
 	if (left_child->boundary_left == right_child->boundary_left || left_child->boundary_left == right_child->boundary_right)
 		common_vertex = left_child->boundary_left;
-	else common_vertex = left_child->boundary_right;
+	else if (left_child->boundary_right == right_child->boundary_left || left_child->boundary_right == right_child->boundary_right)
+		common_vertex = left_child->boundary_right;
+	else {
+		std::cerr << "ERROR: Cannot find common vertex of clusters " << *left_child << " and " << *right_child << std::endl;
+		exit(1);
+	}
 
 	boundary_left = (left_child->boundary_left == common_vertex) ? left_child->boundary_right : left_child->boundary_left;
 	boundary_right = (right_child->boundary_left == common_vertex) ? right_child->boundary_right : right_child->boundary_left;
@@ -173,8 +178,11 @@ void CompressCluster::flip() {
 	right_child = temp_child;
 
 	temp_child = left_foster;
+	auto temp_foster_rake = left_foster_rake;
 	left_foster = right_foster;
+	left_foster_rake = right_foster_rake;
 	right_foster = temp_child;
+	right_foster_rake = temp_foster_rake;
 }
 void CompressCluster::normalize_for_splay() {
 	// Recursive call in top-down direction
