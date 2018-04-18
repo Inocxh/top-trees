@@ -52,7 +52,12 @@ public:
 	// Handle
 	// - if degree at least 2: handle is comprees node around this middle vertex
 	// - if leaf: handle is the top most non-rake (base or compress) node having this vertex as one of its endpoints
-	std::shared_ptr<TopCluster> handle = NULL;
+	
+	// Points to some BaseCluster that has this vertex as one of its endpoints:
+	std::list<std::shared_ptr<TopCluster>> base_handles;
+	// Points to the last TopCluster that was found as handle. When this TopCluster is no longer a
+	// handle, base_handle is used to recompute it
+	std::shared_ptr<TopCluster> last_handle = NULL;
 
 	// Used for building TopTree:
 	bool used = false;

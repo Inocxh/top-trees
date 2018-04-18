@@ -47,6 +47,9 @@ protected:
 	virtual void flip() = 0;
 	virtual void normalize_for_splay() = 0;
 
+	virtual bool is_handle_for(std::shared_ptr<BaseTree::Internal::Vertex> v) = 0;
+	virtual void unregister() = 0;
+
 	virtual std::ostream& _short_name(std::ostream& o) const = 0; // Used only for debugging
 };
 std::ostream& operator<<(std::ostream& o, const TopCluster& v);
@@ -60,12 +63,19 @@ protected:
 
 	std::shared_ptr<BaseTree::Internal::Edge> edge;
 
+	bool handles_registered = false;
+	std::list<std::shared_ptr<TopCluster>>::iterator boundary_left_handles_iterator;
+	std::list<std::shared_ptr<TopCluster>>::iterator boundary_right_handles_iterator;
+
 	virtual bool isBase() { return true; }
 	virtual void do_join();
 	virtual void do_split(std::vector<std::shared_ptr<TopCluster>>* splitted_clusters = NULL);
 	virtual void correct_endpoints() {};
 	virtual void flip();
 	virtual void normalize_for_splay();
+
+	virtual bool is_handle_for(std::shared_ptr<BaseTree::Internal::Vertex> v);
+	virtual void unregister();
 
 	virtual std::ostream& _short_name(std::ostream& o) const; // Used only for debugging
 };
@@ -83,6 +93,9 @@ protected:
 	virtual void correct_endpoints();
 	virtual void flip();
 	virtual void normalize_for_splay();
+
+	virtual bool is_handle_for(std::shared_ptr<BaseTree::Internal::Vertex> v);
+	virtual void unregister();
 
 	virtual std::ostream& _short_name(std::ostream& o) const; // Used only for debugging
 };
@@ -104,6 +117,9 @@ protected:
 	virtual void correct_endpoints();
 	virtual void flip();
 	virtual void normalize_for_splay();
+
+	virtual bool is_handle_for(std::shared_ptr<BaseTree::Internal::Vertex> v);
+	virtual void unregister();
 
 	virtual std::ostream& _short_name(std::ostream& o) const; // Used only for debugging
 

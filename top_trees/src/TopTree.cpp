@@ -26,6 +26,8 @@ public:
 	std::vector<std::shared_ptr<TopCluster>> splitted_clusters;
 	std::vector<std::shared_ptr<CompressCluster>> hard_expose_transformed_clusters;
 
+	std::shared_ptr<TopCluster> get_handle(std::shared_ptr<BaseTree::Internal::Vertex> v);
+
 	// Debug methods:
 	#ifdef DEBUG
 		void print_rooted_prefix(const std::shared_ptr<TopCluster> cluster, const std::string prefix = "", bool last_child = true) const;
@@ -146,6 +148,7 @@ void TopTree::Internal::print_graphviz_recursive(std::shared_ptr<TopCluster> par
 }
 
 void TopTree::Internal::print_graphviz(const std::shared_ptr<TopCluster> root, const std::string title) const {
+	std::cerr << "GRAPHVIZ: " << title << std::endl;
 	std::cout << "digraph \"" << root << "\" {" << std::endl;
 	std::cout << "\tlabelloc=\"t\"" << std::endl << "\tlabel=\"" << title << "\"" << std::endl;
 	print_graphviz_recursive(NULL, root);
@@ -174,6 +177,21 @@ std::shared_ptr<ICluster> TopTree::Expose(int v, int w) {
 
 	internal->soft_expose(vertexV, vertexW);
 	return internal->hard_expose(vertexV, vertexW);
+}
+
+std::shared_ptr<TopCluster> TopTree::Internal::get_handle(std::shared_ptr<BaseTree::Internal::Vertex> v) {
+	if (v->base_handles.size() == 0) return NULL;
+
+	if (v->last_handle == NULL || !v->last_handle->is_handle_for(v)) v->last_handle = v->base_handles.front();
+
+	// Try to go up until it stops to be handle for v
+	while (true) {
+		auto parent = v->last_handle->parent;
+		while (parent != NULL && parent->isRake()) parent = parent->parent;
+		if (parent != NULL && parent->is_handle_for(v)) v->last_handle = parent;
+		else break;
+	}
+	return v->last_handle;
 }
 
 // A. Splaying
@@ -328,10 +346,6 @@ void TopTree::Internal::splice(std::shared_ptr<TopCluster> node) {
 		left_nodes.push_back(root->left_child);
 		if (root->left_foster != NULL) left_nodes.push_back(root->left_foster);
 	}
-	// After removing left child (and removing old boundary) check handle of that boundary:
-	auto check_boundary = root->left_child->boundary_left;
-	if (check_boundary == root->common_vertex) check_boundary = root->left_child->boundary_right;
-	if (check_boundary->handle == root) check_boundary->handle = root->left_child;
 
 	// 3. construct new left and right foster trees
 	std::shared_ptr<TopCluster> new_left_foster = NULL;
@@ -502,13 +516,13 @@ void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> 
 	// Init array for clusters restoration
 	splitted_clusters.clear();
 
+	// A. Making handle of w root node of its top tree
+	auto Nw = get_handle(w);
+	auto Nv = get_handle(v);
 	#ifdef DEBUG
 		std::cerr << "Soft expose of " << *v->data << ", " << *w->data << std::endl;
-		std::cerr << "with handles: " << *v->handle << ", " << *w->handle << std::endl;
+		if (Nv != NULL && Nw != NULL) std::cerr << "with handles: " << *Nv << ", " << *Nw << std::endl;
 	#endif
-
-	// A. Making handle of w root node of its top tree
-	auto Nw = w->handle;
 	soft_expose_handle(Nw);
 
 	if (Nw != NULL && w->degree == 1) {
@@ -518,11 +532,16 @@ void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> 
 
 	// B. Moving handle of v near the handle of w
 	splitted_clusters.clear();
-	auto Nv = v->handle;
-	if (Nv == Nw || Nv == NULL || (Nw != NULL && v == Nw->boundary_left) || (Nw != NULL && v == Nw->boundary_right)) return; // We are done is such situation
-
-	if (w->degree == 1) soft_expose_handle(Nv);
-	else if (w->degree >= 2) soft_expose_handle(Nv, Nw); // Nw as guard
+	Nv = get_handle(v); // update to be sure
+	if (Nv == Nw || Nv == NULL || (Nw != NULL && v == Nw->boundary_left) || (Nw != NULL && v == Nw->boundary_right)) {
+		#ifdef DEBUG
+			std::cerr << "Skipping second expose" << std::endl;
+		#endif
+		// We are done is such situation
+	} else {
+		if (w->degree == 1) soft_expose_handle(Nv);
+		else if (w->degree >= 2) soft_expose_handle(Nv, Nw); // Nw as guard
+	}
 
 	// C. Flipping children
 	if (Nw != NULL && Nw->isCompress()) {
@@ -544,10 +563,20 @@ void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> 
 			Nw->do_join();
 		}
 	}
-	if (Nv->isCompress()) {
+	if (Nv != NULL && Nv->isCompress()) {
 		if ((Nv->left_child->boundary_left == v && Nv->left_child->boundary_right == w)
 		 || (Nv->left_child->boundary_left == w && Nv->left_child->boundary_right == v)) Nv->flip();
 	}
+
+	#ifdef DEBUG
+		for (auto root : root_clusters) {
+			std::ostringstream ss;
+			ss << "after soft expose of " << *v->data << ", " << *w->data;
+			#ifdef DEBUG_GRAPHVIZ
+				print_graphviz(root, ss.str());
+			#endif
+		}
+	#endif
 }
 
 // D. Hard expose
@@ -556,8 +585,9 @@ std::shared_ptr<TopCluster> TopTree::Internal::hard_expose(std::shared_ptr<BaseT
 		std::cerr << "Hard expose of path " << *v->data << "," << *w->data << std::endl;
 	#endif
 
-	auto Nw = w->handle;
-	auto Nv = v->handle;
+	auto Nw = get_handle(w);
+	auto Nv = get_handle(v);
+	if (Nw == NULL || Nv == NULL) return NULL;
 	if (Nw != Nv && Nw->parent == NULL && Nv->parent == NULL) return NULL; // They are in different top trees
 
 	// Wanted node is node's child or grandchild -> raking some nodes needed
@@ -611,10 +641,14 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 		std::cerr << "[Cut of " << *v->data << ", " << *w->data << "]" << std::endl;
 	#endif
 	internal->soft_expose(v, w);
-	auto Nw = w->handle;
-	auto Nv = v->handle;
+	auto Nw = internal->get_handle(w);
+	auto Nv = internal->get_handle(v);
 
 	// 2. Checks
+	if (Nv == NULL || Nw == NULL) {
+		std::cerr << "ERROR: One of vertices is an independent vertex, it cannot be cutted" << std::endl;
+		return std::make_tuple(Nw, Nv, (std::shared_ptr<EdgeData>)NULL); // They are already in different top trees
+	}
 	if (Nw != Nv && Nw->parent == NULL && Nv->parent == NULL) {
 		std::cerr << "ERROR: They are already in different top trees (not connected by edge)" << std::endl;
 		return std::make_tuple(Nw, Nv, (std::shared_ptr<EdgeData>)NULL); // They are already in different top trees
@@ -637,7 +671,7 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 	std::shared_ptr<TopCluster> first = NULL;
 	std::shared_ptr<TopCluster> second = NULL;
 
-	// Node representing v-w edge may be child or grandchild of the root --> from every node we came throught
+	// Node representing v-w edge may be child or grandchild of the root --> from every node we came through
 	// we remove the right child and find some new to its place
 	node = Nw;
 	while ((node->boundary_left != v || node->boundary_right != w) && (node->boundary_left != w || node->boundary_right != v)) {
@@ -679,17 +713,22 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 			}
 		} else {
 			// Left child is the new root and this cluster will be removed
-			if (node->boundary_left->handle == node) node->boundary_left->handle = node->left_child;
-			if (node->boundary_right->handle == node) node->boundary_right->handle = node->left_child;
+
+			#ifdef DEBUG
+				std::cerr << "... removing node " << *node << std::endl;
+			#endif
+			node->unregister();
 
 			if (node == first) {
 				node->left_child->root_vector_index = node->root_vector_index;
 				node->root_vector_index = -1;
 				internal->root_clusters[node->left_child->root_vector_index] = node->left_child;
 				node = node->left_child;
+				node->parent = NULL;
 				first = node;
 			} else {
 				node = node->left_child;
+				node->parent = NULL;
 				second = node;
 			}
 		}
@@ -704,31 +743,24 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 		Nw->root_vector_index = -1;
 	}
 	if (second != NULL) {
+		#ifdef DEBUG
+			std::cerr << "Adding new root cluster " << *second << std::endl;
+		#endif
 		second->root_vector_index = internal->root_clusters.size();
 		internal->root_clusters.push_back(second);
 	}
 
 	// Now node should be Base Cluster with edge
-	// Remove handles
-	if (v->handle == node) v->handle = NULL;
-	if (w->handle == node) w->handle = NULL;
 	node->do_split(&internal->splitted_clusters);
 	auto edge_data = std::dynamic_pointer_cast<BaseCluster>(node)->edge->data;
 	// Remove edge from underlying Base tree
 	auto baseNode = std::dynamic_pointer_cast<BaseCluster>(node);
-	baseNode->edge->from->neighbours.erase(baseNode->edge->from_iter);
-	baseNode->edge->to->neighbours.erase(baseNode->edge->to_iter);
-	v->degree--;
-	w->degree--;
+	baseNode->unregister();
 	// Node will be deleted by garbage collector
 
 	// Restore all clusters
 	for (auto c: internal->splitted_clusters) c->do_join();
 	internal->splitted_clusters.clear();
-
-	// Some cleaning
-	if (v->degree == 0) v->handle = NULL;
-	if (w->degree == 0) w->handle = NULL;
 
 	return std::make_tuple(first, second, edge_data);
 }
@@ -759,11 +791,11 @@ std::shared_ptr<ICluster> TopTree::Link(int v_index, int w_index, std::shared_pt
 
 	// 1. Soft expose handles
 	internal->soft_expose(v, w);
-	auto Nv = v->handle;
-	auto Nw = w->handle;
+	auto Nv = internal->get_handle(v);
+	auto Nw = internal->get_handle(w);
 
 	// 1.1 Checks
-	if (Nv == Nw || Nw == Nv->parent) {
+	if (Nv != NULL && Nw != NULL && (Nv == Nw || Nw == Nv->parent)) {
 		std::cerr << "ERROR: They are already in the same top tree" << std::endl;
 		// std::cerr << *Nw << "---" << *Nv << std::endl;
 		return NULL;
@@ -783,7 +815,7 @@ std::shared_ptr<ICluster> TopTree::Link(int v_index, int w_index, std::shared_pt
 
 	// 3. Joining normal nodes
 	// 3.1 Remove Nv from the root list
-	if (Nv->root_vector_index >= 0) {
+	if (Nv != NULL && Nv->root_vector_index >= 0) {
 		internal->root_clusters.erase(internal->root_clusters.begin() + Nv->root_vector_index);
 		Nv->root_vector_index = -1;
 	}

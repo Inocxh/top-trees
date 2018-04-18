@@ -36,10 +36,20 @@ void BaseCluster::do_join() {
 	boundary_left = edge->from;
 	boundary_right = edge->to;
 
-	// 2. Compute handles:
-	// - if leaf: handle is the top most non-rake (base or compress) node having this vertex as one of its endpoints
-	if (boundary_left->degree == 1) boundary_left->handle = shared_from_this();
-	if (boundary_right->degree == 1) boundary_right->handle = shared_from_this();
+	// 2. Set base handles:
+	// Handle is the top most non-rake (base or compress) node having this vertex as one of its endpoints (for leafs) or as its midpoint (when degree of vertex >=2)
+	// Base handle is used for recomputing handles when some change occurs (during rotating, splaying, splicing) and last_handle is no longer handle.
+	//boundary_left->base_handle = shared_from_this();
+	if (!handles_registered) { // to not register them more than once
+		boundary_left->base_handles.push_back(shared_from_this());
+		boundary_left_handles_iterator = std::prev(boundary_left->base_handles.end());
+
+		//boundary_right->base_handle = shared_from_this();
+		boundary_right->base_handles.push_back(shared_from_this());
+		boundary_right_handles_iterator = std::prev(boundary_right->base_handles.end());
+
+		handles_registered = true;
+	}
 
 	// 3. Call user defined method:
 	Create(shared_from_this(), edge->data);
@@ -60,6 +70,20 @@ void BaseCluster::do_split(std::vector<std::shared_ptr<TopCluster>>* splitted_cl
 
 	is_splitted = true;
 }
+void BaseCluster::unregister() {
+	if (boundary_left->last_handle == shared_from_this()) boundary_left->last_handle = NULL;
+	if (boundary_right->last_handle == shared_from_this()) boundary_right->last_handle = NULL;
+
+	if (handles_registered) {
+		boundary_left->base_handles.erase(boundary_left_handles_iterator);
+		boundary_right->base_handles.erase(boundary_right_handles_iterator);
+	}
+	edge->from->neighbours.erase(edge->from_iter);
+	edge->to->neighbours.erase(edge->to_iter);
+
+	boundary_left->degree--;
+	boundary_right->degree--;
+}
 
 void BaseCluster::flip() {
 	auto temp = boundary_left;
@@ -69,6 +93,9 @@ void BaseCluster::flip() {
 void BaseCluster::normalize_for_splay() {
 	// Recursive call in top-down direction
 	if (parent != NULL) parent->normalize_for_splay();
+}
+bool BaseCluster::is_handle_for(std::shared_ptr<BaseTree::Internal::Vertex> v) {
+	return (boundary_left == v || boundary_right == v);
 }
 std::ostream& BaseCluster::ToString(std::ostream& o) const {
 	return o << "BaseCluster - endpoints " << *boundary_left->data << ", " << *boundary_right->data;
@@ -103,7 +130,7 @@ void CompressCluster::do_join() {
 	if (left_foster != NULL) left_foster->do_join();
 	if (right_foster != NULL) right_foster->do_join();
 
-	// 2. Compute boundary and common vertices and check handles
+	// 2. Compute boundary and common vertices
 	correct_endpoints();
 
 	// 3. Call user defined method:
@@ -147,7 +174,7 @@ void CompressCluster::do_split(std::vector<std::shared_ptr<TopCluster>>* splitte
 	is_splitted = true;
 }
 void CompressCluster::correct_endpoints() {
-	// 1. Correct endpoints
+	// 1. Find common vertex
 	if (left_child->boundary_left == right_child->boundary_left || left_child->boundary_left == right_child->boundary_right)
 		common_vertex = left_child->boundary_left;
 	else if (left_child->boundary_right == right_child->boundary_left || left_child->boundary_right == right_child->boundary_right)
@@ -157,15 +184,14 @@ void CompressCluster::correct_endpoints() {
 		exit(1);
 	}
 
+	// 2. Correct endpoints
 	boundary_left = (left_child->boundary_left == common_vertex) ? left_child->boundary_right : left_child->boundary_left;
 	boundary_right = (right_child->boundary_left == common_vertex) ? right_child->boundary_right : right_child->boundary_left;
-
-	// 2. Check handles:
-	// - if degree at least 2: handle is comprees node around this middle vertex
-	common_vertex->handle = shared_from_this();
-	// - if leaf: handle is the top most non-rake (base or compress) node having this vertex as one of its endpoints
-	if (boundary_left->degree == 1) boundary_left->handle = shared_from_this();
-	if (boundary_right->degree == 1) boundary_right->handle = shared_from_this();
+}
+void CompressCluster::unregister() {
+	if (boundary_left->last_handle == shared_from_this()) boundary_left->last_handle = NULL;
+	if (boundary_right->last_handle == shared_from_this()) boundary_right->last_handle = NULL;
+	if (common_vertex->last_handle == shared_from_this()) common_vertex->last_handle = NULL;
 }
 
 void CompressCluster::flip() {
@@ -196,7 +222,9 @@ void CompressCluster::normalize_for_splay() {
 	// Check fosters connection (by their right boundary)
 	if (left_foster != NULL && left_foster->boundary_right != common_vertex) left_foster->flip();
 	if (right_foster != NULL && right_foster->boundary_right != common_vertex) right_foster->flip();
-
+}
+bool CompressCluster::is_handle_for(std::shared_ptr<BaseTree::Internal::Vertex> v) {
+	return (boundary_left == v || boundary_right == v || common_vertex == v);
 }
 std::ostream& CompressCluster::ToString(std::ostream& o) const {
 	return o << "CompressCluster - endpoints " << *boundary_left->data << " [" << *common_vertex->data << "] " << *boundary_right->data;
@@ -264,6 +292,7 @@ void RakeCluster::correct_endpoints() {
 	boundary_left = rake_to->boundary_left;
 	boundary_right = rake_to->boundary_right;
 }
+void RakeCluster::unregister() {}
 
 void RakeCluster::flip() {
 	auto temp = boundary_left;
@@ -282,6 +311,9 @@ void RakeCluster::normalize_for_splay() {
 	// Joined by the right boundary
 	if (left_child->boundary_right != boundary_right) left_child->flip();
 	if (right_child->boundary_right != boundary_right) right_child->flip();
+}
+bool RakeCluster::is_handle_for(std::shared_ptr<BaseTree::Internal::Vertex> v) {
+	return false;
 }
 std::ostream& RakeCluster::ToString(std::ostream& o) const {
 	return o << "RakeCluster - endpoints " << *boundary_left->data << ", " << *boundary_right->data;
