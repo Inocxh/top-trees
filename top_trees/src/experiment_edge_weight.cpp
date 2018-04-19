@@ -10,6 +10,8 @@
 #define MAX_WEIGHT 10000
 #define OPS_COUNT 4
 
+//#define VERBOSE
+
 enum opType { ADD_EDGE, REMOVE_EDGE, GET_WEIGHT, ADD_WEIGHT };
 struct operation {
 	opType op;
@@ -36,23 +38,30 @@ double run(MaximumEdgeWeight *worker) {
 	clock_t begin = clock();
 	for (auto op: operations) {
 		switch (op.op) {
-		case ADD_EDGE:
-			std::cerr << "Adding edge " << op.vertex_a << " and " << op.vertex_b << " with weight " << op.weight << std::endl;
+		case ADD_EDGE: {
+			#ifdef VERBOSE
+				std::cerr << "Adding edge " << op.vertex_a << " and " << op.vertex_b << " with weight " << op.weight << std::endl;
+			#endif
 			worker->add_edge(op.vertex_a, op.vertex_b, op.weight);
-		break;
-		case REMOVE_EDGE:
-			std::cerr << "Removing edge " << op.vertex_a << " and " << op.vertex_b << ": ";
-			std::cerr << "... result: " << worker->remove_edge(op.vertex_a, op.vertex_b) << std::endl;
-		break;
-		case ADD_WEIGHT:
-			std::cerr << "Adding weight between " << op.vertex_a << " and " << op.vertex_b << ": " << op.weight << std::endl;
+		break;}
+		case REMOVE_EDGE: {
+			auto result = worker->remove_edge(op.vertex_a, op.vertex_b);
+			#ifdef VERBOSE
+				std::cerr << "Removing edge " << op.vertex_a << " and " << op.vertex_b << ": " << result << std::endl;
+			#endif
+		break;}
+		case ADD_WEIGHT: {
+			#ifdef VERBOSE
+				std::cerr << "Adding weight between " << op.vertex_a << " and " << op.vertex_b << ": " << op.weight << std::endl;
+			#endif
 			worker->add_weight_on_path(op.vertex_a, op.vertex_b, op.weight);
-		break;
-		case GET_WEIGHT:
-			std::cerr << "Getting max weight on path " << op.vertex_a << " and " << op.vertex_b << ": ";
+		break;}
+		case GET_WEIGHT: {
 			auto result = worker->get_max_weight_on_path(op.vertex_a, op.vertex_b);
-			std::cerr << result.max_weight << std::endl;
-		break;
+			#ifdef VERBOSE
+				std::cerr << "Getting max weight on path " << op.vertex_a << " and " << op.vertex_b << ": " << result.max_weight << std::endl;
+			#endif
+		break;}
 		}
 	}
 	clock_t end = clock();
@@ -87,5 +96,5 @@ int main(int argc, char *argv[]) {
 	//auto time_topology_top_tree = run(new MaximumEdgeWeight(new TopTree::TopologyTopTree()));
 	double time_topology_top_tree = 0;
 
-	std::cout << seed << " " << time_top_tree / K << " " << time_topology_top_tree / K << std::endl;
+	std::cout << time_top_tree << " " << time_top_tree / K << " " << time_topology_top_tree << " " << time_topology_top_tree / K << std::endl;
 }
