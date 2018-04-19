@@ -34,8 +34,9 @@ protected:
 	void set_left_foster(std::shared_ptr<TopCluster> child);
 	void set_right_foster(std::shared_ptr<TopCluster> child);
 
-	int root_vector_index = -1;
+	std::list<std::shared_ptr<TopCluster>>::iterator root_clusters_iterator;
 	bool is_splitted = true; // Initially clusters are in state that they need do_join method (which is called during construction)
+	bool is_deleted = false;
 
 	virtual bool isBase() { return false; }
 	virtual bool isCompress() { return false; }

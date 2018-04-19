@@ -24,7 +24,7 @@ public:
 	void Restore();
 
 	// Return roots of the top trees
-	std::vector<std::shared_ptr<TopCluster>> GetTopTrees();
+	// std::vector<std::shared_ptr<TopCluster>> GetTopTrees();
 private:
 	class Internal;
 	std::unique_ptr<Internal> internal;

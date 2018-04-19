@@ -14,7 +14,7 @@ namespace TopTree {
 // Hide data from .hpp file using PIMP idiom
 class TopTree::Internal {
 public:
-	std::vector<std::shared_ptr<TopCluster>> root_clusters;
+	std::list<std::shared_ptr<TopCluster>> root_clusters;
 	std::shared_ptr<BaseTree> base_tree;
 
 	std::shared_ptr<TopCluster> construct_cluster(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> e=NULL);
@@ -33,11 +33,12 @@ public:
 		void print_rooted_prefix(const std::shared_ptr<TopCluster> cluster, const std::string prefix = "", bool last_child = true) const;
 	#endif
 	#ifdef DEBUG_GRAPHVIZ
-		void print_graphviz(std::shared_ptr<TopCluster> node, const std::string title="") const;
+		void print_graphviz(std::shared_ptr<TopCluster> node, const std::string title="");
 		void print_graphviz_recursive(std::shared_ptr<TopCluster> parent, std::shared_ptr<TopCluster> node, const char* edge_label="") const;
 		void print_graphviz_child(std::shared_ptr<TopCluster> from, std::shared_ptr<TopCluster> to, const char* edge_label="") const;
 	#endif
 private:
+	int graphviz_counter = 0;
 	void adjust_parent(std::shared_ptr<TopCluster> parent, std::shared_ptr<TopCluster> old_child, std::shared_ptr<TopCluster> new_child);
 	void rotate_left(std::shared_ptr<TopCluster> x);
 	void rotate_right(std::shared_ptr<TopCluster> x);
@@ -60,21 +61,16 @@ void TopTree::InitFromBaseTree(std::shared_ptr<BaseTree> baseTree) {
 
 	for (auto v : internal->base_tree->internal->vertices) v->used = false;
 
-	int i = 0;
 	for (auto v : internal->base_tree->internal->vertices) {
 		if (v->used || v->degree != 1) continue;
-		internal->root_clusters.push_back(internal->construct_cluster(v));
-		internal->root_clusters[i]->root_vector_index = i;
-		i++;
+		auto cluster = internal->construct_cluster(v);
+		internal->root_clusters.push_back(cluster);
+		cluster->root_clusters_iterator = std::prev(internal->root_clusters.end());
 	}
 
 	#ifdef DEBUG_GRAPHVIZ
 		for (auto root_cluster: internal->root_clusters) internal->print_graphviz(root_cluster, "Full");
 	#endif
-}
-
-std::vector<std::shared_ptr<TopCluster> > TopTree::GetTopTrees() {
-	return internal->root_clusters;
 }
 
 #ifdef DEBUG
@@ -147,12 +143,16 @@ void TopTree::Internal::print_graphviz_recursive(std::shared_ptr<TopCluster> par
 	print_graphviz_recursive(node, node->right_child, "R");
 }
 
-void TopTree::Internal::print_graphviz(const std::shared_ptr<TopCluster> root, const std::string title) const {
-	std::cerr << "GRAPHVIZ: " << title << std::endl;
+void TopTree::Internal::print_graphviz(const std::shared_ptr<TopCluster> root, const std::string title) {
+	std::ostringstream ss;
+	ss << "[" << graphviz_counter << "] " << title;
+
+	std::cerr << "GRAPHVIZ: " << ss.str() << std::endl;
 	std::cout << "digraph \"" << root << "\" {" << std::endl;
-	std::cout << "\tlabelloc=\"t\"" << std::endl << "\tlabel=\"" << title << "\"" << std::endl;
+	std::cout << "\tlabelloc=\"t\"" << std::endl << "\tlabel=\"" << ss.str() << "\"" << std::endl;
 	print_graphviz_recursive(NULL, root);
 	std::cout << "}" << std::endl;
+	graphviz_counter++;
 }
 
 #endif
@@ -211,9 +211,9 @@ void TopTree::Internal::adjust_parent(std::shared_ptr<TopCluster> parent, std::s
 		}
 	} else {
 		// x was one of the roots, replace it in place in the vector
-		new_child->root_vector_index = old_child->root_vector_index;
-		old_child->root_vector_index = -1;
-		root_clusters[new_child->root_vector_index] = new_child;
+		root_clusters.erase(old_child->root_clusters_iterator);
+		root_clusters.push_back(new_child);
+		new_child->root_clusters_iterator = std::prev(root_clusters.end());
 	}
 }
 
@@ -689,27 +689,35 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 			// Get leftmost node of the rake tree
 			auto left_foster = node->left_foster;
 			if (!left_foster->isRake()) {
-				node->right_child = left_foster;
+				node->set_right_child(left_foster);
 				node->left_foster = NULL;
 			} else {
-				while (left_foster->isRake()) left_foster = left_foster->right_child;
+				while (left_foster->isRake()) left_foster = left_foster->left_child;
+				left_foster->do_split();
 				internal->guarded_splay(left_foster->parent, node);
-				node->left_foster->do_split();
-				node->set_right_child(node->left_foster->right_child);
-				node->set_left_foster(node->left_foster->left_child);
+				//node->left_foster->do_split();
+				left_foster = node->left_foster;
+				node->set_right_child(left_foster->left_child);
+				node->set_left_foster(left_foster->right_child);
+				left_foster->parent = NULL;
+				left_foster->unregister();
 			}
 		} else if (node->right_foster != NULL) {
 			// Get rightmost node of the rake tree
 			auto right_foster = node->right_foster;
 			if (!right_foster->isRake()) {
-				node->right_child = right_foster;
+				node->set_right_child(right_foster);
 				node->right_foster = NULL;
 			} else {
-				while (right_foster->isRake()) right_foster = right_foster->left_child;
+				while (right_foster->isRake()) right_foster = right_foster->right_child;
+				right_foster->do_split();
 				internal->guarded_splay(right_foster->parent, node);
-				node->right_foster->do_split();
-				node->set_right_child(node->right_foster->left_child);
-				node->set_right_foster(node->right_foster->right_child);
+				//node->right_foster->do_split();
+				right_foster = node->right_foster;
+				node->set_right_child(right_foster->right_child);
+				node->set_right_foster(right_foster->left_child);
+				right_foster->parent = NULL;
+				right_foster->unregister();
 			}
 		} else {
 			// Left child is the new root and this cluster will be removed
@@ -720,11 +728,13 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 			node->unregister();
 
 			if (node == first) {
-				node->left_child->root_vector_index = node->root_vector_index;
-				node->root_vector_index = -1;
-				internal->root_clusters[node->left_child->root_vector_index] = node->left_child;
+				// Unregister as root cluster
+				internal->root_clusters.erase(node->root_clusters_iterator);
+				// Push new root
 				node = node->left_child;
 				node->parent = NULL;
+				internal->root_clusters.push_back(node);
+				node->root_clusters_iterator = std::prev(internal->root_clusters.end());
 				first = node;
 			} else {
 				node = node->left_child;
@@ -739,15 +749,14 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 
 	// When removing this whole one edge tree
 	if (first == NULL) {
-		internal->root_clusters.erase(internal->root_clusters.begin() + Nw->root_vector_index);
-		Nw->root_vector_index = -1;
+		internal->root_clusters.erase(Nw->root_clusters_iterator);
 	}
 	if (second != NULL) {
 		#ifdef DEBUG
 			std::cerr << "Adding new root cluster " << *second << std::endl;
 		#endif
-		second->root_vector_index = internal->root_clusters.size();
 		internal->root_clusters.push_back(second);
+		second->root_clusters_iterator = std::prev(internal->root_clusters.end());
 	}
 
 	// Now node should be Base Cluster with edge
@@ -808,16 +817,15 @@ std::shared_ptr<ICluster> TopTree::Link(int v_index, int w_index, std::shared_pt
 
 	// 2. If joining solitary nodes return only the new cluster
 	if (v->degree == 1 && w->degree == 1) {
-		edge_cluster->root_vector_index = internal->root_clusters.size();
 		internal->root_clusters.push_back(edge_cluster);
+		edge_cluster->root_clusters_iterator = std::prev(internal->root_clusters.end());
 		return edge_cluster;
 	}
 
 	// 3. Joining normal nodes
 	// 3.1 Remove Nv from the root list
-	if (Nv != NULL && Nv->root_vector_index >= 0) {
-		internal->root_clusters.erase(internal->root_clusters.begin() + Nv->root_vector_index);
-		Nv->root_vector_index = -1;
+	if (Nv != NULL && Nv->parent == NULL) {
+		internal->root_clusters.erase(Nv->root_clusters_iterator);
 	}
 
 	// 3.2a Manage Nv
@@ -844,9 +852,10 @@ std::shared_ptr<ICluster> TopTree::Link(int v_index, int w_index, std::shared_pt
 		// w had degree 1, it was endpoint of the Nw -> construct new compress node
 		node = CompressCluster::construct(Nw, node);
 		// Nw is not longer root cluster, there is new root cluster
-		node->root_vector_index = Nw->root_vector_index;
-		Nw->root_vector_index = -1;
-		internal->root_clusters[node->root_vector_index] = node;
+		// -> remove Nw from root clusters and push node there
+		internal->root_clusters.erase(Nw->root_clusters_iterator);
+		internal->root_clusters.push_back(node);
+		node->root_clusters_iterator = std::prev(internal->root_clusters.end());
 	} else {
 		Nw->do_split();
 		if (Nw->right_foster == NULL) Nw->right_foster = Nw->right_child;

@@ -29,7 +29,7 @@ std::shared_ptr<BaseCluster> BaseCluster::construct(std::shared_ptr<BaseTree::In
 	return cluster;
 }
 void BaseCluster::do_join() {
-	if (!is_splitted) return;
+	if (!is_splitted || is_deleted) return;
 	// No child, no need to join them
 
 	// 1. Set boundaries:
@@ -83,6 +83,8 @@ void BaseCluster::unregister() {
 
 	boundary_left->degree--;
 	boundary_right->degree--;
+
+	is_deleted = true;
 }
 
 void BaseCluster::flip() {
@@ -115,14 +117,16 @@ std::shared_ptr<CompressCluster> CompressCluster::construct(std::shared_ptr<TopC
 
 	// Foster children (if there are any)
 	cluster->set_left_foster(cluster->common_vertex->rake_tree_left);
+	cluster->common_vertex->rake_tree_left = NULL;
 	cluster->set_right_foster(cluster->common_vertex->rake_tree_right);
+	cluster->common_vertex->rake_tree_right = NULL;
 
 	cluster->do_join();
 
 	return cluster;
 }
 void CompressCluster::do_join() {
-	if (!is_splitted) return;
+	if (!is_splitted || is_deleted) return;
 
 	// 1. ensure that childs are fine (joined):
 	left_child->do_join();
@@ -180,8 +184,9 @@ void CompressCluster::correct_endpoints() {
 	else if (left_child->boundary_right == right_child->boundary_left || left_child->boundary_right == right_child->boundary_right)
 		common_vertex = left_child->boundary_right;
 	else {
-		std::cerr << "ERROR: Cannot find common vertex of clusters " << *left_child << " and " << *right_child << std::endl;
-		exit(1);
+		std::cerr << "ERROR: " << *shared_from_this() << " Cannot find common vertex of clusters " << *left_child << " and " << *right_child << std::endl;
+		// exit(1);
+		*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
 	}
 
 	// 2. Correct endpoints
@@ -192,6 +197,8 @@ void CompressCluster::unregister() {
 	if (boundary_left->last_handle == shared_from_this()) boundary_left->last_handle = NULL;
 	if (boundary_right->last_handle == shared_from_this()) boundary_right->last_handle = NULL;
 	if (common_vertex->last_handle == shared_from_this()) common_vertex->last_handle = NULL;
+
+	is_deleted = true;
 }
 
 void CompressCluster::flip() {
@@ -213,6 +220,7 @@ void CompressCluster::flip() {
 void CompressCluster::normalize_for_splay() {
 	// Recursive call in top-down direction
 	correct_endpoints();
+
 	if (parent != NULL) parent->normalize_for_splay();
 
 	// Check endpoints
@@ -220,8 +228,21 @@ void CompressCluster::normalize_for_splay() {
 	if (right_child->boundary_right != boundary_right) right_child->flip();
 
 	// Check fosters connection (by their right boundary)
-	if (left_foster != NULL && left_foster->boundary_right != common_vertex) left_foster->flip();
-	if (right_foster != NULL && right_foster->boundary_right != common_vertex) right_foster->flip();
+	if (left_foster != NULL && left_foster->boundary_right != common_vertex) {
+		if (left_foster->boundary_left == common_vertex) left_foster->flip();
+		else {
+			std::cerr << "Left foster " << *left_foster << " of " << *shared_from_this() << " does not have common vertex" << std::endl;
+			exit(1);
+		}
+	}
+
+	if (right_foster != NULL && right_foster->boundary_right != common_vertex) {
+		if (right_foster->boundary_left == common_vertex) right_foster->flip();
+		else {
+			std::cerr << "Right foster " << *right_foster << " of " << *shared_from_this() << " does not have common vertex" << std::endl;
+			exit(1);
+		}
+	}
 }
 bool CompressCluster::is_handle_for(std::shared_ptr<BaseTree::Internal::Vertex> v) {
 	return (boundary_left == v || boundary_right == v || common_vertex == v);
@@ -252,7 +273,7 @@ std::shared_ptr<RakeCluster> RakeCluster::construct(std::shared_ptr<TopCluster> 
 	return cluster;
 }
 void RakeCluster::do_join() {
-	if (!is_splitted) return;
+	if (!is_splitted || is_deleted) return;
 
 	// nicknames
 	auto rake_from = left_child;
@@ -292,7 +313,9 @@ void RakeCluster::correct_endpoints() {
 	boundary_left = rake_to->boundary_left;
 	boundary_right = rake_to->boundary_right;
 }
-void RakeCluster::unregister() {}
+void RakeCluster::unregister() {
+	is_deleted = true;
+}
 
 void RakeCluster::flip() {
 	auto temp = boundary_left;
