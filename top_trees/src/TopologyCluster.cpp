@@ -13,6 +13,7 @@ void SimpleCluster::do_split() {
 	if (was_splitted) return;
 
 	if (parent != NULL) parent->do_split();
+
 	if (edge != NULL) Destroy(shared_from_this(), edge->data);
 	else Split(first, second, shared_from_this());
 
@@ -46,7 +47,7 @@ TopologyCluster::TopologyCluster() {
 }
 
 std::ostream& TopologyCluster::ToString(std::ostream& o) const {
-	o << index;
+	//o << index;
 	if (edge != NULL) o << *edge->data;
 	else if (vertex != NULL) o << *vertex->data;
 	if (boundary_left != NULL) o << " (" << *boundary_left->data << "," << *boundary_right->data << ")";

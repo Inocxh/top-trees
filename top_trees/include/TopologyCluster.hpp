@@ -33,9 +33,9 @@ protected:
 	bool is_rake_branch = false; // if had two children and both outer edges are from one child
 	bool is_deleted = false;
 
-	std::shared_ptr<TopologyCluster> parent;
-	std::shared_ptr<TopologyCluster> first;
-	std::shared_ptr<TopologyCluster> second;
+	std::shared_ptr<TopologyCluster> parent = NULL;
+	std::shared_ptr<TopologyCluster> first = NULL;
+	std::shared_ptr<TopologyCluster> second = NULL;
 
 	// Edge between clusters:
 	std::shared_ptr<BaseTree::Internal::Edge> edge;
