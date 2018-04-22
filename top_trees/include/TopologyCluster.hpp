@@ -84,6 +84,7 @@ class SimpleCluster: public ICluster, public std::enable_shared_from_this<Simple
 friend class TopologyTopTree;
 public:
 	std::ostream& ToString(std::ostream& o) const { return o; }
+	static std::shared_ptr<SimpleCluster> construct(std::shared_ptr<ICluster> first, std::shared_ptr<ICluster> second);
 protected:
 	std::shared_ptr<BaseTree::Internal::Edge> edge = NULL;
 

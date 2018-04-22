@@ -20,6 +20,17 @@ void SimpleCluster::do_split() {
 	was_splitted = true;
 }
 
+std::shared_ptr<SimpleCluster> SimpleCluster::construct(std::shared_ptr<ICluster> first, std::shared_ptr<ICluster> second) {
+	auto cluster = std::make_shared<SimpleCluster>();
+	cluster->first = first;
+	auto simple_first = std::dynamic_pointer_cast<SimpleCluster>(first);
+	if (simple_first != NULL) simple_first->parent = cluster;
+	cluster->second = second;
+	auto simple_second = std::dynamic_pointer_cast<SimpleCluster>(second);
+	if (simple_second != NULL) simple_second->parent = cluster;
+	return cluster;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /// TopologyCluster
 
