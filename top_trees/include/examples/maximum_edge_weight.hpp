@@ -1,17 +1,19 @@
 #include <memory>
 #include <string>
+#include <sstream>
 
 #include "TopTreeInterface.hpp"
 
 class MyEdgeData: public TopTree::EdgeData {
 public:
-	MyEdgeData(int index, int weight): index{index}, weight{weight} {}
+	MyEdgeData(int index, int weight, std::string label): index{index}, weight{weight}, label{label} {}
 
 	int index;
 	int weight;
+	std::string label;
 
 	// For testing:
-	virtual std::ostream& ToString(std::ostream& o) const { return o << weight; }
+	virtual std::ostream& ToString(std::ostream& o) const { return o << label; }
 };
 
 class MyVertexData: public TopTree::VertexData {
@@ -45,7 +47,9 @@ public:
 	int add_edge(int a, int b, int weight) {
 		edges.push_back(edge{a, b, weight});
 		int index = edges.size() - 1;
-		auto edge_data = std::make_shared<MyEdgeData>(index, weight);
+		std::ostringstream ss;
+		ss << vertices[a].index << "," << vertices[b].index;
+		auto edge_data = std::make_shared<MyEdgeData>(index, weight, ss.str());
 
 		// When not initialized add to BaseTree, otherwise call Link
 		if (!initialized) base_tree->AddEdge(vertices[a].index, vertices[b].index, edge_data);
