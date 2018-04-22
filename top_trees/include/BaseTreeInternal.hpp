@@ -52,7 +52,7 @@ public:
 	// Handle
 	// - if degree at least 2: handle is comprees node around this middle vertex
 	// - if leaf: handle is the top most non-rake (base or compress) node having this vertex as one of its endpoints
-	
+
 	// Points to some BaseCluster that has this vertex as one of its endpoints:
 	std::list<std::shared_ptr<TopCluster>> base_handles;
 	// Points to the last TopCluster that was found as handle. When this TopCluster is no longer a
@@ -70,6 +70,12 @@ public:
 	std::list<std::shared_ptr<Vertex>>::iterator superior_vertex_subvertices_iter;
 	std::list<std::shared_ptr<Edge>> subvertice_edges;
 	std::shared_ptr<TopologyCluster> topology_cluster;
+
+	friend std::ostream& operator<<(std::ostream& o, const Vertex& v) {
+		o << *v.data;
+		if (v.superior_vertex != NULL) o << "(" << *v.superior_vertex << ")";
+		return o;
+	}
 };
 
 class BaseTree::Internal::Edge : public std::enable_shared_from_this<Edge> {

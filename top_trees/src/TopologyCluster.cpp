@@ -12,10 +12,20 @@ namespace TopTree {
 void SimpleCluster::do_split() {
 	if (was_splitted) return;
 
+	// std::cerr << "Splitting simple cluster (" << shared_from_this() << ")" << *boundary_left->data << "-" << *boundary_right->data <<
+	// 	"with childs " << first << " and " << second << std::endl;
+
 	if (parent != NULL) parent->do_split();
 
-	if (edge != NULL) Destroy(shared_from_this(), edge->data);
-	else Split(first, second, shared_from_this());
+	if (first != NULL && second != NULL) Split(first, second, shared_from_this());
+	else if (first != NULL) first->data = data; // just copy data
+	else if (edge != NULL && !edge->subvertice_edge) Destroy(shared_from_this(), edge->data);
+	else {
+		std::cerr << "Not know what to do with this simple cluster, cannot Split, copy nor Destroy" << std::endl;
+		exit(1);
+	}
+
+	// std::cerr << "Splitted simple cluster (" << shared_from_this() << ")" << *boundary_left->data << "-" << *boundary_right->data << std::endl;
 
 	was_splitted = true;
 }
