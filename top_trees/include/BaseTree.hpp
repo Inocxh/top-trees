@@ -9,18 +9,20 @@ namespace TopTree {
 //------------------------------------------------------------------------------
 
 class VertexData {
+static int v_counter;
 public:
-	int r = rand() % 100; // DEBUG & TRACE
-	virtual std::ostream& ToString(std::ostream& o) const { return o << "<v" << r << ">"; }
+	int index = VertexData::v_counter++;
+	virtual std::ostream& ToString(std::ostream& o) const { return o << "<v" << index << ">"; }
 };
 std::ostream& operator<<(std::ostream& o, const VertexData& v);
 
 //------------------------------------------------------------------------------
 
 class EdgeData {
+static int e_counter;
 public:
-	int r = rand() % 100; // DEBUG & TRACE
-	virtual std::ostream& ToString(std::ostream& o) const { return o << "<e" << r << ">"; }
+	int index = EdgeData::e_counter++;
+	virtual std::ostream& ToString(std::ostream& o) const { return o << "<e" << index << ">"; }
 };
 std::ostream& operator<<(std::ostream& o, const EdgeData& e);
 

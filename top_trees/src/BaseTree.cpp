@@ -11,6 +11,9 @@ namespace TopTree {
 std::ostream& operator<<(std::ostream& o, const VertexData& v) { return v.ToString(o); }
 std::ostream& operator<<(std::ostream& o, const EdgeData& e) { return e.ToString(o); }
 
+int VertexData::v_counter = 0;
+int EdgeData::e_counter = 0;
+
 ////////////////////////////////////////////////////////////////////////////////
 
 BaseTree::BaseTree() : internal{std::make_unique<Internal>()} {}
