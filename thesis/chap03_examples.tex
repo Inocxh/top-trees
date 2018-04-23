@@ -15,7 +15,7 @@ operations. We could find length of the path between any two vertices (or find
 that they are not connected) in $\O(\log N)$ time.
 
 \medskip\noindent
-{\bf Proof:} We will maintaing length of the cluster path in every cluster.
+{\bf Proof:} We will maintain length of the cluster path in every cluster.
 
 \begin{itemize}
 
@@ -50,7 +50,7 @@ Similarly to the previous problem this problem was originally solved in
 \cite{TopTrees}.
 
 {\bf Theorem:} Let's have dynamic collection of weighted trees with operation of linking,
-cutting, updating edge weight and updating edge weight on given path. We could
+cutting, updating edge weight and updating edge weights on given path. We could
 find maximum edge weight between any two vertices (or find that they are not
 connected) in $\O(\log N)$ time.
 
@@ -72,13 +72,13 @@ which is this cluster created. There is no extra weight yet, so $w_{extra}=0$.
 	Copy $w_{max}$ from the $C_2$. There is no extra weigh, so $w_{extra}=0$.
 	\end{itemize}
 
-\item $\Split$ have to distribute $w_{extra}$ to the children. For $C_i$ children
-of splitted $C$ will operations depends on the type of the $C$:
+\item $\Split$ have to distribute $w_{extra}$ to the children. For $C_1, C_2$,  children
+of splitted $C$ will operations depend on the type of the $C$:
 	\begin{itemize}
 	\item If $C$ is a compress cluster of $C_1$ and $C_2$:
 		\begin{itemize}[$\circ$]
-		\item $w_{extra}(C_i)=w_{extra}(C_i)+w_{extra}(C)$
-		\item $w_{max}(C_i)=w_{max}(C_i)+w_{extra}(C)$
+		\item $w_{extra}(C_i)=w_{extra}(C_i)+w_{extra}(C)$ for $i\in{1,2}$
+		\item $w_{max}(C_i)=w_{max}(C_i)+w_{extra}(C)$ for $i\in{1,2}$
 		\end{itemize}
 	\item If $C$ is a rake cluster and $C_1$ is raked onto $C_2$:
 	Apply above operation only for $C_2$ (and vice versa only for $C_1$ if $C_2$
@@ -86,13 +86,14 @@ of splitted $C$ will operations depends on the type of the $C$:
 	\end{itemize}
 
 
-\item $\Destroy$ sets weight of the underlying edge: $w(e)=w_{max}$.
+\item $\Destroy$ sets weight of the underlying edge: $w(e)=w_{max}+w_{extra}$.
 
 \end{itemize}
 
-Then we could just call $\Expose(u,v)$ and read $w_{max}$ or add to $w_{extra}$
-of the root cluster representing the $(u,v)$-path. Everything in time complexity
-of an {\sc Expose} operation, which is $\O(\log N)$.
+Then we could just call $\Expose(u,v)$ and read $w_{max}$ or add both to
+$w_{extra}$ and $w_{max}$ of the root cluster representing the $(u,v)$-path.
+Everything in time complexity of an {\sc Expose} operation, which is $\O(\log
+N)$.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

@@ -276,7 +276,7 @@ must be done -- see the following algorithm.}
 
 After that we just need to compress all clusters in the chain to obtain the
 final root cluster with endpoints $(u,v)$. It represents the $(u,v)$ path with
-all others parts of the tree raked.
+all other parts of the tree raked.
 
 The whole algorithm would be:
 \begin{enumerate}
@@ -310,7 +310,7 @@ clusters (one of them must occur):
 	We remove current cluster and the following one from the chain and then
 	we construct and add a new top cluster as a rake \Join{} of the current
 	cluster onto the following one. We left $x$ intact (because we still
-	does not found cluster that could be joined after the previous one) and
+	have not found cluster that could be joined after the previous one) and
 	advance to the newly inserted cluster.
 
 \end{enumerate}
@@ -343,7 +343,7 @@ distributed into original clusters.
 
 Firstly we need to \Split{} all the clusters in the auxiliary top tree (there
 is at most $\O(\log N)$ clusters). Clusters on the last level of the auxiliary
-top tree distributes information to the clusters in the original tree.
+top tree distribute information to the clusters in the original tree.
 
 Now we can delete the auxiliary top tree and then join all the splitted clusters
 in the original tree. Because the initial splitting takes $\O(\log N)$ calls to
@@ -360,7 +360,7 @@ before.
 
 In some use cases there are a lot of informations in the clusters used for
 structural changes in the underlying clusters -- for example in the 2-edge
-connectivity that we will use as one of our experiments. In that cases if may be
+connectivity that we will use as one of our experiments. In that cases it may be
 good to turn off some expensive updates during \Join/\Split{} and to turn them
 on after the top tree is returned into its original shape.
 

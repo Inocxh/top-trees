@@ -46,7 +46,7 @@ disjoint and they share one boundary vertex.
 
 A {\I Clusterization} is division of the underlying forest into clusters such
 that each edge is in exactly one cluster. As we mentioned above {\I roots
-clusters} are the ones that represents whole trees in the underlying forest
+clusters} are the ones that represent whole trees in the underlying forest
 (all edges of their underlying tree are contracted inside and there are no
 outgoing edges -- this means that in a clusterization both their boundary
 vertices are not connected with any other cluster).
@@ -241,10 +241,14 @@ bottom-up manner.
 
 \subsection{\sc Choose}
 
-This operation for given cluster with full information (all clusters above it
-are splitted -- efficiently this is a root cluster) selects one of its child
-clusters. It gets reference to the cluster and its children and returns
-reference to one of them. It is used internally by the \Search{} operation.
+%This operation for given cluster with full information (all clusters above it
+%are splitted -- efficiently this is a root cluster) selects one of its child
+%clusters. It gets reference to the cluster and its children and returns
+%reference to one of them. It is used internally by the \Search{} operation.
+
+This operation for given root cluster selects one of its child clusters. It gets
+reference to the cluster and its children and returns reference to one of them.
+It is used internally by the \Search{} operation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -252,8 +256,8 @@ reference to one of them. It is used internally by the \Search{} operation.
 
 \section{Top Trees operations}
 
-These are the only operations which could user use to manipulate with the Top
-Trees structure. In addition to that user could access root clusters and read
+These are the only operations which could user use to manipulate the Top Trees
+structure. In addition to that, user could access root clusters and read
 informations from them.
 
 \subsubsection{Normalized shape}
@@ -293,7 +297,7 @@ underlying forest in this way:
 \item Isolated vertex has no handle.
 \item If the vertex is a leaf of the underlying tree the
 handle for this vertex is the topmost compress (or base) cluster having this
-vertex as one of its boundary vertices.
+vertex as one of its boundary vertices (rake clusters cannot be handles).
 \item Root cluster is handle for its boundary vertices regardless of their
 degree in the underlying tree.
 \item And finally if the vertex has degree at least two the compress cluster of
@@ -325,8 +329,8 @@ See details of both implementations for more information.
 
 As we mentioned before we may need to keep the Top Trees structure in some
 normalized shape. Purpose of this operation is to restore the structure
-in such form. Because some operation may corrupt this normalized shape we
-call the \Restore{} operation at beginning of all others operations.
+to such form. Because some operation may corrupt this normalized shape we
+call the \Restore{} operation at beginning of all other operations.
 
 To allow the user to modify user functions (\Split, \Join, \dots) for each
 operation we will make the \Restore{} callable by the user independently.
@@ -341,8 +345,8 @@ Operation $\Cut(u,v)$ deletes edge between vertices $u$ and $v$ and reorganizes
 the Top Trees structure to reflect this change. Precondition for this operation
 is that $u\ne v$ and there exists edge $(u,v)$.
 
-Both implementations user different approaches, but the result is the same --
-they remove the $(u,v)$ edge and return root of two new top trees.
+Both implementations use different approaches, but the result is the same --
+they remove the $(u,v)$ edge and return roots of two new top trees.
 
 \subsection{\sc Link}
 
@@ -350,7 +354,7 @@ The Link operation is an opposite to the \Cut{} operation. Calling $\Link(u,v)$ 
 two disconnected vertices joins them by the new edge $(u,v)$. Precondition for
 this operation is that $u$ and $v$ are disconnected.
 
-Both implementations user different approaches, but the result is the same --
+Both implementations use different approaches, but the result is the same --
 both top trees are joined by the new edge $(u,v)$ and the cluster of resulting
 top tree is returned.
 

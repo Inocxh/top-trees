@@ -16,9 +16,9 @@ ternarized tree.
 A collection of rooted binary trees (called {\I topology trees}) is built from
 these recursive clusters, one for each tree in the original forest.
 
-Cluster in topology tree is a set of maximally two nodes (vertices of the
+Cluster in topology tree is a set of at most two nodes (vertices of the
 original tree or other topology tree clusters) with edge between them (but
-without edges to neighbours) and with maximally three neighbours, better
+without edges to neighbours) and with at most three neighbours, better
 definition will conclude below. Nodes not connected by edge cannot be in common
 cluster, thus clusters represents some contracted subtrees of the original tree.
 
@@ -32,7 +32,7 @@ To use it as base for the Top trees structure we will have to implement
 Also note that clusters in topology trees are slightly different than clusters
 in top trees. In top trees clusters are generalized edges (with two endpoints)
 representing contracted subtree between two vertices, but clusters in topology
-trees are generalized vertices (with maximally three outgoing edges).
+trees are generalized vertices (with at most three outgoing edges).
 
 We will build the Top trees structure based on topology trees in
 the \Cref{chap:ImplementationTopology}, now let's introduce details of topology
@@ -51,7 +51,7 @@ A {\I cluster of order $k$} is a set of $k$ nodes connected by edges (there must
 be a path from each to each). A {\I clusterization of order $k$} of graph is
 division of this graph into clusters that:
 \begin{itemize}
-\item Each cluster has maximal order $k$.
+\item Each cluster has order at most $k$.
 \item Each vertex of the original graph is contained in exactly one cluster.
 \end{itemize}
 
@@ -59,7 +59,7 @@ The {\I Topology clusterization} of a tree (with maximal degree 3) is clusteriza
 of order 2 whose clusters (called {\I topology clusters}) must meet these conditions:
 \begin{enumerate}
 \item {\bf Neighbours limit}: Every topology cluster has degree (number of
-outgoing edges to neighbours) maximally 3.
+outgoing edges to neighbours) at most 3.
 \item {\bf Simple crossroads}: Clusters with three neighbours must have order 1 (only one vertex).
 \item {\bf Minimality}: There is no cluster that could be merged with its neighbour
 without violation these rules.
@@ -175,7 +175,7 @@ And finally for all other clusters (rest of change list and abandon list) we do
 this process:
 \begin{itemize}
 
-\item {\I When cluster had no neighbours we found a new root cluster}
+\item {\I When cluster has no neighbours we found a new root cluster}
 $\rightarrow$ we just save it into list of root clusters.
 
 \item {\I When cluster has three neighbours and one of the neighbours is {\sl single
@@ -196,9 +196,9 @@ $\rightarrow$ we cannot join cluster with any of its neighbours, therefore we
 only ensure there is parent of this cluster (if parent exists we add it into
 next change list, otherwise we create it and add it into next abandon list).
 
-\item {\I If cluster has degree (number of neighbours) maximally 2 and it has
+\item {\I If cluster has degree (number of neighbours) at most 2 and it has
 neighbour without sibling such that degree of cluster plus degree of this
-neighbour is maximally 4} $\rightarrow$ We join them together. The resulting parent cluster
+neighbour is at most 4} $\rightarrow$ We join them together. The resulting parent cluster
 will have degree 2 (because we encapsulate the common edge, which we count
 twice, into parent cluster). Ensuring the parent cluster is similar as in the
 second case. If there is no such neighbour we only ensure that parent of this cluster exists
@@ -214,7 +214,7 @@ This process takes $\O(1)$ per level and $\O(\log N)$ for the whole topology tre
 
 One of the things we have to deal with when using Topology trees as an executive
 layer for Top trees are degrees of vertices -- the Top Trees structure have to
-work on trees of any degree but Topology trees works only on trees with max
+work on trees of any degree but Topology trees work only on trees with max
 degree 3.
 
 We have to {\I ternarize} each vertex -- turning vertex with higher degree into
@@ -239,7 +239,7 @@ operations.
 \subsection{Ternarization during \Cut{} operation}
 
 Both endpoints of the $\Cut(u,v)$ could be processed independently. When cutting on
-vertex with degree maximally 3 nothing had to be done and we may simply call
+vertex with degree at most 3 nothing had to be done and we may simply call
 internal cut operation.
 
 When cutting on vertex which is splitted into several subvertices the operation
@@ -276,7 +276,7 @@ be really large).
 
 As in the \Cut{} operation both endpoints of the $\Link(u,v)$ could be processed
 independently. We firstly need to ensure that both endpoints have degree at
-most 2. When linking such vertices we not need to do anything and we just simply
+most 2. When linking such vertices we don't need to do anything and we just simply
 call internal link operation.
 
 When linking vertex with degree 3 or more we need to split it into subvertices

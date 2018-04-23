@@ -37,9 +37,10 @@ as left and right foster children.
 
 This construction is easier to implement and gives us ability to better control
 the shape of the resulting top tree. By choosing neighbors instead of directing
-paths from leafs we could prefer longer paths by choosing deepest neighbors
-(we firstly run \gls{dfs} to obtain depths). Longer paths are better contracted
-in binary tree structure of compress clusters to obtain lower top tree.
+paths from leafs we could prefer longer paths by choosing neighbors with deepest
+subtree (we firstly run \gls{dfs} to obtain depths). Longer paths are better
+contracted in binary tree structure of compress clusters to obtain lower top
+tree.
 
 \section{Expose}
 
@@ -47,7 +48,7 @@ Expose in this implementation is based on splaying and splicing whose are used
 to bring handles of given vertices to the top of theirs top trees.
 
 Implementation of the \Expose{} operation has two parts: soft and hard expose. Soft
-expose is used internally by others operations, hard expose is used only in the
+expose is used internally by other operations, hard expose is used only in the
 \Expose{} itself.
 
 Before moving forward we will recall some internal structure of top trees with
@@ -79,8 +80,8 @@ pair of vertices in the root of the top tree. We will use operations of
 \subsubsection{Split and Join operations}
 
 Before doing any operation that changes shape of a top tree all nodes involved
-in this operation must be splitted (and all theirs parent on the way to the root
-of this tree too). This is crucial because after changing shape of the top tree
+in this operation must be splitted (and all their parents on the way to the root
+of this tree). This is crucial because after changing shape of the top tree
 a data stored in these nodes may be changed (for example depth of subtree bellow
 this node).
 
@@ -104,11 +105,11 @@ which moves this vertex to the root of the tree.
 
 Splaying is done by rotations or double rotations (which are called {\I zig-zig}
 or {\I zig-zag} rotations). That moves target vertex up by one or two levels
-leaving all vertices in the right order.
+preserving all vertices in the right order.
 
 Although some not so often used vertices may be in $\O(n)$ distance from the
 root, Sleator and Tarjan in \cite{SelfAdjustingBST} proved that all operations
-works in amortized time $\O(\log n)$ per operation.
+work in amortized time $\O(\log n)$ per operation.
 
 In the Top Trees structure We will use {\I guarded splays} that works exactly
 the same way as normal splays, but it stops splaying when reaching a guard (some
@@ -130,9 +131,9 @@ that we need to change partitioning of the top tree into paths.
 Lets take some vertex $v$ which is internal to some path $a,b$ (so there is
 compress cluster around this vertex) and which has node representing path $c,v$
 in its connected rake tree. We may change partitioning into paths by removing
-one half of the original path (for example $a,v$), connect it into rake tree,
+one half of the original path (for example $v,b$), connect it into rake tree,
 removing node representing path $c,v$ from the rake tree and changing the
-compress cluster that it now represents path $c,b$.
+compress cluster that it now represents path $a,c$.
 
 \begin{figure}[h]
 \centering
@@ -145,7 +146,7 @@ Splicing is used after splaying and its task is to move cluster, which is leaf
 of some rake tree, to the compress tree above it.
 
 Tarjan and Werneck in the \cite{SelfAdjustingTT} only described the main idea in
-the general case, but implementations details had to be worked out. I decided
+the general case, but implementation details had to be worked out. I decided
 to do {\I left splice} (replacing left child of the compress cluster) which was
 original choose of Tarjan and Werneck, but the procedure would work the same
 way if we choose to replace the right child.
@@ -160,7 +161,7 @@ old internal nodes of these rake trees.
 connect $N$ as the new left child of the $N_c$ (that makes $N$ part of the above
 compress tree).
 \item Construct new left and right foster children (rake trees) from left and
-right neighbors lists with respecting their order. New internal rake nodes have
+right neighbors lists respecting their order. New internal rake nodes have
 to be constructed (and added into list of nodes for joining).
 \end{enumerate}
 
@@ -257,7 +258,7 @@ after {\I soft\_expose(u,v)}.}
 
 \begin{enumerate}
 
-\item Root cluster itself -- When both vertices has degree one, they are endpoints
+\item Root cluster itself -- When both vertices have degree one, they are endpoints
 of the root cluster and so their handles are represented in the root cluster.
 
 \item Child of the root cluster -- When one vertex has degree at least two its
@@ -288,8 +289,8 @@ expose and its job is to truncate the path in the root cluster that it contains
 only the exposed subpath.
 
 Ideal situation is when $u$ and $v$ are endpoints of the root cluster, it is
-possible when both of them have degree one or when all others clusters incident
-to the root clusters are raked onto the root cluster.
+possible when both of them have degree one or when all other clusters incident
+to the root cluster are raked onto the root cluster.
 
 But in general root cluster could represent some path $x\dots y$ with path $u\dots v$
 as subpath. In this case we need to temporarily convert ends of this path (paths
