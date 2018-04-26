@@ -1027,7 +1027,10 @@ std::shared_ptr<SimpleCluster> TopologyTopTree::Internal::expose_join_clusters(s
 
 		auto other_vertex = BaseTree::Internal::Vertex::get_superior(c->boundary_left);
 		if (other_vertex == v) other_vertex = BaseTree::Internal::Vertex::get_superior(c->boundary_right);
-		auto child_cluster = expose_join_clusters(other_vertex, target, c);
+		std::shared_ptr<SimpleCluster> child_cluster;
+
+		if (other_vertex == v) child_cluster = c; // cluster around subvertice edge, there is no continuation from it
+		else child_cluster = expose_join_clusters(other_vertex, target, c);
 
 		if (constructed_cluster == NULL) constructed_cluster = child_cluster;
 		else {
