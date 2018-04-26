@@ -71,10 +71,18 @@ public:
 	std::list<std::shared_ptr<Edge>> subvertice_edges;
 	std::shared_ptr<TopologyCluster> topology_cluster;
 
+	// Used in TopologyTopTree expose procedure
+	std::vector<std::shared_ptr<SimpleCluster>> expose_clusters;
+
 	friend std::ostream& operator<<(std::ostream& o, const Vertex& v) {
 		o << *v.data;
 		if (v.superior_vertex != NULL) o << "(" << *v.superior_vertex << ")";
 		return o;
+	}
+
+	static std::shared_ptr<Vertex> get_superior(std::shared_ptr<Vertex> v) {
+		if (v->superior_vertex != NULL) return v->superior_vertex;
+		else return v;
 	}
 };
 

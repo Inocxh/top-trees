@@ -301,10 +301,10 @@ void TopologyCluster::calculate_outer_edges(bool check_neighbours) {
 }
 
 void TopologyCluster::do_split(std::vector<std::shared_ptr<TopologyCluster>>* splitted_clusters) {
-	if (is_splitted) return;
 	#ifdef DEBUG
 		std::cerr << "Splitting " << *shared_from_this() << std::endl;
 	#endif
+	if (is_splitted) return;
 
 	// 1. Log that this cluster will be splitted
 	if (splitted_clusters != NULL) splitted_clusters->push_back(shared_from_this());

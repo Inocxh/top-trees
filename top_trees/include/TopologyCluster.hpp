@@ -6,6 +6,7 @@
 
 namespace TopTree {
 class TopologyCluster;
+class SimpleCluster;
 }
 
 #include "ClusterInterface.hpp"
