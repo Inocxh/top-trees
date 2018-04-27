@@ -1,9 +1,10 @@
 \chapter{Implementation and usage}
 \label{chap:Implementation}
 
-As has beeen mentioned in the Introduction both implementation are writtten
-in \Cpp. More precisely they are written in \Cpp14 with frequent use of smart
-pointers introduced in \Cpp11 and \Cpp14, which helped a lot with memory handling.
+As has beeen mentioned in the Introduction both implementation are written in
+\Cpp. More precisely they are written in \Cpp14 with frequent use of smart
+pointers introduced in \Cpp11 and enhanced in \Cpp14, which helped a lot with
+memory handling.
 
 Source code of both implementations is attached to this thesis including
 Makefile for easier compiling and testing. Source code is also published on
@@ -19,7 +20,61 @@ projects:
 Both implementations share the same interface which makes them easily
 interchangeable.
 
-\todo{interface details}
+Firstly user need to include \texttt{TopTreesInterface.hpp} and define classes
+for holding data in vertices, edges and clusters. These classes must inherit
+from generic classes for edge data, vertex data and cluster data defined in
+the \texttt{TopTrees} namespace.
+
+When using \texttt{DEBUG} options (see below) classes for edges and vertices
+must implement \texttt{std::ostream\& ToString(std::ostream\&)} method too (it
+is used for debug printing):
+
+\begin{figure}[H]
+\begin{verbatim}
+class MyEdgeData: public TopTree::EdgeData {
+public:
+    int weight;
+    std::string label;
+    virtual std::ostream& ToString(std::ostream& o) const {
+        return o << label;
+    }
+};
+
+class MyVertexData: public TopTree::VertexData {
+public:
+    std::string label;
+    virtual std::ostream& ToString(std::ostream& o) const {
+        return o << label;
+    }
+};
+
+struct MyClusterData: public TopTree::ClusterData {
+public:
+    int max_weight;
+};
+
+std::shared_ptr<TopTree::ClusterData> TopTree::InitClusterData() {
+	return std::make_shared<MyClusterData>();
+}
+\end{verbatim}
+\caption{Example of classes for edge, vertex and cluster data}
+\end{figure}
+
+\subsection{User functions}
+
+After defining data structures user must provide definition of user functions.
+User directly defines methods in the \texttt{TopTrees} namespace and without
+these definitions program cannot be even compiled.
+
+Both \Join{} and \Split{} user functions takes shared pointers to three clusters
+(generic interface \texttt{TopTree::ICluster}), tow for child and one for parent.
+\Create{} and \Destroy{} functions takes shared pointer to the created/destroyed
+cluster and shared pointer to the underlying edge's data (data is passed as
+generic type \texttt{TopTree:.EdgeData} and it have to be casted to the our data
+class which we defined above).
+
+Example of user functions is there:
+
 
 \section{Testing and Graphviz output}
 

@@ -9,8 +9,8 @@ Cluster a = makeCompress("$a$");
 Cluster b = makeCompress("$b$");
 Cluster c = makeCompress("$c$");
 Cluster d = makeCompress("$d$");
-Cluster e2 = makeCompress("$e_1$");
-Cluster e1 = makeCompress("$e_2$");
+Cluster e1 = makeCompress("$e_1$");
+Cluster e2 = makeCompress("$e_2$");
 Cluster f = makeCompress("$f$");
 
 Cluster g = makeCompress("$g$");

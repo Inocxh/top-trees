@@ -1,3 +1,5 @@
+// texpreamble("\usepackage[a-2u]{pdfx}");
+
 unitsize(1.2cm);
 settings.outformat = "pdf";
 defaultpen(fontsize(11pt));

@@ -25,6 +25,12 @@
 % \setlength\headheight{0mm}
 % \let\openright=\cleardoublepage
 
+%% Generate PDF/A-2u
+\usepackage[a-2u]{pdfx}
+
+%% Prefer Latin Modern fonts
+\usepackage{lmodern}
+
 % Glyphtounicode cause unicode text easily searchable a copyable from PDF
 \input{glyphtounicode}
 \pdfgentounicode=1
@@ -48,6 +54,10 @@
 \usepackage{booktabs}       % improved horizontal lines in tables
 \usepackage{paralist}       % improved enumerate and itemize
 \usepackage[usenames]{xcolor}  % typesetting in color
+
+% Verbatim with syntax highlighting
+\usepackage{listings}
+\lstset{language=C++,basicstyle=\ttfamily}
 
 \usepackage[footnote,acronym,nomain]{glossaries}
 \setglossarystyle{list}
@@ -91,7 +101,10 @@
 % An optional dedication: you can thank whomever you wish (your supervisor,
 % consultant, a person who lent the software, etc.)
 \def\Dedication{%
-Dedication.
+I would like to thank my supervisor Vladan Majerech for bringing such interesting
+topic, although the topic proved to be more difficult and more challenging than
+I thought. Also I would like to thank my family and friends for patience with me
+during writing this thesis.
 }
 
 % Abstract (recommended length around 80-200 words; this is not a copy of your thesis assignment!)
@@ -101,12 +114,13 @@ Abstract.
 
 % 3 to 5 keywords (recommended), each enclosed in curly braces
 \def\Keywords{%
-Top Trees, Complexity, Implementation
+{Top Trees}, {Complexity}, {Implementation}
 }
 
 %% The hyperref package for clickable links in PDF and also for storing
 %% metadata to PDF (including the table of contents).
-\usepackage[pdftex,unicode,bookmarksnumbered]{hyperref}   % Must follow all other packages
+%\usepackage[pdftex,unicode,bookmarksnumbered]{hyperref}   % Must follow all other packages
+\hypersetup{unicode}
 \hypersetup{breaklinks=true}
 \hypersetup{pdftitle={\ThesisTitle}}
 \hypersetup{pdfauthor={\ThesisAuthor}}

@@ -104,9 +104,46 @@ N)$.
 \section{Edge 2-connectivity}
 \label{sec:edge_2_connectivity}
 
-In time $\O(\log^4 N)$ by Holm, Lichtenberg and Thorup 2001 in \cite{PolylogarithmicAlgorithmsForConnectivity}
+This is an example of more complex problem, where is the Top tree structure used
+as only part of the whole algorithm. It was introduced by Holm, Lichtenberg and
+Thorup in 2001 in \cite{PolylogarithmicAlgorithmsForConnectivity}, where is an
+complete elaboration of the problem. There I will only recall some basic
+principles, most of this section is a simplified citation from the
+\cite{PolylogarithmicAlgorithmsForConnectivity}.
 
-\todo{Do some study.}
+\noindent
+{\bf Theorem:} Problem of 2-edge connectivity on dynamically updated graph with
+$N$ edges could be solved in $\O(\log^4 N)$ per operation -- addition or
+deletion of an edge and test if given vertices are 2-edge connected.
+
+\subsubsection{Basic principle}
+
+We will maintain a spanning forest $F$ of graph $G$ and we will say, that tree
+edge $e$ is {\I covered} by nontree edge $v,w$ if $e \in v\dots w$ (if there is
+a tree path from $v$ to $w$ and $e$ is on this path).
+
+Frederickson showed that two vertices $x$ and $y$ are 2-edge connected if and
+only if they are connected in $F$ and all edges in path $x\dots y$ are covered.
+
+So we will maintain a spanning forest $F$ together with a set $C$ with covering
+edges for each non-bridge edge in $F$. Two vertices are 2-edge connected in $G$
+if and only if they are 2-edge connected in $F\cup C$.
+
+During updates, when we will delete an edge from $F$ we will need to find an
+replacement in $C$. And for every deleted edge from $C$ we may need to add
+several replacement edges to add into $C$. By carefully choosing replacement
+edges we will be able to amortize the time to meet $\O(\log^4 N)$ per operation.
+
+\subsubsection{Details}
+
+Algorithm associate with every nontree edge a level (number $< \log N$), each
+edge starts with level 0 and level may be increased. And for each $i$ we will
+define a graph $G_i$ as graph induces by only edges of level at least $i$
+together with the $F$.
+
+For each tree edge $e \in F$ we will maintain a cover level as maximum level of
+nontree edge covering it (thus maximum level for which $e$ is in 2-edge
+connected component).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
