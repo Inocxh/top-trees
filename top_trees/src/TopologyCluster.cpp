@@ -71,7 +71,7 @@ std::ostream& TopologyCluster::ToString(std::ostream& o) const {
 	//o << index;
 	if (edge != NULL) o << *edge->data;
 	else if (vertex != NULL) o << *vertex->data;
-	if (boundary_left != NULL) o << " (" << *boundary_left->data << "," << *boundary_right->data << ")";
+	if (boundary_left != NULL) o << "(" << *boundary_left->data << "-" << *boundary_right->data << ")";
 	if (is_rake_branch) o << "R";
 	return o;
 }
@@ -234,6 +234,10 @@ void TopologyCluster::calculate_outer_edges(bool check_neighbours) {
 		for (auto n: vertex->neighbours) {
 			auto ee = n.edge.lock();
 			auto vv = (ee->from == vertex ? ee->to : ee->from);
+			if (n.vertex.lock() != vv) {
+				std::cerr << "ERROR: Vertex " << *vertex << " problem with neighbours for this cluster (should be " << *vv << " but it is " << *n.vertex.lock() << ")" << std::endl;
+				exit(1);
+			}
 			#ifdef DEBUG
 				std::cerr << "... " << *vv->data << " (superior vertex " << *n.vertex.lock()->data << ") with " << *ee->data << std::endl;
 			#endif

@@ -40,7 +40,7 @@ public:
 	std::vector<std::shared_ptr<SimpleCluster>> expose_simple_clusters;
 
 	#ifdef DEBUG_GRAPHVIZ
-		void print_graphviz(std::shared_ptr<TopologyCluster> node, const std::string title="", bool full = false) const;
+		void print_graphviz(std::shared_ptr<TopologyCluster> node, const std::string title="", bool full = false);
 		void print_graphviz_recursive(std::shared_ptr<TopologyCluster> cluster, std::shared_ptr<BaseTree::Internal::Edge> parent_edge = NULL, std::shared_ptr<TopologyCluster> parent = NULL, bool edges_to_childs = false, bool gray = false) const;
 	#endif
 
@@ -57,6 +57,7 @@ public:
 		return (v_root == w_root);
 	}
 private:
+	int graphviz_counter = 0;
 	// Used in update_clusters() and helper methods
 	// it is declared globally to easier sharing between helper methods
 	std::vector<std::shared_ptr<TopologyCluster>> delete_list;
@@ -152,9 +153,14 @@ void TopologyTopTree::Internal::print_graphviz_recursive(std::shared_ptr<Topolog
 		std::cout << "\t\"" << cluster << "\" -> \"" << cluster->parent << "\" [style=bold, title=ERROR]" << std::endl;
 }
 
-void TopologyTopTree::Internal::print_graphviz(const std::shared_ptr<TopologyCluster> root, const std::string title, bool full) const {
+void TopologyTopTree::Internal::print_graphviz(const std::shared_ptr<TopologyCluster> root, const std::string title, bool full) {
+	std::ostringstream ss;
+	ss << "[" << graphviz_counter << "] " << title;
+
+	std::cerr << "GRAPHVIZ: " << ss.str() << std::endl;
+
 	std::cout << "digraph \"" << root << "\" {" << "rankdir=\"LR\";" << std::endl;
-	std::cout << "\tlabelloc=\"t\"" << std::endl << "\tlabel=\"" << title << "\"" << std::endl;
+	std::cout << "\tlabelloc=\"t\"" << std::endl << "\tlabel=\"" << ss.str() << "\"" << std::endl;
 	if (full) {
 		int level = 0;
 		auto cluster = root;
@@ -169,6 +175,7 @@ void TopologyTopTree::Internal::print_graphviz(const std::shared_ptr<TopologyClu
 		}
 	} else print_graphviz_recursive(root);
 	std::cout << "}" << std::endl;
+	graphviz_counter++;
 }
 #endif
 
@@ -504,8 +511,10 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 	// (including edge on superior vertices), node will be deleted by garbage collector
 
 	#ifdef DEBUG_GRAPHVIZ
-		internal->print_graphviz(root_v, "Cut - Result A", true);
-		internal->print_graphviz(root_w, "Cut - Result B", true);
+		std::ostringstream ss;
+		ss << "Cut " << *v << " and " << *w << " - Result ";
+		internal->print_graphviz(root_v, ss.str() + "A", true);
+		internal->print_graphviz(root_w, ss.str() + "B", true);
 	#endif
 
 	return std::make_tuple(root_v, root_w, edge->data);
@@ -570,6 +579,7 @@ std::tuple<std::shared_ptr<TopologyCluster>, std::shared_ptr<TopologyCluster>> T
 	// 5. Get results
 	if (found_roots.size() != 2) {
 		std::cerr << "ERROR: Expecting 2 roots after cut operation, found " << found_roots.size() << " roots!" << std::endl;
+		exit(1);
 	}
 	return std::make_tuple(found_roots[0], found_roots[1]);
 	// expecting that do_join will be called from outside Cut function
@@ -608,7 +618,9 @@ std::shared_ptr<ICluster> TopologyTopTree::Link(int v_index, int w_index, std::s
 	internal->splitted_clusters.clear();
 
 	#ifdef DEBUG_GRAPHVIZ
-		internal->print_graphviz(result, "Link result", true);
+		std::ostringstream ss;
+		ss << "Link " << *v << "-" << *w << " result";
+		internal->print_graphviz(result, ss.str(), true);
 	#endif
 
 	return result;
@@ -732,6 +744,11 @@ std::shared_ptr<TopologyCluster> TopologyTopTree::Internal::link(std::shared_ptr
 		std::cerr << "Linking " << *v << " and " << *w << std::endl;
 	#endif
 
+	if (v == BaseTree::Internal::Vertex::get_superior(w) || w == BaseTree::Internal::Vertex::get_superior(v)) {
+		std::cerr << "ERROR: Cannot join " << *v << " and " << *w << ", one is superior of the second" << std::endl;
+		exit(1);
+	}
+
 	// 0. Split from both clusters
 	cluster_v->do_split(&splitted_clusters);
 	cluster_w->do_split(&splitted_clusters);
@@ -787,6 +804,10 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_su
 		}
 	}
 
+	#ifdef DEBUG
+		std::cerr << "Repairing subvertex " << *v << " after cut" << std::endl;
+	#endif
+
 	if (second_neighbour == NULL) {
 		// This vertex is one of end subvertices
 		int subvertice_edges_counter = 0;
@@ -813,8 +834,10 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_su
 				if (auto vv = (*n).vertex.lock()) if (auto ee = (*n).edge.lock()) {
 					auto result = cut(v, vv, ee);
 					#ifdef DEBUG_GRAPHVIZ_VERBOSE
-						print_graphviz(std::get<0>(result), "Consolidating subvertices - After A cut 1/2", true);
-						print_graphviz(std::get<1>(result), "Consolidating subvertices - After A cut 2/2", true);
+						std::ostringstream ss;
+						ss << "Repair subvertex " << *v << " - joining into superior - after A cut ";
+						print_graphviz(std::get<0>(result), ss.str() + "1/2", true);
+						print_graphviz(std::get<1>(result), ss.str() + "2/2", true);
 					#endif
 				}
 				n = next_n;
@@ -827,8 +850,10 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_su
 				if (auto vv = (*n).vertex.lock()) if (auto ee = (*n).edge.lock()) {
 					auto result = cut(first_neighbour, vv, ee);
 					#ifdef DEBUG_GRAPHVIZ_VERBOSE
-						print_graphviz(std::get<0>(result), "Consolidating subvertices - After B cut 1/2", true);
-						print_graphviz(std::get<1>(result), "Consolidating subvertices - After B cut 2/2", true);
+						std::ostringstream ss;
+						ss << "Repair subvertex " << *v << " - joining into superior - after B cut ";
+						print_graphviz(std::get<0>(result), ss.str() + "1/2", true);
+						print_graphviz(std::get<1>(result), ss.str() + "2/2", true);
 					#endif
 				}
 				n = next_n;
@@ -836,8 +861,14 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_su
 			v->superior_vertex->subvertices.clear();
 
 			// 3. Connect all to the superior vertex
+			std::shared_ptr<TopologyCluster> result;
 			for (auto n: neighbours_list) {
-				link(v->superior_vertex, n.first, n.second);
+				result = link(v->superior_vertex, n.first, n.second);
+				#ifdef DEBUG_GRAPHVIZ_VERBOSE
+					std::ostringstream ss;
+					ss << "Repair subvertex " << *v << " - joining into superior - after link";
+					print_graphviz(result, ss.str(), true);
+				#endif
 			}
 
 			return v->superior_vertex;
@@ -880,18 +911,20 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_su
 		// It is vertex inside "chain" -> remove it and join neighbours
 		auto result = cut(first_neighbour, v, first_neighbour_edge);
 		#ifdef DEBUG_GRAPHVIZ_VERBOSE
-			print_graphviz(std::get<0>(result), "After first chain cut 1/2", true);
-			print_graphviz(std::get<1>(result), "After first chain cut 2/2", true);
+			std::ostringstream ss;
+			ss << "Repair subvertex " << *v << " - ";
+			print_graphviz(std::get<0>(result), ss.str() + "After first chain cut 1/2", true);
+			print_graphviz(std::get<1>(result), ss.str() + "After first chain cut 2/2", true);
 		#endif
 		v->superior_vertex->subvertice_edges.erase(first_neighbour_edge->subvertice_edges_iterator); // erase first subvertice edge
 		result = cut(second_neighbour, v, second_neighbour_edge);
 		#ifdef DEBUG_GRAPHVIZ_VERBOSE
-			print_graphviz(std::get<0>(result), "After second chain cut 1/2", true);
-			print_graphviz(std::get<1>(result), "After second chain cut 2/2", true);
+			print_graphviz(std::get<0>(result), ss.str() + "After second chain cut 1/2", true);
+			print_graphviz(std::get<1>(result), ss.str() + "After second chain cut 2/2", true);
 		#endif
 		auto result2 = link(first_neighbour, second_neighbour, second_neighbour_edge); // reuse second subvertice edge
 		#ifdef DEBUG_GRAPHVIZ_VERBOSE
-			print_graphviz(result2, "After chain link", true);
+			print_graphviz(result2, ss.str() + "After chain link", true);
 		#endif
 		// Delete vertex from supervertice's subvertices list
 		v->superior_vertex->subvertices.erase(v->superior_vertex_subvertices_iter);
