@@ -16,9 +16,9 @@ public:
 	class Edge;
 
 	struct neighbour {
-		std::weak_ptr<Vertex> vertex;
+		// std::weak_ptr<Vertex> vertex;
 		std::weak_ptr<Edge> edge;
-		std::list<std::shared_ptr<Vertex>>::iterator subvertice_iter; // may be set, it is needed to everytime check the edge->subvertiec_edge to test if it is subvertice_edge
+		std::list<std::shared_ptr<Vertex>>::iterator subvertice_iter; // may be set, it is needed to everytime check the edge->subvertice_edge to test if it is subvertice_edge
 	};
 
 	std::vector<std::shared_ptr<Vertex> > vertices;

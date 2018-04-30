@@ -900,7 +900,9 @@ std::shared_ptr<TopCluster> TopTree::Internal::construct_cluster(std::shared_ptr
 
 		// 2. Select continuation and recursive construct top trees on subtrees
 		for (auto n : v->neighbours) {
-			if (auto vv = n.vertex.lock()) if (auto ee = n.edge.lock()) {
+			if (auto ee = n.edge.lock()) {
+				auto vv = ee->from;
+				if (vv == v) vv = ee->to;
 				if (vv->used) continue;
 				if (next_v == NULL) {
 					// Use this as continuation of path

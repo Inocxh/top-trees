@@ -233,13 +233,17 @@ void TopologyCluster::calculate_outer_edges(bool check_neighbours) {
 		// Update outer edges according to underlying vertex
 		for (auto n: vertex->neighbours) {
 			auto ee = n.edge.lock();
-			auto vv = (ee->from == vertex ? ee->to : ee->from);
-			if (n.vertex.lock() != vv) {
-				std::cerr << "ERROR: Vertex " << *vertex << " problem with neighbours for this cluster (should be " << *vv << " but it is " << *n.vertex.lock() << ")" << std::endl;
-				exit(1);
+			std::shared_ptr<BaseTree::Internal::Vertex> vv;
+			if (ee->from == vertex) vv = ee->to;
+			else if (ee->to == vertex) vv = ee->from;
+			else {
+				#ifdef DEBUG
+					std::cerr << "... ignoring subvertice edge " << *ee->from << "-" << *ee->to << std::endl;
+				#endif
+				continue;
 			}
 			#ifdef DEBUG
-				std::cerr << "... " << *vv->data << " (superior vertex " << *n.vertex.lock()->data << ") with " << *ee->data << std::endl;
+				std::cerr << "... " << *vv << " with " << *ee->data << " (" << *ee->from << "-" << *ee->to << ")" << std::endl;
 			#endif
 			outer_edges.push_back(neighbour{ee, vv->topology_cluster});
 			if (vv->topology_cluster == NULL) {
