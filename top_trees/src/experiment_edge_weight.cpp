@@ -110,8 +110,8 @@ int main(int argc, char *argv[]) {
 	// Run both implementations
 	auto time_top_tree = run(new MaximumEdgeWeight(new TopTree::TopTree()));
 	//double time_top_tree = 0;
-	//auto time_topology_top_tree = run(new MaximumEdgeWeight(new TopTree::TopologyTopTree()));
-	double time_topology_top_tree = 0;
+	auto time_topology_top_tree = run(new MaximumEdgeWeight(new TopTree::TopologyTopTree()));
+	//double time_topology_top_tree = 0;
 
 	std::cout << time_top_tree << " " << time_top_tree / K << " " << time_topology_top_tree << " " << time_topology_top_tree / K << std::endl;
 }
