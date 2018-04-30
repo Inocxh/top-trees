@@ -25,6 +25,15 @@ difference the mapping could be done quite easily.
 But before mapping we have to deal with fake subvertices and subvertice edges
 added by ternarization.
 
+\begin{figure}[h]
+\centering
+\asyinclude{pic/chap06_tree_mapping.asy}
+\caption{Example of mapping topology tree clusters onto top clusters -- on base
+level there are three base clusters and on other levels there is always one
+topology cluster which combines edge cluster with two clusters from lower levels.}
+\label{fig:topology_tree_mapping}
+\end{figure}
+
 \subsection{Subvertices and subvertice edges from the Top trees perspective}
 
 During ternarization in the \Cref{chap:TopologyTrees} we added additional
@@ -44,6 +53,7 @@ edge and two children, we just rake these children ignoring the edge.
 \subsection{Associated top clusters}
 
 With each topology cluster may be associated at most three top clusters:
+
 \begin{itemize}
 \item {\I Edge cluster} -- when there is an normal edge inside the topology cluster.
 \item {\I Combined edge cluster} -- joined {\I edge cluster} and cluster from
@@ -51,6 +61,15 @@ the first child (when the first child has its own top cluster).
 \item {\I Top cluster} for the whole topology cluster (joining {\I combined edge
 cluster} and cluster from the second child if there is any).
 \end{itemize}
+
+\begin{figure}[H]
+\centering
+\asyinclude{pic/chap06_associated_clusters.asy}
+\caption{Combination of clusters $a$-$x$ and $y$-$z$ with edge $xy$: Firstly
+edge cluster is created, then is combined with the first child cluster and
+then is combined with second child cluster.}
+\end{figure}
+
 
 If topology cluster (or recursive its children) contains at least one normal
 edge we call it {\I topology top cluster} (because it has associated top

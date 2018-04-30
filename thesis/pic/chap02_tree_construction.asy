@@ -1,16 +1,5 @@
 include "./pic/primitives.asy";
 
-path getEllipse(pair a, pair b) {
-	pair center = midpoint(a--b);
-	real angle = degrees(a-b);
-	return shift(center)*rotate(angle)*xscale(length(a-b)*0.7)*yscale(0.2)*unitcircle;
-}
-void drawEllipse(pair a, pair b) { filldraw(getEllipse(a, b), gray(0.9), dotted); }
-path getCircle(pair a) {
-	return shift(a)*scale(0.2)*unitcircle;
-}
-void drawCircle(pair a) { filldraw(getCircle(a), gray(0.9), dotted); }
-
 void connectEllipse(path f, pair a, pair b) {
 	draw(firstcut(f..midpoint(a--b), getEllipse(a,b)).before, dotted, Arrow);
 	drawEllipse(a, b);
