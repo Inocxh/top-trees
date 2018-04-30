@@ -53,7 +53,10 @@ public:
 
 		// When not initialized add to BaseTree, otherwise call Link
 		if (!initialized) base_tree->AddEdge(vertices[a].index, vertices[b].index, edge_data);
-		else top_tree->Link(vertices[a].index, vertices[b].index, edge_data);
+		else {
+			auto result = top_tree->Link(vertices[a].index, vertices[b].index, edge_data);
+			if (result == NULL) return -1; // cannot add edge
+		}
 		return index;
 	}
 

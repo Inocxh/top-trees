@@ -17,19 +17,23 @@ struct operation {
 	opType op;
 	int vertex_a;
 	int vertex_b;
-	int weight;
+	int param; // used as weight when creating or as index into vector when deleting edges
 };
 
 std::vector<std::pair<int, int>> vertices; // pair(edge to, edge weight)
 std::vector<struct operation> operations;
 
 double run(MaximumEdgeWeight *worker) {
+	// Vector for indexing edges
+	std::vector<std::pair<int, int>> edges;
+
 	// Init tree
 	std::vector<int> vertex_index;
 	vertex_index.push_back(worker->add_vertex(std::to_string(0)));
 	for (uint i = 1; i < vertices.size(); i++) {
 		vertex_index.push_back(worker->add_vertex(std::to_string(i)));
 		worker->add_edge(vertex_index[i], vertex_index[vertices[i].first], vertices[i].second);
+		edges.push_back(std::pair<int,int>(i, vertices[i].first));
 	}
 	worker->initialize();
 
@@ -39,27 +43,39 @@ double run(MaximumEdgeWeight *worker) {
 	for (auto op: operations) {
 		switch (op.op) {
 		case ADD_EDGE: {
+			int weight = op.param % MAX_WEIGHT;
 			#ifdef VERBOSE
-				std::cerr << "Adding edge " << op.vertex_a << " and " << op.vertex_b << " with weight " << op.weight << std::endl;
+				std::cerr << "Adding edge " << vertex_index[op.vertex_a] << " and " << vertex_index[op.vertex_b] << " with weight " << weight << std::endl;
 			#endif
-			worker->add_edge(op.vertex_a, op.vertex_b, op.weight);
+			int result = worker->add_edge(vertex_index[op.vertex_a], vertex_index[op.vertex_b], weight);
+			if (result >= 0) edges.push_back(std::pair<int,int>(op.vertex_a,op.vertex_b));
 		break;}
 		case REMOVE_EDGE: {
-			auto result = worker->remove_edge(op.vertex_a, op.vertex_b);
+			// Get edge
+			int index = op.param % edges.size();
+			bool result = worker->remove_edge(vertex_index[edges[index].first], vertex_index[edges[index].second]);
 			#ifdef VERBOSE
-				std::cerr << "Removing edge " << op.vertex_a << " and " << op.vertex_b << ": " << result << std::endl;
+				std::cerr << "Removing edge " << vertex_index[edges[index].first] << " and " << vertex_index[edges[index].second] << ": " << result << std::endl;
 			#endif
+			if (result) {
+				// Remove from vector
+				edges[index] = edges.back();
+				edges.pop_back();
+			} else {
+				std::cerr << "ERROR: Problem during removing edge " << vertex_index[edges[index].first] << "-" << vertex_index[edges[index].second] << std::endl;
+			}
 		break;}
 		case ADD_WEIGHT: {
+			int weight = op.param % MAX_WEIGHT;
 			#ifdef VERBOSE
-				std::cerr << "Adding weight between " << op.vertex_a << " and " << op.vertex_b << ": " << op.weight << std::endl;
+				std::cerr << "Adding weight between " << vertex_index[op.vertex_a] << " and " << vertex_index[op.vertex_b] << ": " << weight << std::endl;
 			#endif
-			worker->add_weight_on_path(op.vertex_a, op.vertex_b, op.weight);
+			worker->add_weight_on_path(vertex_index[op.vertex_a], vertex_index[op.vertex_b], weight);
 		break;}
 		case GET_WEIGHT: {
-			auto result = worker->get_max_weight_on_path(op.vertex_a, op.vertex_b);
+			auto result = worker->get_max_weight_on_path(vertex_index[op.vertex_a], vertex_index[op.vertex_b]);
 			#ifdef VERBOSE
-				std::cerr << "Getting max weight on path " << op.vertex_a << " and " << op.vertex_b << ": " << result.max_weight << std::endl;
+				std::cerr << "Getting max weight on path " << vertex_index[op.vertex_a] << " and " << vertex_index[op.vertex_b] << ": [" << result.exists << "] " << result.max_weight << std::endl;
 			#endif
 		break;}
 		}
@@ -86,13 +102,14 @@ int main(int argc, char *argv[]) {
 			static_cast<opType>(rand() % OPS_COUNT),
 			rand() % N,
 			rand() % N,
-			rand() % MAX_WEIGHT
+			rand()
 		};
 		operations.push_back(op);
 	};
 
 	// Run both implementations
 	auto time_top_tree = run(new MaximumEdgeWeight(new TopTree::TopTree()));
+	//double time_top_tree = 0;
 	//auto time_topology_top_tree = run(new MaximumEdgeWeight(new TopTree::TopologyTopTree()));
 	double time_topology_top_tree = 0;
 
