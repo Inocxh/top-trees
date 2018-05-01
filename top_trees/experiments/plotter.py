@@ -48,7 +48,7 @@ compute_step()
 
 # Compute graph
 plt.rc('text', usetex=True)
-plt.title("Comparison of implementations (operation time)")
+plt.title("Comparison of implementations (time per operation)")
 
 plt.ylabel("Time per 1 operation (sec)")
 plt.xlabel("Number of edges")

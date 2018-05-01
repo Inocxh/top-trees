@@ -56,11 +56,11 @@ with open(logfile_path, "w") as logfile:
 		start_time = time.time()
 
 		# kamenozrout rules
-		if size > 1000000:
-			parallel_processes = max(5, parallel_processes)
-		if size > 2000000:
-			parallel_processes = max(2, parallel_processes)
-		if size > 4000000:
+		if size > 1500000:
+			parallel_processes = min(5, parallel_processes)
+		if size > 3000000:
+			parallel_processes = min(2, parallel_processes)
+		if size > 6000000:
 			parallel_processes = 1
 
 		with Pool(processes=parallel_processes) as pool:
