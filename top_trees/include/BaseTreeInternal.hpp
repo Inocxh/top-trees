@@ -74,6 +74,21 @@ public:
 	// Used in TopologyTopTree expose procedure
 	std::vector<std::shared_ptr<SimpleCluster>> expose_clusters;
 
+	void unlink() {
+		neighbours.clear();
+		base_handles.clear();
+		last_handle = NULL;
+		rake_tree_left = NULL;
+		rake_tree_right = NULL;
+		superior_vertex = NULL;
+		subvertices.clear();
+		subvertice_edges.clear();
+		topology_cluster = NULL;
+		expose_clusters.clear();
+
+		deleted = true;
+	}
+
 	friend std::ostream& operator<<(std::ostream& o, const Vertex& v) {
 		o << *v.data;
 		if (v.superior_vertex != NULL) o << "(" << *v.superior_vertex << ")";
@@ -109,6 +124,13 @@ public:
 	// Used in TopologyTopTree
 	bool subvertice_edge = false;
 	std::list<std::shared_ptr<Edge>>::iterator subvertice_edges_iterator;
+
+	void unlink() {
+		from = NULL;
+		to = NULL;
+
+		deleted = true;
+	}
 };
 
 // Edges in TopologyTree

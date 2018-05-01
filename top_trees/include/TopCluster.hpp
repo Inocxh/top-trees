@@ -50,6 +50,7 @@ protected:
 
 	virtual bool is_handle_for(std::shared_ptr<BaseTree::Internal::Vertex> v) = 0;
 	virtual void unregister() = 0;
+	virtual void unlink();
 
 	virtual std::ostream& _short_name(std::ostream& o) const = 0; // Used only for debugging
 };
@@ -77,6 +78,7 @@ protected:
 
 	virtual bool is_handle_for(std::shared_ptr<BaseTree::Internal::Vertex> v);
 	virtual void unregister();
+	virtual void unlink();
 
 	virtual std::ostream& _short_name(std::ostream& o) const; // Used only for debugging
 };
@@ -97,6 +99,7 @@ protected:
 
 	virtual bool is_handle_for(std::shared_ptr<BaseTree::Internal::Vertex> v);
 	virtual void unregister();
+	virtual void unlink();
 
 	virtual std::ostream& _short_name(std::ostream& o) const; // Used only for debugging
 };
@@ -121,6 +124,7 @@ protected:
 
 	virtual bool is_handle_for(std::shared_ptr<BaseTree::Internal::Vertex> v);
 	virtual void unregister();
+	virtual void unlink();
 
 	virtual std::ostream& _short_name(std::ostream& o) const; // Used only for debugging
 

@@ -37,6 +37,10 @@ class MaximumEdgeWeight {
 public:
 	MaximumEdgeWeight(TopTree::ITopTree *top_tree): top_tree{top_tree}, base_tree{std::make_shared<TopTree::BaseTree>()} {}
 
+	~MaximumEdgeWeight() {
+		delete(top_tree);
+	}
+
 	int add_vertex(std::string label) {
 		// Add vertex adds vertex every time in the BaseTree
 		int index = base_tree->AddVertex(std::make_shared<MyVertexData>(label));

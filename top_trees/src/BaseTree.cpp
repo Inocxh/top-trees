@@ -17,7 +17,12 @@ int EdgeData::e_counter = 0;
 ////////////////////////////////////////////////////////////////////////////////
 
 BaseTree::BaseTree() : internal{std::make_unique<Internal>()} {}
-BaseTree::~BaseTree() {}
+BaseTree::~BaseTree() {
+	for (auto e: internal->edges) e->unlink();
+	for (auto v: internal->vertices) v->unlink();
+	internal->edges.clear();
+	internal->vertices.clear();
+}
 
 int BaseTree::AddVertex(std::shared_ptr<VertexData> v) {
 	if (v == NULL) v = std::make_shared<VertexData>();

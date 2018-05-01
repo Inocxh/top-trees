@@ -20,6 +20,14 @@ void TopCluster::set_right_foster(std::shared_ptr<TopCluster> child) {
 	if (child != NULL) child->parent = shared_from_this();
 }
 
+void TopCluster::unlink() {
+	parent = NULL;
+	left_foster = NULL;
+	right_foster = NULL;
+	left_child = NULL;
+	right_child = NULL;
+}
+
 std::shared_ptr<BaseCluster> BaseCluster::construct(std::shared_ptr<BaseTree::Internal::Edge> edge) {
 	auto cluster = std::make_shared<BaseCluster>();
 
@@ -85,6 +93,13 @@ void BaseCluster::unregister() {
 	boundary_right->degree--;
 
 	is_deleted = true;
+}
+
+void BaseCluster::unlink() {
+	if (!is_deleted) unregister();
+
+	TopCluster::unlink();
+	edge = NULL;
 }
 
 void BaseCluster::flip() {
@@ -201,6 +216,14 @@ void CompressCluster::unregister() {
 	is_deleted = true;
 }
 
+void CompressCluster::unlink() {
+	if (!is_deleted) unregister();
+
+	TopCluster::unlink();
+	left_foster_rake = NULL;
+	right_foster_rake = NULL;
+}
+
 void CompressCluster::flip() {
 	auto temp = boundary_left;
 	boundary_left = boundary_right;
@@ -315,6 +338,12 @@ void RakeCluster::correct_endpoints() {
 }
 void RakeCluster::unregister() {
 	is_deleted = true;
+}
+
+void RakeCluster::unlink() {
+	if (!is_deleted) unregister();
+
+	TopCluster::unlink();
 }
 
 void RakeCluster::flip() {

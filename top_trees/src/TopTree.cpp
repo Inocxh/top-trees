@@ -39,6 +39,8 @@ public:
 		void print_graphviz_recursive(std::shared_ptr<TopCluster> parent, std::shared_ptr<TopCluster> node, const char* edge_label="") const;
 		void print_graphviz_child(std::shared_ptr<TopCluster> from, std::shared_ptr<TopCluster> to, const char* edge_label="") const;
 	#endif
+
+	void recursive_delete_cluster(std::shared_ptr<TopCluster> cluster);
 private:
 	int graphviz_counter = 0;
 	void adjust_parent(std::shared_ptr<TopCluster> parent, std::shared_ptr<TopCluster> old_child, std::shared_ptr<TopCluster> new_child);
@@ -58,6 +60,13 @@ TopTree::TopTree(std::shared_ptr<BaseTree> baseTree) : TopTree() {
 	InitFromBaseTree(baseTree);
 }
 
+TopTree::~TopTree() {
+	for (auto root_cluster: internal->root_clusters) {
+		internal->recursive_delete_cluster(root_cluster);
+	}
+	internal->root_clusters.clear();
+}
+
 void TopTree::InitFromBaseTree(std::shared_ptr<BaseTree> baseTree) {
 	internal->base_tree = baseTree;
 
@@ -73,6 +82,15 @@ void TopTree::InitFromBaseTree(std::shared_ptr<BaseTree> baseTree) {
 	#ifdef DEBUG_GRAPHVIZ
 		for (auto root_cluster: internal->root_clusters) internal->print_graphviz(root_cluster, "Full");
 	#endif
+}
+
+void TopTree::Internal::recursive_delete_cluster(std::shared_ptr<TopCluster> cluster) {
+	if (cluster == NULL) return;
+	recursive_delete_cluster(cluster->left_foster);
+	recursive_delete_cluster(cluster->left_child);
+	recursive_delete_cluster(cluster->right_foster);
+	recursive_delete_cluster(cluster->right_child);
+	cluster->unlink();
 }
 
 #ifdef DEBUG
@@ -323,6 +341,7 @@ void TopTree::Internal::splice(std::shared_ptr<TopCluster> node) {
 
 		current = root;
 		root = root->parent;
+		current->unlink();
 	}
 	if (!root->is_splitted) root->do_split(&splitted_clusters);
 
@@ -712,7 +731,8 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 				node->set_right_child(left_foster->left_child);
 				node->set_left_foster(left_foster->right_child);
 				left_foster->parent = NULL;
-				left_foster->unregister();
+				//left_foster->unregister();
+				left_foster->unlink();
 			}
 		} else if (node->right_foster != NULL) {
 			// Get rightmost node of the rake tree
@@ -729,7 +749,8 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 				node->set_right_child(right_foster->right_child);
 				node->set_right_foster(right_foster->left_child);
 				right_foster->parent = NULL;
-				right_foster->unregister();
+				//right_foster->unregister();
+				right_foster->unlink();
 			}
 		} else {
 			// Left child is the new root and this cluster will be removed
@@ -754,6 +775,7 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 				node->parent = NULL;
 				second = node;
 			}
+			old_node->unlink();
 		}
 
 		node->do_join();
@@ -997,6 +1019,4 @@ std::shared_ptr<TopCluster> TopTree::Internal::construct_cluster(std::shared_ptr
 	return path.front();
 }
 
-
-TopTree::~TopTree() {}
 }
