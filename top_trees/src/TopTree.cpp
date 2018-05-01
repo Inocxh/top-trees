@@ -9,6 +9,8 @@
 // #define DEBUG
 // #define DEBUG_GRAPHVIZ
 
+//#define WARNINGS
+
 namespace TopTree {
 
 // Hide data from .hpp file using PIMP idiom
@@ -164,7 +166,9 @@ std::shared_ptr<ICluster> TopTree::Expose(int v, int w) {
 	Restore();
 
 	if (v == w) {
-		std::cerr << "ERROR: Cannot expose one vertex" << std::endl;
+		#ifdef WARNINGS
+			std::cerr << "WARNING: Cannot expose one vertex " << *internal->base_tree->internal->vertices[v] << std::endl;
+		#endif
 		return NULL;
 	}
 
@@ -646,24 +650,32 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 
 	// 2. Checks
 	if (Nv == NULL || Nw == NULL) {
-		std::cerr << "ERROR: One of vertices is an independent vertex, it cannot be cutted" << std::endl;
+		#ifdef WARNINGS
+			std::cerr << "WARNING: One of vertices " << *v << ", " << *w << " is an independent vertex, it cannot be cutted" << std::endl;
+		#endif
 		return std::make_tuple(Nw, Nv, (std::shared_ptr<EdgeData>)NULL); // They are already in different top trees
 	}
 	if (Nw != Nv && Nw->parent == NULL && Nv->parent == NULL) {
-		std::cerr << "ERROR: They are already in different top trees (not connected by edge)" << std::endl;
+		#ifdef WARNINGS
+			std::cerr << "WARNING: Vertices " << *v << " and " << *w << " are already in different top trees (not connected by edge)" << std::endl;
+		#endif
 		return std::make_tuple(Nw, Nv, (std::shared_ptr<EdgeData>)NULL); // They are already in different top trees
 	}
 	// Check if it is really an edge:
 	auto node = Nw;
 	while ((node->boundary_left != v || node->boundary_right != w) && (node->boundary_left != w || node->boundary_right != v)) {
 		if (node->isBase()) {
-			std::cerr << "ERROR: There is no cluster with endpoint " << *v->data << ", " << *w->data << " (edge with these endpoints does not exists)" << std::endl;
+			#ifdef WARNINGS
+				std::cerr << "WARNING: There is no cluster with endpoint " << *v << ", " << *w << " (edge with these endpoints does not exists)" << std::endl;
+			#endif
 			return std::make_tuple(Nw, Nv, (std::shared_ptr<EdgeData>)NULL);
 		}
 		node = node->right_child;
 	}
 	if (!node->isBase()) {
-		std::cerr << "ERROR: It is not Base cluster: " << *node << std::endl;
+		#ifdef WARNINGS
+			std::cerr << "WARNING: Cut - it is not Base cluster: " << *node << std::endl;
+		#endif
 		return std::make_tuple(Nw, Nv, (std::shared_ptr<EdgeData>)NULL);
 	}
 
@@ -726,6 +738,7 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 				std::cerr << "... removing node " << *node << std::endl;
 			#endif
 			node->unregister();
+			auto old_node = node;
 
 			if (node == first) {
 				// Unregister as root cluster
@@ -779,7 +792,9 @@ std::shared_ptr<ICluster> TopTree::Link(int v_index, int w_index, std::shared_pt
 	Restore();
 
 	if (v_index == w_index) {
-		std::cerr << "Cannot link vertex to itself" << std::endl;
+		#ifdef WARNINGS
+			std::cerr << "WARNING: Cannot link vertex to itself" << std::endl;
+		#endif
 		return NULL;
 	}
 
@@ -805,7 +820,9 @@ std::shared_ptr<ICluster> TopTree::Link(int v_index, int w_index, std::shared_pt
 
 	// 1.1 Checks
 	if (Nv != NULL && Nw != NULL && (Nv == Nw || Nw == Nv->parent)) {
-		std::cerr << "ERROR: They are already in the same top tree" << std::endl;
+		#ifdef WARNINGS
+			std::cerr << "WARNING: Vertices " << *v << " and " << *w << " are already in the same top tree, cannot link" << std::endl;
+		#endif
 		// std::cerr << *Nw << "---" << *Nv << std::endl;
 		return NULL;
 	}

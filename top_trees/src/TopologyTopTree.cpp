@@ -10,6 +10,8 @@
 //#define DEBUG_GRAPHVIZ
 //#define DEBUG_GRAPHVIZ_VERBOSE
 
+//#define WARNINGS
+
 namespace TopTree {
 
 // Hide data from .hpp file using PIMP idiom
@@ -606,7 +608,9 @@ std::shared_ptr<ICluster> TopologyTopTree::Link(int v_index, int w_index, std::s
 
 	// 1. Test if they aren't in the same tree (if they are already linked) - O(log N)
 	if (internal->in_same_tree(v, w)) {
-		std::cerr << "ERROR: Vertices " << *v << " and " << *w << " are already in the same tree, cannot link" << std::endl;
+		#ifdef WARNINGS
+			std::cerr << "WARNING: Vertices " << *v << " and " << *w << " are already in the same tree, cannot link" << std::endl;
+		#endif
 		return NULL;
 	}
 
@@ -722,7 +726,7 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::get_verte
 				if (ee->from == v) vv = ee->to;
 				else if (ee->to == v) vv = ee->from;
 				else {
-					std::cerr << "Skipping subvertice edge " << *ee->from << "-" << *ee->to << std::endl;
+					//std::cerr << "Skipping subvertice edge " << *ee->from << "-" << *ee->to << std::endl;
 					n = next_n;
 					continue;
 				}
@@ -1187,12 +1191,16 @@ std::shared_ptr<ICluster> TopologyTopTree::Expose(int v_index, int w_index) {
 	#endif
 
 	if (v_index == w_index) {
-		std::cerr << "ERROR: Cannot expose single vertex " << *v << std::endl;
+		#ifdef WARNINGS
+			std::cerr << "WARNING: Cannot expose single vertex " << *v << std::endl;
+		#endif
 		return NULL;
 	}
 
 	if (!internal->in_same_tree(v, w)) {
-		std::cerr << "ERROR: Vertices " << *v << " and " << *w << " are not linked in the same tree, cannot expose path between them" << std::endl;
+		#ifdef WARNINGS
+			std::cerr << "WARNING: Vertices " << *v << " and " << *w << " are not linked in the same tree, cannot expose path between them" << std::endl;
+		#endif
 		return NULL;
 	}
 
@@ -1332,7 +1340,7 @@ std::shared_ptr<TopologyCluster> TopologyTopTree::Internal::construct_basic_clus
 	// 1. Sanity check
 	if (parent_edge == NULL and v->degree > 1) {
 		std::cerr << "ERROR: Cluster without parent with degree > 1" << std::endl;
-		return NULL;
+		exit(1);
 	}
 
 	// 2. Construct basic topology clusters from this vertex and connect with outgoing edges with others
