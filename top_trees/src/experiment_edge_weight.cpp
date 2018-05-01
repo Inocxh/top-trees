@@ -23,11 +23,12 @@ struct operation {
 std::vector<std::pair<int, int>> vertices; // pair(edge to, edge weight)
 std::vector<struct operation> operations;
 
-double run(MaximumEdgeWeight *worker) {
+std::pair<double, double> run(MaximumEdgeWeight *worker, int N) {
 	// Vector for indexing edges
 	std::vector<std::pair<int, int>> edges;
 
 	// Init tree
+	clock_t begin = clock();
 	std::vector<int> vertex_index;
 	vertex_index.push_back(worker->add_vertex(std::to_string(0)));
 	for (uint i = 1; i < vertices.size(); i++) {
@@ -36,10 +37,12 @@ double run(MaximumEdgeWeight *worker) {
 		edges.push_back(std::pair<int,int>(i, vertices[i].first));
 	}
 	worker->initialize();
+	clock_t end = clock();
+	double init_time = double(end - begin) / CLOCKS_PER_SEC;
 
 	// Start measure time and perform all operations
-	// clock_t begin = clock();
-	clock_t begin = clock();
+	begin = clock();
+	int op_skipped = 0;
 	for (auto op: operations) {
 		switch (op.op) {
 		case ADD_EDGE: {
@@ -52,6 +55,10 @@ double run(MaximumEdgeWeight *worker) {
 		break;}
 		case REMOVE_EDGE: {
 			// Get edge
+			if (edges.size() < N * 7/10) {
+				op_skipped++;
+				continue;
+			}
 			int index = op.param % edges.size();
 			bool result = worker->remove_edge(vertex_index[edges[index].first], vertex_index[edges[index].second]);
 			#ifdef VERBOSE
@@ -80,8 +87,14 @@ double run(MaximumEdgeWeight *worker) {
 		break;}
 		}
 	}
-	clock_t end = clock();
-	return double(end - begin) / CLOCKS_PER_SEC;
+	end = clock();
+
+	// Cleaning
+	delete(worker);
+
+	int op_count = operations.size() - op_skipped;
+	double execution_time = double(end - begin) / CLOCKS_PER_SEC;
+	return std::make_pair(init_time / N, execution_time / op_count);
 }
 
 int main(int argc, char *argv[]) {
@@ -107,11 +120,13 @@ int main(int argc, char *argv[]) {
 		operations.push_back(op);
 	};
 
-	// Run both implementations
-	auto time_top_tree = run(new MaximumEdgeWeight(new TopTree::TopTree()));
-	//double time_top_tree = 0;
-	auto time_topology_top_tree = run(new MaximumEdgeWeight(new TopTree::TopologyTopTree()));
-	//double time_topology_top_tree = 0;
+	//std::cerr << "Generating of operations ended" << std::endl;
 
-	std::cout << time_top_tree << " " << time_top_tree / K << " " << time_topology_top_tree << " " << time_topology_top_tree / K << std::endl;
+	// Run both implementations
+	auto time_top_tree = run(new MaximumEdgeWeight(new TopTree::TopTree()), N);
+	//auto time_top_tree = std::make_pair(0, 0);
+	auto time_topology_top_tree = run(new MaximumEdgeWeight(new TopTree::TopologyTopTree()), N);
+	//auto time_topology_top_tree = std::make_pair(0, 0);
+
+	std::cout << time_top_tree.first << " " << time_top_tree.second << " " << time_topology_top_tree.first << " " << time_topology_top_tree.second << std::endl;
 }
