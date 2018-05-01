@@ -53,7 +53,7 @@ protected:
 	void set_first_child(std::shared_ptr<TopologyCluster> child);
 	void set_second_child(std::shared_ptr<TopologyCluster> child);
 
-	int root_vector_index = -1;
+	std::list<std::shared_ptr<TopologyCluster>>::iterator root_clusters_iterator;
 	bool is_splitted = true; // Initially clusters are in state that they need do_join method (which is called during construction)
 	bool listed_in_delete_list = false;
 	bool listed_in_change_list = false;
@@ -67,6 +67,8 @@ protected:
 
 	void calculate_outer_edges(bool check_neighbours = false);
 	void remove_all_outer_edges();
+
+	void unlink();
 
 	/**
 	 * @brief Tries to find common vertex of two given IClusters.
@@ -95,6 +97,8 @@ protected:
 
 	void do_split();
 	bool was_splitted = false;
+
+	void unlink(bool recursive = false);
 };
 
 }

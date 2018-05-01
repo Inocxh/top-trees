@@ -17,7 +17,7 @@ namespace TopTree {
 // Hide data from .hpp file using PIMP idiom
 class TopologyTopTree::Internal {
 public:
-	std::vector<std::shared_ptr<TopologyCluster> > root_clusters;
+	std::list<std::shared_ptr<TopologyCluster> > root_clusters;
 	std::shared_ptr<BaseTree> base_tree;
 
 	std::shared_ptr<TopologyCluster> construct_basic_clusters(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> parent_edge=NULL);
@@ -58,6 +58,8 @@ public:
 
 		return (v_root == w_root);
 	}
+
+	void recursive_delete_cluster(std::shared_ptr<TopologyCluster> cluster);
 private:
 	int graphviz_counter = 0;
 	// Used in update_clusters() and helper methods
@@ -85,12 +87,19 @@ TopologyTopTree::TopologyTopTree(std::shared_ptr<BaseTree> baseTree) : TopologyT
 	InitFromBaseTree(baseTree);
 }
 
+TopologyTopTree::~TopologyTopTree() {
+	Restore();
+	for (auto root_cluster: internal->root_clusters) {
+		internal->recursive_delete_cluster(root_cluster);
+	}
+	internal->root_clusters.clear();
+}
+
 void TopologyTopTree::InitFromBaseTree(std::shared_ptr<BaseTree> baseTree) {
 	internal->base_tree = baseTree;
 
 	for (auto v : internal->base_tree->internal->vertices) v->used = false;
 
-	int i = 0;
 	for (auto v : internal->base_tree->internal->vertices) {
 		if (v->used || v->degree != 1) continue;
 
@@ -107,8 +116,7 @@ void TopologyTopTree::InitFromBaseTree(std::shared_ptr<BaseTree> baseTree) {
 			internal->to_calculate_outer_edges.clear();
 		}
 		internal->root_clusters.push_back(root_cluster);
-		internal->root_clusters[i]->root_vector_index = i;
-		i++;
+		root_cluster->root_clusters_iterator = std::prev(internal->root_clusters.end());
 	}
 
 	for (auto c: internal->splitted_clusters) c->do_join();
@@ -117,6 +125,13 @@ void TopologyTopTree::InitFromBaseTree(std::shared_ptr<BaseTree> baseTree) {
 	#ifdef DEBUG_GRAPHVIZ
 		for (auto root_cluster: internal->root_clusters) internal->print_graphviz(root_cluster, "Full", true);
 	#endif
+}
+
+void TopologyTopTree::Internal::recursive_delete_cluster(std::shared_ptr<TopologyCluster> cluster) {
+	if (cluster == NULL) return;
+	recursive_delete_cluster(cluster->first);
+	recursive_delete_cluster(cluster->second);
+	cluster->unlink();
 }
 
 //std::vector<std::shared_ptr<Cluster> > TopologyTopTree::GetTopTrees() {
@@ -227,8 +242,7 @@ void TopologyTopTree::Internal::update_clusters_join_with_neighbour(std::shared_
 			neighbour->parent->first = NULL;
 			next_delete.push_back(neighbour->parent);
 			neighbour->parent->listed_in_delete_list = true;
-			neighbour->parent = cluster->parent;
-			cluster->parent->second = neighbour;
+			cluster->parent->set_second_child(neighbour);
 			#ifdef DEBUG
 				std::cerr << "... joined under one parent " << *cluster->parent << " with childs " << *cluster->parent->first << " and " << *cluster->parent->second << std::endl;
 			#endif
@@ -336,6 +350,7 @@ void TopologyTopTree::Internal::update_clusters() {
 			cluster->remove_all_outer_edges();
 		}
 		cluster->listed_in_delete_list = false;
+		cluster->unlink();
 	}
 
 	// 2. Run through changed list that have sibling
@@ -455,6 +470,7 @@ void TopologyTopTree::Internal::update_clusters() {
 	delete_list = next_delete;
 	change_list = next_change;
 	abandon_list = next_abandon;
+
 	return update_clusters();
 }
 
@@ -497,6 +513,11 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 	auto vv = edge->from;
 	auto ww = edge->to;
 
+	// 2.1 Remove original root from root list
+	auto root = vv->topology_cluster;
+	while (root->parent != NULL) root = root->parent;
+	internal->root_clusters.erase(root->root_clusters_iterator);
+
 	// 3. Cut itself (save results)
 	auto result = internal->cut(vv, ww, edge);
 
@@ -511,6 +532,12 @@ std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr
 	while (root_v->parent != NULL) root_v = root_v->parent;
 	auto root_w = ww->topology_cluster;
 	while (root_w->parent != NULL) root_w = root_w->parent;
+
+	// 5.1 Add roots into root clusters list
+	internal->root_clusters.push_back(root_v);
+	root_v->root_clusters_iterator = std::prev(internal->root_clusters.end());
+	internal->root_clusters.push_back(root_w);
+	root_w->root_clusters_iterator = std::prev(internal->root_clusters.end());
 
 	// 6. Restore all splitted clusters
 	for (auto c: internal->splitted_clusters) c->do_join();
@@ -618,11 +645,23 @@ std::shared_ptr<ICluster> TopologyTopTree::Link(int v_index, int w_index, std::s
 	auto vv = internal->get_vertex_to_link(v);
 	auto ww = internal->get_vertex_to_link(w);
 
+	// 2.1 Remove roots from clusters list
+	//auto root_v = vv->topology_cluster;
+	//while (root_v->parent != NULL) root_v = root_v->parent;
+	//std::cerr << "Deleting cluster " << *root_v << " from roots list with iterator " << *root_v->root_clusters_iterator << std::endl;
+	//if (root_v->root_clusters_iterator != internal->root_clusters.end()) internal->root_clusters.erase(root_v->root_clusters_iterator);
+	//auto root_w = ww->topology_cluster;
+	//while (root_w->parent != NULL) root_w = root_w->parent;
+	//if (root_w->root_clusters_iterator != internal->root_clusters.end()) internal->root_clusters.erase(root_w->root_clusters_iterator);
+
 	// 3. Create edge
 	auto edge = std::make_shared<BaseTree::Internal::Edge>(vv, ww, edge_data);
 
 	// 4. Link vertices
 	auto result = internal->link(vv, ww, edge);
+	// 4.1 Add new root
+	internal->root_clusters.push_back(result);
+	result->root_clusters_iterator = std::prev(internal->root_clusters.end());
 
 	// 5. Restore all splitted clusters
 	for (auto c: internal->splitted_clusters) c->do_join();
@@ -937,7 +976,11 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_su
 				#endif
 			}
 
-			return v->superior_vertex;
+			auto superior_vertex = v->superior_vertex;
+			v->unlink();
+			w->unlink();
+
+			return superior_vertex;
 		} else {
 			// We "steal" one edge from the neighbour and then we repair on this vertex
 			for (auto n: first_neighbour->neighbours) {
@@ -987,6 +1030,7 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::repair_su
 		#endif
 		// Delete vertex from supervertice's subvertices list
 		v->superior_vertex->subvertices.erase(v->superior_vertex_subvertices_iter);
+		v->unlink();
 		return first_neighbour;
 	}
 }
@@ -1129,6 +1173,7 @@ std::shared_ptr<SimpleCluster> TopologyTopTree::Internal::expose_join_clusters(s
 			// We do rake join
 			// 1. Construct cluster
 			auto new_cluster = SimpleCluster::construct(constructed_cluster, child_cluster);
+			expose_simple_clusters.push_back(new_cluster); // to allow splitting it in Restore operation
 
 			// 2. Set boundaries
 			other_vertex = BaseTree::Internal::Vertex::get_superior(child_cluster->boundary_left);
@@ -1158,6 +1203,7 @@ std::shared_ptr<SimpleCluster> TopologyTopTree::Internal::expose_join_clusters(s
 	if (parent_cluster == NULL) return constructed_cluster;
 
 	auto new_cluster = SimpleCluster::construct(parent_cluster, constructed_cluster);
+	expose_simple_clusters.push_back(new_cluster); // to allow splitting it in Restore operation
 	if (v == target) {
 		// Rake onto parent_cluster
 		new_cluster->boundary_left = parent_cluster->boundary_left;
@@ -1215,6 +1261,7 @@ std::shared_ptr<ICluster> TopologyTopTree::Expose(int v_index, int w_index) {
 	cluster_v->do_split(&internal->splitted_clusters);
 	cluster_w->do_split(&internal->splitted_clusters);
 
+
 	// 2. Get all clusters that contains v/w as non-boundary vertex and save them into two lists
 	auto first_list = internal->expose_get_clusters(v, w, true);
 	auto second_list = internal->expose_get_clusters(w, v, false);
@@ -1247,6 +1294,12 @@ std::shared_ptr<ICluster> TopologyTopTree::Expose(int v_index, int w_index) {
 		std::cerr << "Final cluster is: " << *final_cluster->boundary_left << "-" << *final_cluster->boundary_right << std::endl;
 	#endif
 
+	// Cleaning
+	for (auto c: clusters_list) {
+		BaseTree::Internal::Vertex::get_superior(c->boundary_left)->expose_clusters.clear();
+		BaseTree::Internal::Vertex::get_superior(c->boundary_right)->expose_clusters.clear();
+	}
+
 	return final_cluster;
 }
 
@@ -1254,7 +1307,10 @@ void TopologyTopTree::Restore() {
 	if (internal->expose_simple_clusters.empty()) return; // no need to restore anything
 
 	// Split temporary clusters
-	for (auto c: internal->expose_simple_clusters) c->do_split();
+	for (auto c: internal->expose_simple_clusters) {
+		c->do_split();
+		c->unlink(true);
+	}
 	internal->expose_simple_clusters.clear();
 
 	// Join original clusters
@@ -1438,5 +1494,4 @@ std::shared_ptr<TopologyCluster> TopologyTopTree::Internal::construct_topology_t
 	return new_cluster;
 }
 
-TopologyTopTree::~TopologyTopTree() {}
 }

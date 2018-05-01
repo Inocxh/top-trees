@@ -41,8 +41,32 @@ std::shared_ptr<SimpleCluster> SimpleCluster::construct(std::shared_ptr<ICluster
 	return cluster;
 }
 
+void SimpleCluster::unlink(bool recursive) {
+	if (recursive && parent != NULL) parent->unlink();
+
+	edge = NULL;
+	parent = NULL;
+	first = NULL;
+	second = NULL;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /// TopologyCluster
+
+void TopologyCluster::unlink() {
+	parent = NULL;
+	first = NULL;
+	second = NULL;
+
+	edge = NULL;
+	vertex = NULL;
+	edge_cluster = NULL;
+	combined_edge_cluster = NULL;
+
+	outer_edges.clear(); // or call remove_all_outer_edges?
+
+	is_deleted = true;
+}
 
 std::shared_ptr<BaseTree::Internal::Vertex> TopologyCluster::get_common_vertex(std::shared_ptr<ICluster> cluster_a, std::shared_ptr<ICluster> cluster_b, bool get_superior) {
 	auto common_vertex = cluster_a->boundary_left;
@@ -70,7 +94,7 @@ TopologyCluster::TopologyCluster() {
 std::ostream& TopologyCluster::ToString(std::ostream& o) const {
 	//o << index;
 	if (edge != NULL) o << *edge->data;
-	else if (vertex != NULL) o << *vertex->data;
+	else if (vertex != NULL) o << *vertex;
 	if (boundary_left != NULL) o << "(" << *boundary_left->data << "-" << *boundary_right->data << ")";
 	if (is_rake_branch) o << "R";
 	return o;
@@ -247,7 +271,7 @@ void TopologyCluster::calculate_outer_edges(bool check_neighbours) {
 			#endif
 			outer_edges.push_back(neighbour{ee, vv->topology_cluster});
 			if (vv->topology_cluster == NULL) {
-				std::cerr << "ERROR: Cannot get topology cluster for neighbour " << *vv->data << std::endl;
+				std::cerr << "ERROR: Cannot get topology cluster for neighbour " << *vv << std::endl;
 				exit(1);
 			}
 		}
