@@ -25,50 +25,8 @@
 % \setlength\headheight{0mm}
 % \let\openright=\cleardoublepage
 
-%% Generate PDF/A-2u
-\usepackage[a-2u]{pdfx}
 
-%% Prefer Latin Modern fonts
-\usepackage{lmodern}
-
-% Glyphtounicode cause unicode text easily searchable a copyable from PDF
-\input{glyphtounicode}
-\pdfgentounicode=1
-
-%% Character encoding: usually latin2, cp1250 or utf8:
-\usepackage[utf8]{inputenc}
-
-%% Further useful packages (included in most LaTeX distributions)
-\usepackage{amsmath}        % extensions for typesetting of math
-\usepackage{amsfonts}       % math fonts
-\usepackage{amsthm}         % theorems, definitions, etc.
-\usepackage{bbding}         % various symbols (squares, asterisks, scissors, ...)
-\usepackage{bm}             % boldface symbols (\bm)
-\usepackage{graphicx}       % embedding of pictures
-\usepackage{fancyvrb}       % improved verbatim environment
-\usepackage[numbers]{natbib}         % citation style AUTHOR (YEAR), or AUTHOR [NUMBER]
-\usepackage[nottoc]{tocbibind} % makes sure that bibliography and the lists
-			    % of figures/tables are included in the table
-			    % of contents
-\usepackage{dcolumn}        % improved alignment of table columns
-\usepackage{booktabs}       % improved horizontal lines in tables
-\usepackage{paralist}       % improved enumerate and itemize
-\usepackage[usenames]{xcolor}  % typesetting in color
-
-% Verbatim with syntax highlighting
-\usepackage{listings}
-\lstset{language=C++,basicstyle=\ttfamily}
-
-\usepackage[footnote,acronym,nomain]{glossaries}
-\setglossarystyle{list}
-\makeglossaries
-
-\usepackage{easy-todo}
-
-\usepackage{asymptote}
-\usepackage[format=plain,font=it]{caption}
-\usepackage{float}
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Basic information on the thesis
 
 % Thesis title in English (exactly as in the formal assignment)
@@ -113,19 +71,71 @@ Abstract.
 }
 
 % 3 to 5 keywords (recommended), each enclosed in curly braces
-\def\Keywords{%
-{Top Trees}, {Complexity}, {Implementation}
-}
+\def\ThesisKeywords{Top Trees, Complexity, Implementation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \Subject{\Abstract}
+\begin{filecontents*}{\jobname.xmpdata}
+\Title{\ThesisTitle}
+\Author{\ThesisAuthor}
+\Publisher{Charles University}
+\Keywords{Top Trees\sep Complexity\sep Implementation}
+\end{filecontents*}
+
+%% Generate PDF/A-2u
+\usepackage[a-2u]{pdfx}
+
+%% Prefer Latin Modern fonts
+\usepackage{lmodern}
+
+% Glyphtounicode cause unicode text easily searchable a copyable from PDF
+\input{glyphtounicode}
+\pdfgentounicode=1
+
+%% Character encoding: usually latin2, cp1250 or utf8:
+\usepackage[utf8]{inputenc}
+
+%% Further useful packages (included in most LaTeX distributions)
+\usepackage{amsmath}        % extensions for typesetting of math
+\usepackage{amsfonts}       % math fonts
+\usepackage{amsthm}         % theorems, definitions, etc.
+\usepackage{bbding}         % various symbols (squares, asterisks, scissors, ...)
+\usepackage{bm}             % boldface symbols (\bm)
+\usepackage{graphicx}       % embedding of pictures
+\usepackage{fancyvrb}       % improved verbatim environment
+\usepackage[numbers]{natbib}         % citation style AUTHOR (YEAR), or AUTHOR [NUMBER]
+\usepackage[nottoc]{tocbibind} % makes sure that bibliography and the lists
+			    % of figures/tables are included in the table
+			    % of contents
+\usepackage{dcolumn}        % improved alignment of table columns
+\usepackage{booktabs}       % improved horizontal lines in tables
+\usepackage{paralist}       % improved enumerate and itemize
+\usepackage[usenames]{xcolor}  % typesetting in color
+
+% Verbatim with syntax highlighting
+\usepackage{listings}
+\lstset{language=C++,basicstyle=\ttfamily}
+
+\usepackage[footnote,acronym,nomain]{glossaries}
+%\setglossarystyle{list}
+%\makeglossaries
+
+\usepackage{easy-todo}
+
+\usepackage{asymptote}
+\usepackage[format=plain,font=it]{caption}
+\usepackage{float}
 
 %% The hyperref package for clickable links in PDF and also for storing
 %% metadata to PDF (including the table of contents).
 %\usepackage[pdftex,unicode,bookmarksnumbered]{hyperref}   % Must follow all other packages
 \hypersetup{unicode}
 \hypersetup{breaklinks=true}
-\hypersetup{pdftitle={\ThesisTitle}}
-\hypersetup{pdfauthor={\ThesisAuthor}}
-\hypersetup{pdfkeywords=\Keywords}
+%\hypersetup{pdftitle={\ThesisTitle}}
+%\hypersetup{pdfauthor={\ThesisAuthor}}
+%\hypersetup{pdfkeywords=\Keywords}
 \hypersetup{urlcolor=blue}
+
 
 % Better referencese: \cref with normal first letter and \Cref with uppercase first letter
 \usepackage{listings}

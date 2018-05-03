@@ -55,7 +55,7 @@ For given size $N$ of the tree and number of operations we randomly generated
 initial tree with $N$ edges and $N+1$ vertices and then list of operations
 (every operation with the same chance).
 
-Number of edges during execution was maintained between $N$ and ${7\over 10}N$
+Number of edges during execution was maintained between $N$ and $\frac{7}{10}N$
 to maintain the input size.
 
 Possible operations are:
@@ -64,7 +64,7 @@ Possible operations are:
 \item Add edge -- Choose random two vertices and execute \Link{} operation
 (when we choose two vertices in the same top tree the Top trees structure should
 return an error).
-\item Remove edge -- If there are at least ${7\over10}N$ edges choose random
+\item Remove edge -- If there are at least $\frac{7}{10}N$ edges choose random
 edge from list of edges and execute \Cut{} operation (we will maintain array of
 added edges so every remove operation should be successful), otherwise skip this
 operation.

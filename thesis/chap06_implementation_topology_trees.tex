@@ -25,7 +25,7 @@ difference the mapping could be done quite easily.
 But before mapping we have to deal with fake subvertices and subvertice edges
 added by ternarization.
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \asyinclude{pic/chap06_tree_mapping.asy}
 \caption[Example of mapping topology tree clusters onto top clusters]
@@ -223,10 +223,20 @@ separate chain.
 
 \subsubsection{Example of splitted chains}
 
-We will take topology tree from the figure \ref{fig:topology_tree_construction}
+We will take topology tree from the figure~\ref{fig:topology_tree_construction}
 (page \pageref{fig:topology_tree_construction}) and let us \Expose(b,f). We will
 start splitting clusters from base clusters containing these vertices as you
-can see on the figure \ref{fig:chain_clusters_example}.
+can see on the figure~\ref{fig:chain_clusters_example}.
+
+\begin{figure}[H]
+\centering
+\asyinclude{pic/chap06_expose_splitting.asy}
+\caption[Splitting clusters into chains]
+{Splitting from vertices b and f. Marked clusters will be added into
+chains -- notice that they cover all vertices of the underlying tree and with
+connecting edges they cover all edges too.}
+\label{fig:chain_clusters_example}
+\end{figure}
 
 Firstly we split all clusters above vertices $b$ and $f$. Then starting from the
 vertex $b$ we continue up to the moment, when $b$ stops be an external vertex
@@ -243,16 +253,6 @@ $e_1$-$d$ to the second chain (notice that we ignore subvertice edge because it
 is not a cluster). Above this cluster we hit the path processed by the first run
 and thus we end.
 
-\begin{figure}[h]
-\centering
-\asyinclude{pic/chap06_expose_splitting.asy}
-\caption[Splitting clusters into chains]
-{Splitting from vertices b and f. Marked clusters will be added into
-chains -- notice that they cover all vertices of the underlying tree and with
-connecting edges they cover all edges too.}
-\label{fig:chain_clusters_example}
-\end{figure}
-
 We ended with two chains of clusters: [$c$-$b$; $b$-$e_1$; $e_2$-$h$] and
 [$f$-$e_2$; $e_1$-$d$], that have to be joined together. Subvertices
 of the same vertex acts from this point of view as the same vertex and therefore
@@ -263,7 +263,7 @@ we will not act with topology tree structure and ternarization is not needed).
 
 During splitting we saved splitted clusters along the paths from both given
 vertices and we saved those splitted vertices into two chains. Now we need to
-join them. In \cite{TopTrees} Alstrup, Holm, Lichtenberg and Thorup suggested
+join them. In~\cite{TopTrees} Alstrup, Holm, Lichtenberg and Thorup suggested
 some joining based on joining point clusters with arbitrary neighbours and then
 compressing all remaining clusters on path.
 

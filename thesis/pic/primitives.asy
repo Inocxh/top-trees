@@ -1,4 +1,5 @@
 // texpreamble("\usepackage[a-2u]{pdfx}");
+texpreamble("\pdfminorversion=4");
 
 unitsize(1.2cm);
 settings.outformat = "pdf";

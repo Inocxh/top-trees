@@ -10,3 +10,4 @@ clean:
 	latexmk -C
 	rm -f *.acn *.bbl *.ist *.lod
 	rm -f $(name)-*.pdf $(name)-*.asy
+	rm -f $(name).xmpdata $(name).pre pdfa.xmpi
