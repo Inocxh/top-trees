@@ -33,6 +33,7 @@ public:
 	std::list<std::shared_ptr<MyEdgeData>>::iterator to_incident_iterator;
 
 	int cover = -1;
+	std::shared_ptr<MyEdgeData> cover_edge = NULL;
 	int level = 0;
 
 	std::list<std::shared_ptr<MyEdgeData>>::iterator nontree_edges_iterator;
@@ -482,13 +483,13 @@ private:
 
 	// INTERNAL:
 	void internal_cover(std::shared_ptr<TopTree::ICluster> cluster, int i, std::shared_ptr<MyEdgeData> edge) {
+		auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
 		#ifdef DEBUG
 			std::cerr << "* Internal cover " << i << " for edge ";
 			if (edge != NULL) std::cerr << *edge;
 			else std::cerr << "NULL";
-			std::cerr << " at cluster " << cluster->getLeftBoundary() << "-" << cluster->getRightBoundary() << std::endl;
+			std::cerr << " at cluster " << cluster->getLeftBoundary() << "-" << cluster->getRightBoundary() << " with cover " << data->cover  << std::endl;
 		#endif
-		auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
 		if (data->cover < i) {
 			data->cover = i;
 			data->cover_edge = edge;
@@ -514,6 +515,10 @@ private:
 				data->set_incident(r, j, k, data->get_incident(r, -1, k));
 			}
 		}
+
+		#ifdef DEBUG
+			std::cerr << "  -> resulting cover " << data->cover << std::endl;
+		#endif
 	} // COMPLETE
 
 	void internal_uncover(std::shared_ptr<TopTree::ICluster> cluster, int i) {
@@ -720,8 +725,8 @@ void TopTree::Join(std::shared_ptr<TopTree::ICluster> leftChild, std::shared_ptr
 	auto right_data = std::dynamic_pointer_cast<MyClusterData>(rightChild->data);
 
 	#ifdef DEBUG
-		std::cerr << "JOIN of cluster " << leftChild->getLeftBoundary()  << "-" << leftChild->getRightBoundary()
-		<< " and " << rightChild->getLeftBoundary()  << "-" << rightChild->getRightBoundary()
+		std::cerr << "JOIN of cluster " << leftChild->getLeftBoundary()  << "-" << leftChild->getRightBoundary() << "(" << left_data->cover << ")"
+		<< " and " << rightChild->getLeftBoundary()  << "-" << rightChild->getRightBoundary() << "(" << right_data->cover << ")"
 		<< " into " << parent->getLeftBoundary()  << "-" << parent->getRightBoundary() << std::endl;
 	#endif
 
@@ -872,6 +877,10 @@ void TopTree::Join(std::shared_ptr<TopTree::ICluster> leftChild, std::shared_ptr
 			}
 		}
 	}
+
+	#ifdef DEBUG
+		std::cerr << "JOIN result: cover " << data->cover << std::endl;
+	#endif
 } // COMPLETE
 void TopTree::Split(std::shared_ptr<ICluster> leftChild, std::shared_ptr<ICluster> rightChild, std::shared_ptr<ICluster> parent) {
 	DoubleConnectivity::dc->clean(leftChild, rightChild, parent);
@@ -884,22 +893,31 @@ void TopTree::Create(std::shared_ptr<ICluster> cluster, std::shared_ptr<EdgeData
 	auto edge_data = std::dynamic_pointer_cast<MyEdgeData>(edge);
 
 	#ifdef DEBUG
-		std::cerr << "Creating cluster for edge " << edge_data->from << "-" << edge_data->to << std::endl;
+		std::cerr << "Creating cluster for edge " << edge_data->from << "-" << edge_data->to << " with cover " << edge_data->cover << std::endl;
 	#endif
-
-	data->cover = -1; // InitTreeEdge
-	edge_data->cover = -1; // InitTreeEdge
 
 	data->endpoint_a = cluster->getLeftBoundary();
 	data->endpoint_b = cluster->getRightBoundary();
 
 	data->edge = edge_data;
+
+	data->cover = edge_data->cover;
+
+	// Backup (or defaults) from underlying edge
+	data->cover = edge_data->cover;
+	data->cover_edge = edge_data->cover_edge;
 } // COMPLETE
 void TopTree::Destroy(std::shared_ptr<ICluster> cluster, std::shared_ptr<EdgeData> edge) {
 	auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
 	auto edge_data = std::dynamic_pointer_cast<MyEdgeData>(edge);
 
+	#ifdef DEBUG
+		std::cerr << "Destroying cluster for edge " << edge_data->from << "-" << edge_data->to << " with cover " << data->cover << std::endl;
+	#endif
+
+	// Backup into cluster
 	edge_data->cover = data->cover;
+	edge_data->cover_edge = data->cover_edge;
 } // COMPLETE
 
 std::shared_ptr<TopTree::ClusterData> TopTree::InitClusterData() {
