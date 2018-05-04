@@ -1,5 +1,7 @@
 #include "TopCluster.hpp"
 
+//#define DEBUG
+
 namespace TopTree {
 std::ostream& operator<<(std::ostream& o, const TopCluster& c) { return c.ToString(o); }
 
@@ -44,6 +46,10 @@ void BaseCluster::do_join() {
 	boundary_left = edge->from;
 	boundary_right = edge->to;
 
+	#ifdef DEBUG
+		std::cerr << "Joining " << *shared_from_this() << std::endl;
+	#endif
+
 	// 2. Set base handles:
 	// Handle is the top most non-rake (base or compress) node having this vertex as one of its endpoints (for leafs) or as its midpoint (when degree of vertex >=2)
 	// Base handle is used for recomputing handles when some change occurs (during rotating, splaying, splicing) and last_handle is no longer handle.
@@ -66,6 +72,10 @@ void BaseCluster::do_join() {
 }
 void BaseCluster::do_split(std::vector<std::shared_ptr<TopCluster>>* splitted_clusters) {
 	if (is_splitted) return;
+
+	#ifdef DEBUG
+		std::cerr << "Splitting " << *shared_from_this() << std::endl;
+	#endif
 
 	// 1. Log that this cluster will be splitted
 	if (splitted_clusters != NULL) splitted_clusters->push_back(shared_from_this());
@@ -143,6 +153,10 @@ std::shared_ptr<CompressCluster> CompressCluster::construct(std::shared_ptr<TopC
 void CompressCluster::do_join() {
 	if (!is_splitted || is_deleted) return;
 
+	#ifdef DEBUG
+		std::cerr << "Joining " << *shared_from_this() << std::endl;
+	#endif
+
 	// 1. ensure that childs are fine (joined):
 	left_child->do_join();
 	right_child->do_join();
@@ -172,6 +186,10 @@ void CompressCluster::do_join() {
 void CompressCluster::do_split(std::vector<std::shared_ptr<TopCluster>>* splitted_clusters) {
 	if (is_splitted) return;
 
+	#ifdef DEBUG
+		std::cerr << "Splitting " << *shared_from_this() << std::endl;
+	#endif
+
 	// 1. Log that this cluster will be splitted
 	if (splitted_clusters != NULL) splitted_clusters->push_back(shared_from_this());
 
@@ -193,6 +211,16 @@ void CompressCluster::do_split(std::vector<std::shared_ptr<TopCluster>>* splitte
 	is_splitted = true;
 }
 void CompressCluster::correct_endpoints() {
+	if (rakerized) {
+		// nicknames
+		auto rake_from = left_child;
+		auto rake_to = right_child;
+
+		boundary_left = rake_to->boundary_left;
+		boundary_right = rake_to->boundary_right;
+		return;
+	}
+
 	// 1. Find common vertex
 	if (left_child->boundary_left == right_child->boundary_left || left_child->boundary_left == right_child->boundary_right)
 		common_vertex = left_child->boundary_left;
@@ -298,6 +326,10 @@ std::shared_ptr<RakeCluster> RakeCluster::construct(std::shared_ptr<TopCluster> 
 void RakeCluster::do_join() {
 	if (!is_splitted || is_deleted) return;
 
+	#ifdef DEBUG
+		std::cerr << "Joining " << *shared_from_this() << std::endl;
+	#endif
+
 	// nicknames
 	auto rake_from = left_child;
 	auto rake_to = right_child;
@@ -316,6 +348,10 @@ void RakeCluster::do_join() {
 }
 void RakeCluster::do_split(std::vector<std::shared_ptr<TopCluster>>* splitted_clusters) {
 	if (is_splitted) return;
+
+	#ifdef DEBUG
+		std::cerr << "Splitting " << *shared_from_this() << std::endl;
+	#endif
 
 	// 1. Log that this cluster will be splitted
 	if (splitted_clusters != NULL) splitted_clusters->push_back(shared_from_this());
