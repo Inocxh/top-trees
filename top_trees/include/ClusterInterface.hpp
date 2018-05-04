@@ -30,6 +30,7 @@ protected:
 	std::shared_ptr<BaseTree::Internal::Vertex> boundary_left;
 	std::shared_ptr<BaseTree::Internal::Vertex> boundary_right;
 };
+std::ostream& operator<<(std::ostream& o, const ICluster& v);
 
 // Helper functions:
 

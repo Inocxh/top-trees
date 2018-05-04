@@ -22,6 +22,7 @@ public:
 	std::tuple<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>, std::shared_ptr<EdgeData>> Cut(int v, int w);
 	std::shared_ptr<ICluster> Link(int v, int w, std::shared_ptr<EdgeData> edge_data);
 	void Restore();
+	std::pair<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>> SplitRoot(std::shared_ptr<ICluster> root);
 
 	// Return roots of the top trees
 	// std::vector<std::shared_ptr<Cluster> > GetTopTrees();

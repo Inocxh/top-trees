@@ -65,6 +65,8 @@ public:
 	 * (for example when switching Cut and Join behaviour for different operations)
 	 */
 	virtual void Restore() = 0;
+
+	virtual std::pair<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>> SplitRoot(std::shared_ptr<ICluster> root) = 0;
 };
 
 }

@@ -913,6 +913,14 @@ std::shared_ptr<ICluster> TopTree::Link(int v_index, int w_index, std::shared_pt
 	return node;
 }
 
+std::pair<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>> TopTree::SplitRoot(std::shared_ptr<ICluster> root) {
+	auto cluster = std::dynamic_pointer_cast<TopCluster>(root);
+	if (cluster->isCompress() || cluster->isRake()) {
+		cluster->do_split();
+		return std::make_pair(cluster->left_child, cluster->right_child);
+	} else return std::make_pair((std::shared_ptr<ICluster>)NULL, (std::shared_ptr<ICluster>)NULL);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 std::shared_ptr<TopCluster> TopTree::Internal::construct_cluster(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Edge> e) {

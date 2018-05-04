@@ -1323,6 +1323,16 @@ void TopologyTopTree::Restore() {
 	internal->splitted_clusters.clear();
 }
 
+std::pair<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>> TopologyTopTree::SplitRoot(std::shared_ptr<ICluster> root) {
+	auto cluster = std::dynamic_pointer_cast<SimpleCluster>(root);
+	if (cluster->first == NULL || cluster->second == NULL) {
+		return std::make_pair((std::shared_ptr<ICluster>)NULL, (std::shared_ptr<ICluster>)NULL);
+	} else {
+		cluster->do_split();
+		return std::make_pair(cluster->first, cluster->second);
+	}
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /// Functions for construction:
 
