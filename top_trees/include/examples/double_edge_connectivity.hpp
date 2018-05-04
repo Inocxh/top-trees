@@ -1,6 +1,7 @@
 #include <memory>
 #include <string>
 #include <algorithm>
+#include <sstream>
 
 #include "TopTreeInterface.hpp"
 
@@ -11,30 +12,30 @@ public:
 
 	std::vector<int> incident; //incident_v,i = number of level >= i nontree edges with an endpoint in v
 
-	virtual std::ostream& ToString(std::ostream& o) const {
-		//return o << "Vertex " << label;
-		return o << label;
-	}
+	virtual std::ostream& ToString(std::ostream& o) const { return o << label; }
 };
 
 class MyEdgeData: public TopTree::EdgeData {
 public:
-	MyEdgeData(std::string label): label{label} {}
+	MyEdgeData(int from, int to): from{from}, to{to} {
+		std::ostringstream ss;
+		ss << from << "-" << to;
+		label = ss.str();
+	}
 
-	int from;
-	int to;
+	int from; // index of vertex in top tree structure
+	int to;   // index of vertex in top tree structure
+	std::list<std::shared_ptr<MyEdgeData>>::iterator from_incident_iterator;
+	std::list<std::shared_ptr<MyEdgeData>>::iterator to_incident_iterator;
 
 	int cover = -1;
 	int level = 0;
 
 	std::list<std::shared_ptr<MyEdgeData>>::iterator nontree_edges_iterator;
 
-	std::string label; // obsolete
+	std::string label;
 
-	virtual std::ostream& ToString(std::ostream& o) const {
-		//return o << "Edge " << label;
-		return o << label;
-	}
+	virtual std::ostream& ToString(std::ostream& o) const { return o << label; }
 };
 
 struct MyClusterData: public TopTree::ClusterData {
@@ -198,229 +199,373 @@ struct MyClusterData: public TopTree::ClusterData {
 ////////////////////////////////////////////////////////////////////////////////
 
 class DoubleConnectivity {
+friend void TopTree::Join(std::shared_ptr<TopTree::ICluster> leftChild, std::shared_ptr<TopTree::ICluster> rightChild, std::shared_ptr<TopTree::ICluster> parent);
+friend void TopTree::Split(std::shared_ptr<ICluster> leftChild, std::shared_ptr<ICluster> rightChild, std::shared_ptr<ICluster> parent);
+friend void TopTree::Create(std::shared_ptr<ICluster> cluster, std::shared_ptr<EdgeData> edge);
+friend void TopTree::Destroy(std::shared_ptr<ICluster> cluster, std::shared_ptr<EdgeData> edge);
 public:
-std::shared_ptr<TopTree::ITopTree> TT;
-std::vector<std::vector<int>> incident;
-std::vector<std::vector<int>> size;
-int max_l = 0;
-int N = 0;
+	static DoubleConnectivity *dc;
 
-int get_size(uint u, int i) {
-	// indexes are shifted +1
-	uint i_index = i+1;
-	if (size.size() <= u) size.resize(u+1);
-	if (size[u].size() <= i_index) size[u].resize(i_index+1);
-	return size[u][i_index];
-}
-void set_size(uint u, int i, int value) {
-	// indexes are shifted +1
-	uint i_index = i+1;
-	if (size.size() <= u) size.resize(u+1);
-	if (size[u].size() <= i_index) size[u].resize(i_index+1);
-	size[u][i_index] = value;
-}
-int get_incident(uint u, int i) {
-	// indexes are shifted +1
-	uint i_index = i+1;
-	if (incident.size() <= u) incident.resize(u+1);
-	if (incident[u].size() <= i_index) incident[u].resize(i_index+1);
-	return incident[u][i_index];
-}
-void set_incident(uint u, int i, int value) {
-	// indexes are shifted +1
-	uint i_index = i+1;
-	if (incident.size() <= u) incident.resize(u+1);
-	if (incident[u].size() <= i_index) incident[u].resize(i_index+1);
-	incident[u][i_index] = value;
-}
-
-std::list<std::shared_ptr<MyEdgeData>> nontree_edges;
-
-// Decide if v and w are c-2-edge connected on level 0
-bool Double_edge_connected(int v, int w) {
-	auto cluster = TT->Expose(v, w);
-	auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
-	return (data->cover > 0);
-} // COMPLETE
-
-// For all e in v...w: if c(e) < i, set c(e)=i (lazy propagate down)
-void Cover(int v, int w, int i) {
-	auto cluster = TT->Expose(v, w);
-
-	internal_cover(cluster, i, v, w); // TODO: correctly send edge as MyEdgeData
-}
-
-// For all e in v...w: if c(e)<=i, set c(e)=-1 (lazy propagate down)
-void Uncover(int v, int w, int i) {
-	auto cluster = TT->Expose(v, w);
-
-	internal_uncover(cluster, i);
-}
-
-// INTERNAL:
-void internal_cover(std::shared_ptr<TopTree::ICluster> cluster, int i, std::shared_ptr<MyEdgeData> edge) {
-	auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
-	if (data->cover < i) {
-		data->cover = i;
-		data->cover_edge = edge;
-	}
-	// if (i < data->cover_set) // nothing
-	if (i <= data->cover_limit && i >= data->cover_set) {
-		data->cover_set = i;
-		data->cover_edge_set = edge;
-	} else if (i > data->cover_limit) {
-		data->cover_limit = i;
-		data->cover_set = i;
-		data->cover_edge_set = edge;
+	DoubleConnectivity(std::shared_ptr<TopTree::ITopTree> top_tree) {
+		TT = top_tree;
+		base_tree = std::make_shared<TopTree::BaseTree>();
+		TT->InitFromBaseTree(base_tree); // empty for now
+		dc = this;
 	}
 
-	auto l = cluster->getLeftBoundary();
-	auto r = cluster->getRightBoundary();
-	for (int j = -1; j <= i; j++) {
-		for (int k = -1; k <= max_l; k++) {
-			data->set_size(l, j, k, data->get_size(l, -1, k));
-			data->set_size(r, j, k, data->get_size(r, -1, k));
+	// Decide if v and w are c-2-edge connected on level 0
+	bool Double_edge_connected(int v, int w) {
+		int vv = get_vertex(v);
+		int ww = get_vertex(w);
 
-			data->set_incident(l, j, k, data->get_incident(l, -1, k));
-			data->set_incident(r, j, k, data->get_incident(r, -1, k));
+		auto cluster = TT->Expose(vv, ww);
+		auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
+		return (data->cover > 0);
+	} // COMPLETE
+
+	void Insert(int v, int w) {
+		if (v == w) return;
+
+		// 1. Try to Link v and w
+		int vv = get_vertex(v);
+		int ww = get_vertex(w);
+
+		auto edge = std::make_shared<MyEdgeData>(vv, ww);
+		auto result = TT->Link(vv, ww, edge);
+
+		// 2. If link successful we end
+		if (result != NULL) return;
+
+		// 3. Otherwise if cannot link (v and w are already connected)
+		// set edge level
+		edge->level = 0;
+		// add edge to non tree edges
+		nontree_edges.push_back(edge);
+		register_at_vertices(edge);
+		edge->nontree_edges_iterator = std::prev(nontree_edges.end());
+		// call cover
+		cover(edge, 0);
+	}
+
+
+	void Delete(std::shared_ptr<MyEdgeData> edge) {
+		// May be tree or nontree edge
+		int vv = edge->from;
+		int ww = edge->to;
+
+		// 1. Expose v-w
+		auto cluster = TT->Expose(vv, ww);
+		if (cluster == NULL) {
+			// This should never happen, but just for debug and to be sure
+			std::cerr << "Vertices " << vv << " and " << ww << " not even connected, cannot delete" << std::endl;
+			return;
 		}
-	}
-} // COMPLETE
+		auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
 
-void internal_uncover(std::shared_ptr<TopTree::ICluster> cluster, int i) {
-	auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
-	if (data->cover <= i) {
-		data->cover = -1;
-		data->cover_edge = NULL;
-	}
-	// if (i < data->cover_set) // nothing
-	if (i >= data->cover_set) {
-		data->cover_set = -1;
-		data->cover_edge_set = NULL;
-		data->cover_limit = std::max(data->cover_limit, i);
-	}
-
-	int l = cluster->getLeftBoundary();
-	int r = cluster->getRightBoundary();
-
-	for (int j = -1; j <= i; j++) {
-		for (int k = -1; k <= max_l; k++) {
-			data->set_size(l, j, k, data->get_size(l, i+1, k));
-			data->set_size(r, j, k, data->get_size(r, i+1, k));
-
-			data->set_incident(l, j, k, data->get_incident(l, i+1, k));
-			data->set_incident(r, j, k, data->get_incident(r, i+1, k));
-		}
-	}
-} // COMPLETE
-
-
-void Clean(std::shared_ptr<TopTree::ICluster> leftChild, std::shared_ptr<TopTree::ICluster> rightChild, std::shared_ptr<TopTree::ICluster> parent) {
-	// Part of the Split is an Clean method
-	auto data = std::dynamic_pointer_cast<MyClusterData>(parent->data);
-
-	// For each path child A of C call Uncover(A, cover_limit) and Cover(A, cover_set, cover_edge_set)
-	if (isLeftRake(leftChild, rightChild, parent))
-		internal_uncover(rightChild, data->cover_limit); // Only the right is a path child
-	else if (isRightRake(leftChild, rightChild, parent))
-		internal_uncover(leftChild, data->cover_limit); // Only the left is a path child
-	else {
-		internal_uncover(leftChild, data->cover_limit);
-		internal_uncover(rightChild, data->cover_limit);
-	}
-
-	data->cover_set = -1;
-	data->cover_limit = -1;
-	data->cover_edge_set = NULL;
-}
-
-void Recover(int v, int w, int i) {
-	auto clusterC = TT->Expose(v, w);
-	auto dataC = std::dynamic_pointer_cast<MyClusterData>(clusterC->data);
-
-	// Firstly u=v
-	auto u = clusterC->getLeftBoundary();
-	while (true) {
-		while (dataC->get_incident(u, -1, i) + get_incident(u, i) > 0) {
-			std::shared_ptr<MyEdgeData> edge = Find(u, clusterC, i);
-			auto clusterD = TT->Expose(edge->from, edge->to);
-			auto dataD = std::dynamic_pointer_cast<MyClusterData>(clusterD->data);
-			if ((dataD->get_size(edge->from, -1, i+1) + 2) > N/(1<<(i+1))) {
-				internal_cover(clusterD, i, edge);
-				break;
-			} else {
-				edge->level = i+1;
-				incident[edge->from][i]--;
-				incident[edge->to][i]--;
-				incident[edge->from][i]++;
-				incident[edge->to][i]++;
-				internal_cover(clusterD, i+1, edge);
+		// 2. Delete edge
+		if (data->edge != NULL) {
+			// 2.1 If v-w is a bridge -> just delete it
+			if (data->cover == -1) {
+				TT->Cut(vv, ww);
+				return;
 			}
-			clusterC = TT->Expose(v,w);
-			dataC = std::dynamic_pointer_cast<MyClusterData>(clusterC->data);
+			// 2.2 Otherwise if it is an tree edge call Swap
+			swap(vv, ww);
 		}
-		if (u == clusterC->getLeftBoundary()) u == clusterC->getRightBoundary();
-		else break; //end of the u=w run
-	}
-}
+		internal_uncover(cluster, edge->level);
 
-std::shared_ptr<MyEdgeData> Find(int a, std::shared_ptr<TopTree::ICluster> cluster, int i) {
-	if (incident[a][i] > 0) {
-		// TODO: return a nontree edge incdent to a on level i
-	} else {
-		Clean(/*TODO childs*/ cluster);
-	}
-}
+		unregister_at_vertices(edge);
 
-void Swap(int v, int w) {
-	auto edgeCluster = TT->Expose(v, w);
-	auto data = std::dynamic_pointer_cast<MyClusterData>(edgeCluster->data);
-
-	if (data->edge == NULL) {
-		std::cerr << "Edge cluster " << v << "-" << w << " does not have underlying edge" << std::endl;
-		return;
+		for (int i = edge->level; i >= 0; i--) recover(vv, ww, i);
 	}
 
-	if (data->cover < 0) { // it is a bridge
-		//std::cerr << "Edge " << *edgeCluster << " is a bridge, cannot swap" << std::endl;
-		std::cerr << "Edge " << v << "-" << w << " is a bridge, cannot swap" << std::endl;
-		return;
+private:
+	std::shared_ptr<TopTree::ITopTree> TT;
+	std::shared_ptr<TopTree::BaseTree> base_tree;
+
+	std::vector<bool> vertex_added;
+	std::vector<int> vertex_mapping; // from local indexes to the top trees structure indexes
+	std::vector<int> inverse_vertex_mapping; // from top trees structure indexes to local indexes
+
+	std::list<std::shared_ptr<MyEdgeData>> nontree_edges;
+
+	int get_vertex(uint v) {
+		if (v >= vertex_added.size()) {
+			vertex_added.resize(v+1);
+			vertex_mapping.resize(v+1);
+		}
+
+		if (!vertex_added[v]) {
+			N++;
+			// Recompute max_l
+			while (1<<max_l < N) max_l++; // max_l = upper_part(log N)
+
+			vertex_added[v] = true;
+			vertex_mapping[v] = base_tree->AddVertex(std::make_shared<MyVertexData>(std::to_string(v)));
+			inverse_vertex_mapping[vertex_mapping[v]] = v;
+		}
+
+		return vertex_mapping[v];
 	}
 
-	auto cover = data->cover;
-	auto coverEdge = data->cover_edge;
+	////////////////////////////////
 
-	// 1. Set level of the v-w to the cover
-	data->edge->level = cover;
-	// 1.1 Call InitTreeEdge(x,y)
-	coverEdge->cover = -1;
+	std::vector<std::vector<std::list<std::shared_ptr<MyEdgeData>>>> incident;
+	std::vector<std::vector<int>> size;
+	int max_l = 0;
+	int N = 0;
 
-	// 2. Replace tree edge v-w for coverEdge x-y
-	// 2.1 Remove coverEdge from nontree_edges
-	nontree_edges.erase(coverEdge->nontree_edges_iterator);
-	// 2.2 Remove v-w from tree, push x-y into tree
-	TT->Cut(v, w);
-	TT->Link(coverEdge->from, coverEdge->to, coverEdge);
-	// 2.3 Push v-w edge into nontree_edges
-	nontree_edges.push_back(data->edge);
-	data->edge->nontree_edges_iterator = std::prev(nontree_edges.end());
+	int get_size(uint u, int i) {
+		return 1; // citation: "For any vertex v and any level i: size[v][i]=1"
+	}
+	/*
+	int get_size(uint u, int i) {
+		// indexes are shifted +1
+		uint i_index = i+1;
+		if (size.size() <= u) size.resize(u+1);
+		if (size[u].size() <= i_index) size[u].resize(i_index+1, 1);
+		return size[u][i_index];
+	}
+	void set_size(uint u, int i, int value) {
+		// indexes are shifted +1
+		uint i_index = i+1;
+		if (size.size() <= u) size.resize(u+1);
+		if (size[u].size() <= i_index) size[u].resize(i_index+1, 1);
+		size[u][i_index] = value;
+	}*/
+	int get_incident(uint u, int i) {
+		// indexes are shifted +1
+		uint i_index = i+1;
+		if (incident.size() <= u) incident.resize(u+1);
+		if (incident[u].size() <= i_index) incident[u].resize(i_index+1);
+		return incident[u][i_index].size();
+	}
+	std::shared_ptr<MyEdgeData> get_incident_edge(uint u, int i) {
+		// indexes are shifted +1
+		uint i_index = i+1;
+		// return first such edge
+		return incident[u][i_index].front();
+	}
+	/*void set_incident(uint u, int i, int value) {
+		// indexes are shifted +1
+		uint i_index = i+1;
+		if (incident.size() <= u) incident.resize(u+1);
+		if (incident[u].size() <= i_index) incident[u].resize(i_index+1);
+		incident[u][i_index] = value;
+	}*/
 
-	// 3. Call Cover
-	Cover(v, w, cover);
-}
+	// For all e in v...w: if c(e) < i, set c(e)=i (lazy propagate down)
+	void cover(std::shared_ptr<MyEdgeData> edge, int i) {
+		int vv = edge->from;
+		int ww = edge->to;
+		auto cluster = TT->Expose(vv, ww);
+
+		internal_cover(cluster, i, edge);
+	}
+
+	// For all e in v...w: if c(e)<=i, set c(e)=-1 (lazy propagate down)
+	/*void uncover(int vv, int ww, int i) {
+		auto cluster = TT->Expose(vv, ww);
+
+		internal_uncover(cluster, i);
+	}*/
+
+	void register_at_vertices(std::shared_ptr<MyEdgeData> edge) {
+		incident[edge->from][edge->level].push_back(edge);
+		edge->from_incident_iterator = std::prev(incident[edge->from][edge->level].end());
+
+		incident[edge->to][edge->level].push_back(edge);
+		edge->to_incident_iterator = std::prev(incident[edge->to][edge->level].end());
+	}
+
+	void unregister_at_vertices(std::shared_ptr<MyEdgeData> edge) {
+		incident[edge->from][edge->level].erase(edge->from_incident_iterator);
+		incident[edge->to][edge->level].erase(edge->to_incident_iterator);
+	}
+
+	// INTERNAL:
+	void internal_cover(std::shared_ptr<TopTree::ICluster> cluster, int i, std::shared_ptr<MyEdgeData> edge) {
+		auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
+		if (data->cover < i) {
+			data->cover = i;
+			data->cover_edge = edge;
+		}
+		// if (i < data->cover_set) // nothing
+		if (i <= data->cover_limit && i >= data->cover_set) {
+			data->cover_set = i;
+			data->cover_edge_set = edge;
+		} else if (i > data->cover_limit) {
+			data->cover_limit = i;
+			data->cover_set = i;
+			data->cover_edge_set = edge;
+		}
+
+		auto l = cluster->getLeftBoundary();
+		auto r = cluster->getRightBoundary();
+		for (int j = -1; j <= i; j++) {
+			for (int k = -1; k <= max_l; k++) {
+				data->set_size(l, j, k, data->get_size(l, -1, k));
+				data->set_size(r, j, k, data->get_size(r, -1, k));
+
+				data->set_incident(l, j, k, data->get_incident(l, -1, k));
+				data->set_incident(r, j, k, data->get_incident(r, -1, k));
+			}
+		}
+	} // COMPLETE
+
+	void internal_uncover(std::shared_ptr<TopTree::ICluster> cluster, int i) {
+		auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
+		if (data->cover <= i) {
+			data->cover = -1;
+			data->cover_edge = NULL;
+		}
+		// if (i < data->cover_set) // nothing
+		if (i >= data->cover_set) {
+			data->cover_set = -1;
+			data->cover_edge_set = NULL;
+			data->cover_limit = std::max(data->cover_limit, i);
+		}
+
+		int l = cluster->getLeftBoundary();
+		int r = cluster->getRightBoundary();
+
+		for (int j = -1; j <= i; j++) {
+			for (int k = -1; k <= max_l; k++) {
+				data->set_size(l, j, k, data->get_size(l, i+1, k));
+				data->set_size(r, j, k, data->get_size(r, i+1, k));
+
+				data->set_incident(l, j, k, data->get_incident(l, i+1, k));
+				data->set_incident(r, j, k, data->get_incident(r, i+1, k));
+			}
+		}
+	} // COMPLETE
+
+
+	void clean(std::shared_ptr<TopTree::ICluster> leftChild, std::shared_ptr<TopTree::ICluster> rightChild, std::shared_ptr<TopTree::ICluster> parent) {
+		// Part of the Split is an Clean method
+		auto data = std::dynamic_pointer_cast<MyClusterData>(parent->data);
+
+		// For each path child A of C call Uncover(A, cover_limit) and Cover(A, cover_set, cover_edge_set)
+		if (isLeftRake(leftChild, rightChild, parent))
+			internal_uncover(rightChild, data->cover_limit); // Only the right is a path child
+		else if (isRightRake(leftChild, rightChild, parent))
+			internal_uncover(leftChild, data->cover_limit); // Only the left is a path child
+		else {
+			internal_uncover(leftChild, data->cover_limit);
+			internal_uncover(rightChild, data->cover_limit);
+		}
+
+		data->cover_set = -1;
+		data->cover_limit = -1;
+		data->cover_edge_set = NULL;
+	}
+
+	void recover(int vv, int ww, int i) {
+		auto clusterC = TT->Expose(vv, ww);
+		auto dataC = std::dynamic_pointer_cast<MyClusterData>(clusterC->data);
+
+		// Firstly u=v
+		auto u = clusterC->getLeftBoundary();
+		while (true) {
+			while (dataC->get_incident(u, -1, i) + get_incident(u, i) > 0) {
+				std::shared_ptr<MyEdgeData> edge = Find(u, clusterC, i);
+				auto clusterD = TT->Expose(edge->from, edge->to);
+				auto dataD = std::dynamic_pointer_cast<MyClusterData>(clusterD->data);
+				if ((dataD->get_size(edge->from, -1, i+1) + 2) > N/(1<<(i+1))) {
+					internal_cover(clusterD, i, edge);
+					break;
+				} else {
+					unregister_at_vertices(edge);
+					edge->level = i+1;
+					register_at_vertices(edge);
+					internal_cover(clusterD, i+1, edge);
+				}
+				clusterC = TT->Expose(vv,ww);
+				dataC = std::dynamic_pointer_cast<MyClusterData>(clusterC->data);
+			}
+			if (u == clusterC->getLeftBoundary()) u = clusterC->getRightBoundary();
+			else break; //end of the u=w run
+		}
+	}
+
+	std::shared_ptr<MyEdgeData> Find(int a, std::shared_ptr<TopTree::ICluster> cluster, int i) {
+		if (get_incident(a, i) > 0) {
+			return get_incident_edge(a, i);
+		} else {
+			auto childs = TT->SplitRoot(cluster);
+			if (childs.first == NULL || childs.second == NULL) {
+				std::cerr << "ERROR: Cannot split cluster " << *cluster << " into childs" << std::endl;
+			}
+
+			clean(childs.first, childs.second, cluster);
+			int common = childs.first->getLeftBoundary();
+			if (common == childs.second->getLeftBoundary() || common == childs.second->getRightBoundary()) common = childs.first->getRightBoundary();
+
+			auto A = childs.first;
+			auto B = childs.second;
+			int other_a = (A->getLeftBoundary() == common ? A->getRightBoundary() : A->getLeftBoundary());
+			int other_b = (B->getLeftBoundary() == common ? B->getRightBoundary() : B->getLeftBoundary());
+
+			if (a == other_b) {
+				std::swap(other_a, other_b);
+				std::swap(A, B);
+			}
+		}
+	}
+
+	void swap(int vv, int ww) {
+		auto edgeCluster = TT->Expose(vv, ww);
+		auto data = std::dynamic_pointer_cast<MyClusterData>(edgeCluster->data);
+
+		if (data->edge == NULL) {
+			std::cerr << "Edge cluster " << vv << "-" << ww << " does not have underlying edge" << std::endl;
+			return;
+		}
+
+		if (data->cover < 0) { // it is a bridge
+			//std::cerr << "Edge " << *edgeCluster << " is a bridge, cannot swap" << std::endl;
+			std::cerr << "Edge " << vv << "-" << ww << " is a bridge, cannot swap" << std::endl;
+			return;
+		}
+
+		auto coverValue = data->cover;
+		auto coverEdge = data->cover_edge;
+		auto treeEdge = data->edge;
+
+		// 1. Set level of the v-w to the cover
+		treeEdge->level = coverValue;
+		// 1.1 Call InitTreeEdge(x,y)
+		coverEdge->cover = -1;
+
+		// 2. Replace tree edge v-w for coverEdge x-y
+		// 2.1 Remove coverEdge from nontree_edges
+		nontree_edges.erase(coverEdge->nontree_edges_iterator);
+		unregister_at_vertices(coverEdge);
+		// 2.2 Remove v-w from tree, push x-y into tree
+		TT->Cut(vv, ww);
+		TT->Link(coverEdge->from, coverEdge->to, coverEdge);
+		// 2.3 Push v-w edge into nontree_edges
+		nontree_edges.push_back(treeEdge);
+		register_at_vertices(treeEdge);
+		treeEdge->nontree_edges_iterator = std::prev(nontree_edges.end());
+
+		// 3. Call Cover (treeEdge is now nonTree edge)
+		cover(treeEdge, coverValue);
+	}
 
 };
+DoubleConnectivity* DoubleConnectivity::dc = NULL;
 
 
 ////////////////////////////////////////////////////////////////////////////////
-
-DoubleConnectivity *dc; // TODO: save into this variable
 
 // Merge
 void TopTree::Join(std::shared_ptr<TopTree::ICluster> leftChild, std::shared_ptr<TopTree::ICluster> rightChild, std::shared_ptr<TopTree::ICluster> parent) {
 	auto data = std::dynamic_pointer_cast<MyClusterData>(parent->data);
 	auto left_data = std::dynamic_pointer_cast<MyClusterData>(leftChild->data);
 	auto right_data = std::dynamic_pointer_cast<MyClusterData>(rightChild->data);
+
+	auto dc = DoubleConnectivity::dc;
 
 	/////////////////////////////////////////////////////////
 	// Init endpoints in the new cluster - O(1) computations:
@@ -557,7 +702,7 @@ void TopTree::Join(std::shared_ptr<TopTree::ICluster> leftChild, std::shared_ptr
 	}
 } // COMPLETE
 void TopTree::Split(std::shared_ptr<ICluster> leftChild, std::shared_ptr<ICluster> rightChild, std::shared_ptr<ICluster> parent) {
-	dc->Clean(leftChild, rightChild, parent);
+	DoubleConnectivity::dc->clean(leftChild, rightChild, parent);
 	// delete C - not needed, it will be deleted by TopTrees structure
 } // COMPLETE
 
@@ -565,8 +710,8 @@ void TopTree::Split(std::shared_ptr<ICluster> leftChild, std::shared_ptr<ICluste
 void TopTree::Create(std::shared_ptr<ICluster> cluster, std::shared_ptr<EdgeData> edge) {
 	auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
 	auto edge_data = std::dynamic_pointer_cast<MyEdgeData>(edge);
-	data->cover = -1;
-	edge_data->cover = -1;
+	data->cover = -1; // InitTreeEdge
+	edge_data->cover = -1; // InitTreeEdge
 
 	data->endpoint_a = cluster->getLeftBoundary();
 	data->endpoint_b = cluster->getRightBoundary();
