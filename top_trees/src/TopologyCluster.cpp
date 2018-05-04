@@ -379,7 +379,7 @@ void TopologyCluster::do_split(std::vector<std::shared_ptr<TopologyCluster>>* sp
 			// 2. Split with the first
 			if (first->is_top_cluster) {
 				Split(first, edge_cluster, combined_edge_cluster);
-			} else combined_edge_cluster->data = data;
+			} else edge_cluster->data = combined_edge_cluster->data;
 
 			// 3. Destroy edge cluster
 			Destroy(edge_cluster, edge->data);

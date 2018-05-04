@@ -47,6 +47,9 @@ public:
 	#endif
 
 	bool in_same_tree(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w) {
+		// 0. If one of them has no cluster -> it is independent vertex, they are not connected
+		if (v->topology_cluster == NULL || w->topology_cluster == NULL) return false;
+
 		// 1. Test if they aren't in the same tree (if they are already linked) - O(log N)
 		auto v_root = v->topology_cluster;
 		if (!v->subvertices.empty()) v_root = v->subvertices.front()->topology_cluster;
@@ -827,7 +830,15 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::get_verte
 std::shared_ptr<TopologyCluster> TopologyTopTree::Internal::link(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w, std::shared_ptr<BaseTree::Internal::Edge> edge) {
 	// This function is not aware of splitted vertices (not needs it)
 
+	if (v->topology_cluster == NULL) {
+		v->topology_cluster = std::make_shared<TopologyCluster>();
+		v->topology_cluster->vertex = v;
+	}
 	auto cluster_v = v->topology_cluster;
+	if (w->topology_cluster == NULL) {
+		w->topology_cluster = std::make_shared<TopologyCluster>();
+		w->topology_cluster->vertex = w;
+	}
 	auto cluster_w = w->topology_cluster;
 
 	#ifdef DEBUG
