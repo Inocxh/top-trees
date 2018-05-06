@@ -95,7 +95,7 @@ std::ostream& TopologyCluster::ToString(std::ostream& o) const {
 	//o << index;
 	if (edge != NULL) o << *edge->data;
 	else if (vertex != NULL) o << *vertex;
-	if (boundary_left != NULL) o << "(" << *boundary_left->data << "-" << *boundary_right->data << ")";
+	if (boundary_left != NULL) o << "[" << *boundary_left << "-" << *boundary_right << "]";
 	if (is_rake_branch) o << "R";
 	return o;
 }
@@ -164,20 +164,20 @@ void TopologyCluster::do_join() {
 		edge_cluster->boundary_right = edge->to;
 		if (!edge->subvertice_edge) Create(edge_cluster, edge->data);
 
-		// 2. Join with the first (if there is something to Join)
+		// 2. Join with the edge first (if there is something to Join)
 		if (first->is_top_cluster) {
 			#ifdef DEBUG
-				std::cerr << "... joining " << *first << " with edge with endpoints " << *edge_cluster->boundary_left->data << "," << *edge_cluster->boundary_right->data << std::endl;
+				std::cerr << "... joining " << *first << " (" << *first->boundary_left << "-" << *first->boundary_right << ") with edge with endpoints " << *edge_cluster->boundary_left << "-" << *edge_cluster->boundary_right << std::endl;
 			#endif
 			combined_edge_cluster = std::make_shared<SimpleCluster>();
 			if (first->is_rake_branch) {
-				if (edge->subvertice_edge) {
-					combined_edge_cluster->boundary_left = first->boundary_left;
-					combined_edge_cluster->boundary_right = first->boundary_right;
-				} else {
+				//if (edge->subvertice_edge) {
+				//	combined_edge_cluster->boundary_left = first->boundary_left;
+				//	combined_edge_cluster->boundary_right = first->boundary_right;
+				//} else {
 					combined_edge_cluster->boundary_left = edge_cluster->boundary_left;
 					combined_edge_cluster->boundary_right = edge_cluster->boundary_right;
-				}
+				//}
 			} else {
 				// It is compress
 				// i) get common vertex
@@ -187,17 +187,20 @@ void TopologyCluster::do_join() {
 				combined_edge_cluster->boundary_left = (common_vertex == first->boundary_left || common_vertex == first->boundary_left->superior_vertex ? first->boundary_right : first->boundary_left);
 				combined_edge_cluster->boundary_right = (common_vertex == edge_cluster->boundary_left || common_vertex == edge_cluster->boundary_left->superior_vertex ? edge_cluster->boundary_right : edge_cluster->boundary_left);
 			}
-			if (!edge->subvertice_edge) Join(first, edge_cluster, combined_edge_cluster);
+			if (!edge->subvertice_edge) {
+				if (first->data == combined_edge_cluster->data || edge_cluster->data == combined_edge_cluster->data) combined_edge_cluster->data = InitClusterData();
+				Join(first, edge_cluster, combined_edge_cluster);
+			}
 			else combined_edge_cluster->data = first->data;
 			#ifdef DEBUG
-				std::cerr << "... combined edge have endpoints " << *combined_edge_cluster->boundary_left->data << "," << *combined_edge_cluster->boundary_right->data << std::endl;
+				std::cerr << "... combined edge have endpoints " << *combined_edge_cluster->boundary_left << "," << *combined_edge_cluster->boundary_right << std::endl;
 			#endif
 		} else combined_edge_cluster = edge_cluster;
 
 		// 3. Join with the second (if there is something to Join)
 		if (second->is_top_cluster) {
 			#ifdef DEBUG
-				std::cerr << "... joining " << *second << " with combined edge" << std::endl;
+				std::cerr << "... joining " << *second << " (" << *second->boundary_left << "-" << *second->boundary_right << ") with combined edge " << *combined_edge_cluster->boundary_left << "-" << *combined_edge_cluster->boundary_right << std::endl;
 			#endif
 			if (second->is_rake_branch) {
 				boundary_left = combined_edge_cluster->boundary_left;
@@ -206,15 +209,27 @@ void TopologyCluster::do_join() {
 			} else {
 				// It is compress
 				// i) get common vertex
-				auto common_vertex = get_common_vertex(second, combined_edge_cluster, !edge->subvertice_edge);
+				auto common_vertex = get_common_vertex(second, combined_edge_cluster, !edge->subvertice_edge || first->is_top_cluster);
 
 				// ii) Get boundary vertices
 				boundary_left = (common_vertex == second->boundary_left || common_vertex == second->boundary_left->superior_vertex ? second->boundary_right : second->boundary_left);
 				boundary_right = (common_vertex == combined_edge_cluster->boundary_left || common_vertex == combined_edge_cluster->boundary_left->superior_vertex ? combined_edge_cluster->boundary_right : combined_edge_cluster->boundary_left);
 			}
 			// Join if there is something in the combined edge cluster - either when there is normal edge or there was something in the first cluster
-			if (!edge->subvertice_edge || first->is_top_cluster) Join(second, combined_edge_cluster, shared_from_this());
+			if (!edge->subvertice_edge || first->is_top_cluster) {
+				#ifdef DEBUG
+					std::cerr << "Joining " << *second->boundary_left << "-" << *second->boundary_right << " and "
+						<< *combined_edge_cluster->boundary_left << "-" << *combined_edge_cluster->boundary_right << " into "
+						<< *boundary_left << "-" << *boundary_right << std::endl;
+				#endif
+				if (second->data == data || combined_edge_cluster->data == data) data = InitClusterData();
+				Join(second, combined_edge_cluster, shared_from_this());
+			}
 			else data = second->data;
+
+			#ifdef DEBUG
+				std::cerr << "... cluster have endpoints " << *boundary_left << "," << *boundary_right << std::endl;
+			#endif
 		} else {
 			// Copy from combined egde cluster into this cluster
 			data = combined_edge_cluster->data;
@@ -374,12 +389,16 @@ void TopologyCluster::do_split(std::vector<std::shared_ptr<TopologyCluster>>* sp
 			// 1. Split with the second
 			if (second->is_top_cluster) {
 				Split(second, combined_edge_cluster, shared_from_this());
-			} else combined_edge_cluster->data = data;
+			} else {
+				combined_edge_cluster->data = data;
+			}
 
 			// 2. Split with the first
 			if (first->is_top_cluster) {
 				Split(first, edge_cluster, combined_edge_cluster);
-			} else edge_cluster->data = combined_edge_cluster->data;
+			} else {
+				edge_cluster->data = combined_edge_cluster->data;
+			}
 
 			// 3. Destroy edge cluster
 			Destroy(edge_cluster, edge->data);

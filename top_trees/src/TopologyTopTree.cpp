@@ -286,7 +286,12 @@ void TopologyTopTree::Internal::update_clusters_only_child(std::shared_ptr<Topol
 
 void TopologyTopTree::Internal::update_clusters() {
 	// When all lists empty -> end procedure
-	if (delete_list.size() == 0 && abandon_list.size() == 0 && change_list.size() == 0) return;
+	if (delete_list.size() == 0 && abandon_list.size() == 0 && change_list.size() == 0) {
+		#ifdef DEBUG
+			std::cerr << "Ending with update clusters" << std::endl;
+		#endif
+		return;
+	}
 
 	#ifdef DEBUG
 		std::cerr << std::endl << "Delete list(" << delete_list.size() << "): ";
@@ -474,7 +479,7 @@ void TopologyTopTree::Internal::update_clusters() {
 	change_list = next_change;
 	abandon_list = next_abandon;
 
-	return update_clusters();
+	update_clusters();
 }
 
 
@@ -694,8 +699,8 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::get_verte
 			exit(1);
 		}
 
-		// Have to add new subvertice, we add it as second subvertice in the chain
-		// 1. Prepare new subvertice
+		// Have to add new subvertex, we add it as second subvertex in the chain
+		// 1. Prepare new subvertex
 		auto subvertex = std::make_shared<BaseTree::Internal::Vertex>(std::make_shared<VertexData>());
 		subvertex->index = v->index; // index of the subvertex is the same as index of the superior vertex (from the Join point of view it is the same vertex)
 		subvertex->superior_vertex = v;
@@ -718,18 +723,34 @@ std::shared_ptr<BaseTree::Internal::Vertex> TopologyTopTree::Internal::get_verte
 			}
 		}
 		//std::cerr << "Edge: " << edge << std::endl;
-		cut(*first, *second, edge);
+		auto cut_result = cut(*first, *second, edge);
+		#ifdef DEBUG_GRAPHVIZ_VERBOSE
+			std::ostringstream ss;
+			ss << "Getting vertex for link fox " << *v << " - added new subvertex " << *subvertex;
+			print_graphviz(std::get<0>(cut_result), ss.str() + " after cut 1/2", true);
+			print_graphviz(std::get<1>(cut_result), ss.str() + " after cut 2/2", true);
+		#endif
 
 		// 3. Link first-new-second
 		// 3.1 Insert new subvertex a
 		subvertex->superior_vertex_subvertices_iter = v->subvertices.insert(second, subvertex);
 		// 3.2 Link itself
-		link(*first, subvertex, edge); // reuse original edge
+		edge->from = *first;
+		edge->to = subvertex;
+		auto link_result = link(*first, subvertex, edge); // reuse original edge
+		#ifdef DEBUG_GRAPHVIZ_VERBOSE
+			print_graphviz(link_result, ss.str() + " after first link", true);
+		#endif
+
 		auto edge2 = std::make_shared<BaseTree::Internal::Edge>(subvertex, *second, std::make_shared<EdgeData>());
 		edge2->subvertice_edge = true;
 		v->subvertice_edges.push_back(edge2);
 		edge2->subvertice_edges_iterator = std::prev(v->subvertice_edges.end());
-		link(subvertex, *second, edge2);
+		link_result = link(subvertex, *second, edge2);
+
+		#ifdef DEBUG_GRAPHVIZ_VERBOSE
+			print_graphviz(link_result, ss.str() + " after second link", true);
+		#endif
 
 		return subvertex;
 	} else if (v->degree == 3) {
@@ -885,6 +906,13 @@ std::shared_ptr<TopologyCluster> TopologyTopTree::Internal::link(std::shared_ptr
 		std::cerr << "ERROR: Expecting 1 root after link operation, found " << found_roots.size() << " roots!" << std::endl;
 		exit(1);
 	}
+
+	#ifdef DEBUG_GRAPHVIZ
+		std::ostringstream ss;
+		ss << "After inner join of " << *v << " and " << *w;
+		print_graphviz(found_roots[0], ss.str(), true);
+	#endif
+
 	return found_roots[0];
 	// expecting that do_join will be called from outside Cut function
 }
@@ -1224,14 +1252,14 @@ std::shared_ptr<SimpleCluster> TopologyTopTree::Internal::expose_join_clusters(s
 		new_cluster->boundary_left = (BaseTree::Internal::Vertex::get_superior(parent_cluster->boundary_left) == v ? parent_cluster->boundary_right : parent_cluster->boundary_left);
 		new_cluster->boundary_right = (BaseTree::Internal::Vertex::get_superior(constructed_cluster->boundary_left) == v ? constructed_cluster->boundary_right : constructed_cluster->boundary_left);
 	}
-	Join(parent_cluster, constructed_cluster, new_cluster);
-
 	#ifdef DEBUG
 		std::cerr << "Finishing joining from vertex " << *v << ": ";
-		std::cerr << "-> joining " << *constructed_cluster->boundary_left << "-" << *constructed_cluster->boundary_right << " and "
-			<< *parent_cluster->boundary_left << "-" << *parent_cluster->boundary_right << " into "
+		std::cerr << "-> joining " << *parent_cluster->boundary_left << "-" << *parent_cluster->boundary_right << " and "
+			<< *constructed_cluster->boundary_left << "-" << *constructed_cluster->boundary_right << " into "
 			<< *new_cluster->boundary_left << "-" << *new_cluster->boundary_right << std::endl;
 	#endif
+	Join(parent_cluster, constructed_cluster, new_cluster);
+
 	return new_cluster;
 }
 
