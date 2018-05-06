@@ -293,12 +293,11 @@ public:
 
 		auto edge = std::make_shared<MyEdgeData>(vv, ww);
 		auto result = TT->Link(vv, ww, edge);
-
 		// 2. If link successful we end
 		if (result != NULL) return edge;
 
 		#ifdef DEBUG
-			std::cerr << "[Insertt B] Vertices are already connected, adding nontree edge" << std::endl;
+			std::cerr << "[Insert B] Vertices are already connected, adding nontree edge" << std::endl;
 		#endif
 
 		// 3. Otherwise if cannot link (v and w are already connected)
@@ -372,10 +371,12 @@ private:
 		if (!vertex_added[v]) {
 			N++;
 			// Recompute max_l
-			while (1<<max_l < N) max_l++; // max_l = upper_part(log N)
+			while (1<<max_l <= N) max_l++; // max_l = upper_part(log N)
 
 			vertex_added[v] = true;
-			vertex_mapping[v] = base_tree->AddVertex(std::make_shared<MyVertexData>(std::to_string(v)));
+			auto vertex_data = std::make_shared<MyVertexData>(std::to_string(v));
+			vertex_mapping[v] = base_tree->AddVertex(vertex_data);
+			vertex_data->label = std::to_string(vertex_mapping[v]);
 
 			if (vertex_mapping[v] >= inverse_vertex_mapping.size()) inverse_vertex_mapping.resize(vertex_mapping[v] + 1);
 			inverse_vertex_mapping[vertex_mapping[v]] = v;
@@ -729,6 +730,30 @@ void TopTree::Join(std::shared_ptr<TopTree::ICluster> leftChild, std::shared_ptr
 		<< " and " << rightChild->getLeftBoundary()  << "-" << rightChild->getRightBoundary() << "(" << right_data->cover << ")"
 		<< " into " << parent->getLeftBoundary()  << "-" << parent->getRightBoundary() << std::endl;
 	#endif
+
+	// HOTFIX FIXUP
+	if ((leftChild->getLeftBoundary() != left_data->endpoint_a && leftChild->getLeftBoundary() != left_data->endpoint_b)
+		|| (leftChild->getRightBoundary() != left_data->endpoint_a && leftChild->getRightBoundary() != left_data->endpoint_b)) {
+			left_data->endpoint_a = leftChild->getLeftBoundary();
+			left_data->endpoint_b = leftChild->getRightBoundary();
+		}
+
+	// HOTFIX FIXUP
+	if ((rightChild->getLeftBoundary() != right_data->endpoint_a && rightChild->getLeftBoundary() != right_data->endpoint_b)
+		|| (rightChild->getRightBoundary() != right_data->endpoint_a && rightChild->getRightBoundary() != right_data->endpoint_b)) {
+			right_data->endpoint_a = rightChild->getLeftBoundary();
+			right_data->endpoint_b = rightChild->getRightBoundary();
+		}
+
+	/*
+	std::cerr << "PARENT JOIN: " << parent->getLeftBoundary() << "-" << parent->getRightBoundary() << std::endl;
+
+	std::cerr << "Left: " << leftChild->getLeftBoundary() << "-" << leftChild->getRightBoundary() << std::endl;
+	std::cerr << "Left: " << left_data->endpoint_a << "-" << left_data->endpoint_b << std::endl;
+
+	std::cerr << "Right: " << rightChild->getLeftBoundary() << "-" << rightChild->getRightBoundary() << std::endl;
+	std::cerr << "Right: " << right_data->endpoint_a << "-" << right_data->endpoint_b << std::endl;
+	*/
 
 	auto dc = DoubleConnectivity::dc;
 
