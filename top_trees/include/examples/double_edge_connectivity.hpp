@@ -9,6 +9,8 @@
 //#define DEBUG_VERBOSE
 //#define DEBUG_VERBOSE_GETTERS
 
+//#define ASSERTS
+
 class MyVertexData: public TopTree::VertexData {
 public:
 	MyVertexData(std::string label): label{label} {}
@@ -31,6 +33,7 @@ public:
 	uint to;   // index of vertex in top tree structure
 	std::list<std::shared_ptr<MyEdgeData>>::iterator from_incident_iterator;
 	std::list<std::shared_ptr<MyEdgeData>>::iterator to_incident_iterator;
+	bool registered;
 
 	int cover = -1;
 	std::shared_ptr<MyEdgeData> cover_edge = NULL;
@@ -45,6 +48,8 @@ public:
 
 struct MyClusterData: public TopTree::ClusterData {
 	int cover;
+
+	int join_step;
 
 	int cover_limit; // in paper referred as cover^-
 	int cover_set; // in paper referred as cover^+, should be cover_set <= cover_limit
@@ -77,14 +82,17 @@ struct MyClusterData: public TopTree::ClusterData {
 		#ifdef DEBUG_VERBOSE_GETTERS
 			std::cerr << "   getting size " << v << "," << i << "," << j << ": ";
 		#endif
+		#ifdef ASSERTS
+			if (v != endpoint_a && v != endpoint_b) {
+				std::cerr << "Cannot get size for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
+				*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
+				exit(2);
+			}
+		#endif
 		std::vector<std::vector<int>>& vector = size_a;
 		if (v == endpoint_a) vector = size_a;
-		else if (v == endpoint_b) vector = size_b;
-		else {
-			std::cerr << "Cannot get size for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
-			*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
-			exit(2);
-		}
+		else vector = size_b;
+
 
 		// indexes are shifted +1
 		uint i_index = i+1;
@@ -100,14 +108,16 @@ struct MyClusterData: public TopTree::ClusterData {
 		#ifdef DEBUG_VERBOSE_GETTERS
 			std::cerr << "   setting size " << v << "," << i << "," << j << ": " << value;
 		#endif
+		#ifdef ASSERTS
+			if (v != endpoint_a && v != endpoint_b) {
+				std::cerr << "Cannot set size for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
+				*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
+				exit(2);
+			}
+		#endif
 		std::vector<std::vector<int>>& vector = size_a;
 		if (v == endpoint_a) vector = size_a;
-		else if (v == endpoint_b) vector = size_b;
-		else {
-			std::cerr << "Cannot set size for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
-			*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
-			exit(2);
-		}
+		else vector = size_b;
 
 		// indexes are shifted +1
 		uint i_index = i+1;
@@ -120,14 +130,16 @@ struct MyClusterData: public TopTree::ClusterData {
 		#ifdef DEBUG_VERBOSE_GETTERS
 			std::cerr << "   getting incident " << v << "," << i << "," << j << ": ";
 		#endif
+		#ifdef ASSERTS
+			if (v != endpoint_a && v != endpoint_b) {
+				std::cerr << "Cannot get incident for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
+				*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
+				exit(2);
+			}
+		#endif
 		std::vector<std::vector<int>>& vector = incident_a;
 		if (v == endpoint_a) vector = incident_a;
-		else if (v == endpoint_b) vector = incident_b;
-		else {
-			std::cerr << "Cannot get incident for vertex " << v << ", endpoints of edge clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
-			*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
-			exit(2);
-		}
+		else vector = incident_b;
 
 		// indexes are shifted +1
 		uint i_index = i+1;
@@ -143,14 +155,16 @@ struct MyClusterData: public TopTree::ClusterData {
 		#ifdef DEBUG_VERBOSE_GETTERS
 			std::cerr << "   setting incident " << v << "," << i << "," << j << ": " << value;
 		#endif
+		#ifdef ASSERTS
+			if (v != endpoint_a && v != endpoint_b) {
+				std::cerr << "Cannot set incident for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
+				*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
+				exit(2);
+			}
+		#endif
 		std::vector<std::vector<int>>& vector = incident_a;
 		if (v == endpoint_a) vector = incident_a;
-		else if (v == endpoint_b) vector = incident_b;
-		else {
-			std::cerr << "Cannot set incident for vertex " << v << ", endpoints of edge clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
-			*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
-			exit(2);
-		}
+		else vector = incident_b;
 
 		// indexes are shifted +1
 		uint i_index = i+1;
@@ -164,14 +178,17 @@ struct MyClusterData: public TopTree::ClusterData {
 		#ifdef DEBUG_VERBOSE_GETTERS
 			std::cerr << "   getting nonpath size " << v << "," << i << ": ";
 		#endif
+		#ifdef ASSERTS
+			if (v != endpoint_a && v != endpoint_b) {
+				std::cerr << "Cannot get nonpath size for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
+				*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
+				exit(2);
+			}
+		#endif
+
 		std::vector<int>& vector = nonpath_size_a;
 		if (v == endpoint_a) vector = nonpath_size_a;
-		else if (v == endpoint_b) vector = nonpath_size_b;
-		else {
-			std::cerr << "Cannot get nonpath size for vertex " << v << ", endpoints of edge clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
-			*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
-			exit(2);
-		}
+		else vector = nonpath_size_b;
 
 		// indexes are shifted +1
 		uint i_index = i+1;
@@ -185,14 +202,17 @@ struct MyClusterData: public TopTree::ClusterData {
 		#ifdef DEBUG_VERBOSE_GETTERS
 			std::cerr << "   setting nonpath size " << v << "," << i << ": " << value;
 		#endif
+		#ifdef ASSERTS
+			if (v != endpoint_a && v != endpoint_b) {
+				std::cerr << "Cannot set nonpath size for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
+				*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
+				exit(2);
+			}
+		#endif
+
 		std::vector<int>& vector = nonpath_size_a;
 		if (v == endpoint_a) vector = nonpath_size_a;
-		else if (v == endpoint_b) vector = nonpath_size_b;
-		else {
-			std::cerr << "Cannot set nonpath size for vertex " << v << ", endpoints of edge clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
-			*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
-			exit(2);
-		}
+		else vector = nonpath_size_b;
 
 		// indexes are shifted +1
 		uint i_index = i+1;
@@ -203,14 +223,17 @@ struct MyClusterData: public TopTree::ClusterData {
 		#ifdef DEBUG_VERBOSE_GETTERS
 			std::cerr << "   getting nonpath incident " << v << "," << i << ": ";
 		#endif
+		#ifdef ASSERTS
+			if (v != endpoint_a && v != endpoint_b) {
+				std::cerr << "Cannot get nonpath incident for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
+				*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
+				exit(2);
+			}
+		#endif
+
 		std::vector<int>& vector = nonpath_incident_a;
 		if (v == endpoint_a) vector = nonpath_incident_a;
-		else if (v == endpoint_b) vector = nonpath_incident_b;
-		else {
-			std::cerr << "Cannot get nonpath incident for vertex " << v << ", endpoints of edge clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
-			*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
-			exit(2);
-		}
+		else vector = nonpath_incident_b;
 
 		// indexes are shifted +1
 		uint i_index = i+1;
@@ -224,14 +247,17 @@ struct MyClusterData: public TopTree::ClusterData {
 		#ifdef DEBUG_VERBOSE_GETTERS
 			std::cerr << "   setting nonpath incident " << v << "," << i << ": " << value;
 		#endif
+		#ifdef ASSERTS
+			if (v != endpoint_a && v != endpoint_b) {
+				std::cerr << "Cannot set nonpath incident for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
+				*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
+				exit(2);
+			}
+		#endif
+
 		std::vector<int>& vector = nonpath_incident_a;
 		if (v == endpoint_a) vector = nonpath_incident_a;
-		else if (v == endpoint_b) vector = nonpath_incident_b;
-		else {
-			std::cerr << "Cannot set nonpath incident for vertex " << v << ", endpoints of edge clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
-			*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
-			exit(2);
-		}
+		else vector = nonpath_incident_b;
 
 		// indexes are shifted +1
 		uint i_index = i+1;
@@ -326,7 +352,8 @@ public:
 		auto cluster = TT->Expose(vv, ww);
 		if (cluster == NULL) {
 			// This should never happen, but just for debug and to be sure
-			std::cerr << "Vertices " << vv << " and " << ww << " not even connected, cannot delete" << std::endl;
+			std::cerr << "[Delete] Vertices " << vv << " and " << ww << " not even connected, cannot delete" << std::endl;
+			unregister_at_vertices(edge);
 			return;
 		}
 		auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
@@ -342,6 +369,11 @@ public:
 			swap(vv, ww);
 			// 2.3 Update cluster and data because they changed
 			cluster = TT->Expose(vv, ww);
+			if (cluster == NULL) {
+				std::cerr << "[Delete] Vertices " << vv << " and " << ww << " - cannot get cluster after swap" << std::endl;
+				unregister_at_vertices(edge);
+				return;
+			}
 			data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
 		}
 		internal_uncover(cluster, edge->level);
@@ -391,6 +423,8 @@ private:
 	std::vector<std::vector<int>> size;
 	int max_l = 0;
 	int N = 0;
+
+	int join_counter = 0;
 
 	int get_size(uint u, int i) {
 		return 1; // citation: "For any vertex v and any level i: size[v][i]=1"
@@ -442,6 +476,9 @@ private:
 		int vv = edge->from;
 		int ww = edge->to;
 		auto cluster = TT->Expose(vv, ww);
+		if (cluster == NULL) {
+			std::cerr << "Cover for edge " << *edge << " - cluster is NULL" << std::endl;
+		}
 
 		internal_cover(cluster, i, edge);
 	}
@@ -469,6 +506,8 @@ private:
 		if (incident[edge->to].size() <= index) incident[edge->to].resize(index+1);
 		incident[edge->to][index].push_back(edge);
 		edge->to_incident_iterator = std::prev(incident[edge->to][index].end());
+
+		edge->registered = true;
 	}
 
 	void unregister_at_vertices(std::shared_ptr<MyEdgeData> edge) {
@@ -478,18 +517,26 @@ private:
 
 		uint index = edge->level+1;
 
-		incident[edge->from][index].erase(edge->from_incident_iterator);
-		incident[edge->to][index].erase(edge->to_incident_iterator);
+		if (edge->registered) {
+			incident[edge->from][index].erase(edge->from_incident_iterator);
+			incident[edge->to][index].erase(edge->to_incident_iterator);
+			edge->registered = false;
+		}
 	}
 
 	// INTERNAL:
 	void internal_cover(std::shared_ptr<TopTree::ICluster> cluster, int i, std::shared_ptr<MyEdgeData> edge) {
+		if (cluster == NULL) {
+			std::cerr << "ERROR: No cluster for internal cover" << std::endl;
+			return;
+		}
+
 		auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
 		#ifdef DEBUG
 			std::cerr << "* Internal cover " << i << " for edge ";
 			if (edge != NULL) std::cerr << *edge;
 			else std::cerr << "NULL";
-			std::cerr << " at cluster " << cluster->getLeftBoundary() << "-" << cluster->getRightBoundary() << " with cover " << data->cover  << std::endl;
+			std::cerr << " at cluster " << cluster->getLeftBoundary() << "-" << cluster->getRightBoundary() << " joined in " << data->join_step << " with cover " << data->cover  << std::endl;
 		#endif
 		if (data->cover < i) {
 			data->cover = i;
@@ -523,6 +570,11 @@ private:
 	} // COMPLETE
 
 	void internal_uncover(std::shared_ptr<TopTree::ICluster> cluster, int i) {
+		if (cluster == NULL) {
+			std::cerr << "ERROR: No cluster for internal uncover" << std::endl;
+			return;
+		}
+
 		auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
 		#ifdef DEBUG
 			std::cerr << "* Internal uncover " << i << " at cluster " << cluster->getLeftBoundary() << "-" << cluster->getRightBoundary() << " with cover " << data->cover  << std::endl;
@@ -540,6 +592,11 @@ private:
 
 		int l = cluster->getLeftBoundary();
 		int r = cluster->getRightBoundary();
+		// HOTFIX
+		if ((data->endpoint_a != l && data->endpoint_b != l) || (data->endpoint_a != r && data->endpoint_b != r)) {
+			data->endpoint_a = l;
+			data->endpoint_b = r;
+		}
 
 		for (int j = -1; j <= i; j++) {
 			for (int k = -1; k <= max_l; k++) {
@@ -558,7 +615,7 @@ private:
 		auto data = std::dynamic_pointer_cast<MyClusterData>(parent->data);
 
 		#ifdef DEBUG_VERBOSE
-			std::cerr << "Clean of cluster " << parent->getLeftBoundary() << "-" << parent->getRightBoundary();
+			std::cerr << "Clean of cluster " << parent->getLeftBoundary() << "-" << parent->getRightBoundary() << " joined in step " << data->join_step;
 		#endif
 
 		// For each path child A of C call Uncover(A, cover_limit) and Cover(A, cover_set, cover_edge_set)
@@ -596,14 +653,30 @@ private:
 			std::cerr << "Recover " << i << " of path " << vv << "-" << ww << std::endl;
 		#endif
 		auto clusterC = TT->Expose(vv, ww);
+		if (clusterC == NULL) {
+			std::cerr << "Recover " << i << " of path " << vv << "-" << ww << " - cluster is NULL" << std::endl;
+			return;
+		}
 		auto dataC = std::dynamic_pointer_cast<MyClusterData>(clusterC->data);
+
+		std::shared_ptr<MyEdgeData> last_edge = NULL;
 
 		// Firstly u=v
 		auto u = clusterC->getLeftBoundary();
+		auto uu = clusterC->getRightBoundary();
 		while (true) {
 			while (dataC->get_incident(u, -1, i) + get_incident(u, i) > 0) {
+				#ifdef DEBUG
+					std::cerr << "Recover step for " << clusterC->getLeftBoundary() << "-" << clusterC->getRightBoundary() << " with incident " << dataC->get_incident(u, -1, i) << " + " << get_incident(u, i) << std::endl;
+				#endif
 				std::shared_ptr<MyEdgeData> edge = find(u, clusterC, i);
+				if (edge == last_edge) break;
+				last_edge = edge;
 				auto clusterD = TT->Expose(edge->from, edge->to);
+				if (clusterD == NULL) {
+					std::cerr << "Recover " << i << " of path " << vv << "-" << ww << " - clusterD is NULL" << std::endl;
+					return;
+				}
 				auto dataD = std::dynamic_pointer_cast<MyClusterData>(clusterD->data);
 				if ((dataD->get_size(edge->from, -1, i+1) + 2) > N/(1<<(i+1))) {
 					internal_cover(clusterD, i, edge);
@@ -615,10 +688,14 @@ private:
 					internal_cover(clusterD, i+1, edge);
 				}
 				clusterC = TT->Expose(vv,ww);
+				if (clusterC == NULL) {
+					std::cerr << "Recover " << i << " of path " << vv << "-" << ww << " - clusterC is NULL" << std::endl;
+					return;
+				}
 				dataC = std::dynamic_pointer_cast<MyClusterData>(clusterC->data);
 			}
-			if (u == clusterC->getLeftBoundary()) u = clusterC->getRightBoundary();
-			else break; //end of the u=w run
+			if (u == uu) break;
+			else u = uu; //end of the u=w run
 		}
 	}
 
@@ -666,6 +743,9 @@ private:
 			std::cerr << "[Swap] Swap of " << vv << "-" << ww << std::endl;
 		#endif
 		auto edgeCluster = TT->Expose(vv, ww);
+		if (edgeCluster == NULL) {
+			std::cerr << "[Swap] Swap of " << vv << "-" << ww << " - cluster is NULL" << std::endl;
+		}
 		auto data = std::dynamic_pointer_cast<MyClusterData>(edgeCluster->data);
 
 		if (data->edge == NULL) {
@@ -725,13 +805,16 @@ void TopTree::Join(std::shared_ptr<TopTree::ICluster> leftChild, std::shared_ptr
 	auto left_data = std::dynamic_pointer_cast<MyClusterData>(leftChild->data);
 	auto right_data = std::dynamic_pointer_cast<MyClusterData>(rightChild->data);
 
+	auto dc = DoubleConnectivity::dc;
+
 	#ifdef DEBUG
-		std::cerr << "JOIN of cluster " << leftChild->getLeftBoundary()  << "-" << leftChild->getRightBoundary() << "(" << left_data->cover << ")"
+		std::cerr << "JOIN " << dc->join_counter <<  " of cluster " << leftChild->getLeftBoundary()  << "-" << leftChild->getRightBoundary() << "(" << left_data->cover << ")"
 		<< " and " << rightChild->getLeftBoundary()  << "-" << rightChild->getRightBoundary() << "(" << right_data->cover << ")"
 		<< " into " << parent->getLeftBoundary()  << "-" << parent->getRightBoundary() << std::endl;
 	#endif
 
 	// HOTFIX FIXUP
+	/*
 	if ((leftChild->getLeftBoundary() != left_data->endpoint_a && leftChild->getLeftBoundary() != left_data->endpoint_b)
 		|| (leftChild->getRightBoundary() != left_data->endpoint_a && leftChild->getRightBoundary() != left_data->endpoint_b)) {
 			left_data->endpoint_a = leftChild->getLeftBoundary();
@@ -744,6 +827,7 @@ void TopTree::Join(std::shared_ptr<TopTree::ICluster> leftChild, std::shared_ptr
 			right_data->endpoint_a = rightChild->getLeftBoundary();
 			right_data->endpoint_b = rightChild->getRightBoundary();
 		}
+	*/
 
 	/*
 	std::cerr << "PARENT JOIN: " << parent->getLeftBoundary() << "-" << parent->getRightBoundary() << std::endl;
@@ -755,12 +839,12 @@ void TopTree::Join(std::shared_ptr<TopTree::ICluster> leftChild, std::shared_ptr
 	std::cerr << "Right: " << right_data->endpoint_a << "-" << right_data->endpoint_b << std::endl;
 	*/
 
-	auto dc = DoubleConnectivity::dc;
-
 	/////////////////////////////////////////////////////////
 	// Init endpoints in the new cluster - O(1) computations:
 	data->endpoint_a = parent->getLeftBoundary();
 	data->endpoint_b = parent->getRightBoundary();
+
+	data->join_step = dc->join_counter++;
 
 	// Find path child minimizing cover
 	if (isLeftRake(leftChild, rightChild, parent)) {
