@@ -6,8 +6,9 @@
 #include "TopTree.hpp"
 #include "BaseTreeInternal.hpp"
 
-// #define DEBUG
-// #define DEBUG_GRAPHVIZ
+//#define DEBUG
+//#define DEBUG_GRAPHVIZ
+//#define DEBUG_GRAPHVIZ_FROM 0 // from what graph output to the stdout
 
 //#define WARNINGS
 
@@ -167,11 +168,13 @@ void TopTree::Internal::print_graphviz(const std::shared_ptr<TopCluster> root, c
 	std::ostringstream ss;
 	ss << "[" << graphviz_counter << "] " << title;
 
-	std::cerr << "GRAPHVIZ: " << ss.str() << std::endl;
-	std::cout << "digraph \"" << root << "\" {" << std::endl;
-	std::cout << "\tlabelloc=\"t\"" << std::endl << "\tlabel=\"" << ss.str() << "\"" << std::endl;
-	print_graphviz_recursive(NULL, root);
-	std::cout << "}" << std::endl;
+	if (graphviz_counter > DEBUG_GRAPHVIZ_FROM) {
+		std::cerr << "GRAPHVIZ: " << ss.str() << std::endl;
+		std::cout << "digraph \"" << root << "\" {" << std::endl;
+		std::cout << "\tlabelloc=\"t\"" << std::endl << "\tlabel=\"" << ss.str() << "\"" << std::endl;
+		print_graphviz_recursive(NULL, root);
+		std::cout << "}" << std::endl;
+	}
 	graphviz_counter++;
 }
 
@@ -245,6 +248,9 @@ void TopTree::Internal::adjust_parent(std::shared_ptr<TopCluster> parent, std::s
 void TopTree::Internal::rotate_left(std::shared_ptr<TopCluster> x) {
 	auto parent = x->parent;
 	auto y = x->right_child;
+	// Ensure splitted
+	x->do_split(&splitted_clusters);
+	y->do_split(&splitted_clusters);
 
 	#ifdef DEBUG
 		std::cerr << "Rotating left around " << *x << std::endl;
@@ -268,6 +274,9 @@ void TopTree::Internal::rotate_left(std::shared_ptr<TopCluster> x) {
 void TopTree::Internal::rotate_right(std::shared_ptr<TopCluster> x) {
 	auto parent = x->parent;
 	auto y = x->left_child;
+	// Ensure splitted
+	x->do_split(&splitted_clusters);
+	y->do_split(&splitted_clusters);
 
 	#ifdef DEBUG
 		std::cerr << "Rotating right around " << *x << std::endl;
@@ -297,6 +306,7 @@ void TopTree::Internal::guarded_splay(std::shared_ptr<TopCluster> node, std::sha
 		return;
 	}
 	while (true) {
+		node->do_split();
 		if (node->parent == guard || node->parent == NULL) return;
 		if (node->parent->parent == guard || node->parent->parent == NULL) {
 			// Zig rotate (last under guard)
@@ -335,12 +345,11 @@ void TopTree::Internal::splice(std::shared_ptr<TopCluster> node) {
 		if (current == root->left_child) right_nodes.push_back(root->right_child);
 		else left_nodes.push_back(root->left_child);
 
-		// Inner clusters will be deleted by garbage collection after, we only
-		// need to not joining them so mark them as joined
-		root->is_splitted = false;
-
 		current = root;
 		root = root->parent;
+		current->do_split(&splitted_clusters);
+		// Inner clusters will be deleted by garbage collection after, we only
+		// need to not joining them so unlink them (it marks them as deleted)
 		current->unlink();
 	}
 	if (!root->is_splitted) root->do_split(&splitted_clusters);
@@ -590,6 +599,8 @@ void TopTree::Internal::soft_expose(std::shared_ptr<BaseTree::Internal::Vertex> 
 		if ((Nv->left_child->boundary_left == v && Nv->left_child->boundary_right == w)
 		 || (Nv->left_child->boundary_left == w && Nv->left_child->boundary_right == v)) Nv->flip();
 	}
+	if (Nv != NULL) Nv->do_join();
+	if (Nw != NULL) Nw->do_join();
 
 	#ifdef DEBUG
 		for (auto root : root_clusters) {

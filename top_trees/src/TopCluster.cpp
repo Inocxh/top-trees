@@ -113,6 +113,7 @@ void BaseCluster::unlink() {
 }
 
 void BaseCluster::flip() {
+	do_split(); // ensure splitted
 	auto temp = boundary_left;
 	boundary_left = boundary_right;
 	boundary_right = temp;
@@ -184,11 +185,11 @@ void CompressCluster::do_join() {
 	is_splitted = false;
 }
 void CompressCluster::do_split(std::vector<std::shared_ptr<TopCluster>>* splitted_clusters) {
-	if (is_splitted) return;
 
 	#ifdef DEBUG
 		std::cerr << "Splitting " << *shared_from_this() << std::endl;
 	#endif
+	if (is_splitted) return;
 
 	// 1. Log that this cluster will be splitted
 	if (splitted_clusters != NULL) splitted_clusters->push_back(shared_from_this());
@@ -203,6 +204,8 @@ void CompressCluster::do_split(std::vector<std::shared_ptr<TopCluster>>* splitte
 	auto right = right_child;
 	if (right_foster != NULL) right = right_foster_rake;
 	// 3.2 Normal Split
+	left->correct_endpoints();
+	right->correct_endpoints();
 	Split(left, right, shared_from_this());
 	// 3.3 If there are foster children Split virtual rake nodes
 	if (left_foster != NULL) Split(left_foster, left_child, left);
@@ -253,6 +256,7 @@ void CompressCluster::unlink() {
 }
 
 void CompressCluster::flip() {
+	do_split(); // ensure splitted
 	auto temp = boundary_left;
 	boundary_left = boundary_right;
 	boundary_right = temp;
@@ -269,6 +273,7 @@ void CompressCluster::flip() {
 	right_foster_rake = temp_foster_rake;
 }
 void CompressCluster::normalize_for_splay() {
+	do_split(); // ensure splitted
 	// Recursive call in top-down direction
 	correct_endpoints();
 
@@ -326,10 +331,6 @@ std::shared_ptr<RakeCluster> RakeCluster::construct(std::shared_ptr<TopCluster> 
 void RakeCluster::do_join() {
 	if (!is_splitted || is_deleted) return;
 
-	#ifdef DEBUG
-		std::cerr << "Joining " << *shared_from_this() << std::endl;
-	#endif
-
 	// nicknames
 	auto rake_from = left_child;
 	auto rake_to = right_child;
@@ -341,17 +342,21 @@ void RakeCluster::do_join() {
 	// 2. Set boundary vertices:
 	correct_endpoints();
 
+	#ifdef DEBUG
+		std::cerr << "Joining " << *shared_from_this() << std::endl;
+	#endif
+
 	// 3. Call user defined method:
 	Join(rake_from, rake_to, shared_from_this());
 
 	is_splitted = false;
 }
 void RakeCluster::do_split(std::vector<std::shared_ptr<TopCluster>>* splitted_clusters) {
-	if (is_splitted) return;
 
 	#ifdef DEBUG
 		std::cerr << "Splitting " << *shared_from_this() << std::endl;
 	#endif
+	if (is_splitted) return;
 
 	// 1. Log that this cluster will be splitted
 	if (splitted_clusters != NULL) splitted_clusters->push_back(shared_from_this());
@@ -360,6 +365,8 @@ void RakeCluster::do_split(std::vector<std::shared_ptr<TopCluster>>* splitted_cl
 	if (parent != NULL) parent->do_split(splitted_clusters);
 
 	// 3. Call user defined method:
+	left_child->correct_endpoints();
+	right_child->correct_endpoints();
 	Split(left_child, right_child, shared_from_this());
 
 	is_splitted = true;
@@ -383,6 +390,7 @@ void RakeCluster::unlink() {
 }
 
 void RakeCluster::flip() {
+	do_split(); // ensure splitted
 	auto temp = boundary_left;
 	boundary_left = boundary_right;
 	boundary_right = temp;
@@ -404,10 +412,10 @@ bool RakeCluster::is_handle_for(std::shared_ptr<BaseTree::Internal::Vertex> v) {
 	return false;
 }
 std::ostream& RakeCluster::ToString(std::ostream& o) const {
-	return o << "RakeCluster - endpoints " << *boundary_left->data << ", " << *boundary_right->data;
+	return o << "RakeCluster - endpoints " << *boundary_left << ", " << *boundary_right;
 }
 std::ostream& RakeCluster::_short_name(std::ostream& o) const {
-	return o << *boundary_left->data << "," << *boundary_right->data;
+	return o << *boundary_left << "," << *boundary_right;
 }
 
 }
