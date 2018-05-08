@@ -1,48 +1,11 @@
 #!/usr/bin/python3
 
 import matplotlib.pyplot as plt
-import statistics
 import sys
 
-variables = ["top_construction", "top_op", "topology_construction", "topology_op"]
+from common import load_values
 
-values = {}
-yerr = {}
-run = {}
-sizes = []
-last_size = 0
-for variable in variables:
-	values[variable] = []
-	yerr[variable] = []
-	run[variable] = []
-
-
-def compute_step():
-	if len(run[variables[0]]) == 0:
-		return
-	sizes.append(last_size)
-	for variable in variables:
-		values[variable].append(statistics.mean(run[variable]))
-		yerr[variable].append(statistics.stdev(run[variable]))
-		run[variable] = []  # prepare for next step
-
-
-with open(sys.argv[1]) as file:
-	for line in file:
-		parts = line.split()
-		size = int(parts[1])
-		if last_size != size:
-			# Compute previous step
-			compute_step()
-			# Prepare for next step
-			last_size = size
-		index = 3
-		for variable in variables:
-			run[variable].append(float(parts[index]))
-			index += 1
-
-# Last step
-compute_step()
+(sizes, values, yerr) = load_values(sys.argv[1], ["top_construction", "top_op", "topology_construction", "topology_op"], skip_fields=3)
 
 ################################################################################
 
