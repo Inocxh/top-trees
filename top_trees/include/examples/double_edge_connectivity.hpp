@@ -10,6 +10,7 @@
 //#define DEBUG_VERBOSE_GETTERS
 
 //#define ASSERTS
+//#define DISPLAY_ERRORS
 
 class MyVertexData: public TopTree::VertexData {
 public:
@@ -33,13 +34,14 @@ public:
 	uint to;   // index of vertex in top tree structure
 	std::list<std::shared_ptr<MyEdgeData>>::iterator from_incident_iterator;
 	std::list<std::shared_ptr<MyEdgeData>>::iterator to_incident_iterator;
-	bool registered;
+	bool registered = false;
 
 	int cover = -1;
 	std::shared_ptr<MyEdgeData> cover_edge = NULL;
 	int level = 0;
 
 	std::list<std::shared_ptr<MyEdgeData>>::iterator nontree_edges_iterator;
+	bool nontree_edges_inserted = false;
 
 	std::string label;
 
@@ -84,7 +86,7 @@ struct MyClusterData: public TopTree::ClusterData {
 		#endif
 		#ifdef ASSERTS
 			if (v != endpoint_a && v != endpoint_b) {
-				std::cerr << "Cannot get size for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
+				std::cerr << "Cannot get size for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << " computed in step " << join_step << std::endl;
 				*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
 				exit(2);
 			}
@@ -110,7 +112,7 @@ struct MyClusterData: public TopTree::ClusterData {
 		#endif
 		#ifdef ASSERTS
 			if (v != endpoint_a && v != endpoint_b) {
-				std::cerr << "Cannot set size for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
+				std::cerr << "Cannot set size for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << " computed in step " << join_step << std::endl;
 				*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
 				exit(2);
 			}
@@ -132,7 +134,7 @@ struct MyClusterData: public TopTree::ClusterData {
 		#endif
 		#ifdef ASSERTS
 			if (v != endpoint_a && v != endpoint_b) {
-				std::cerr << "Cannot get incident for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
+				std::cerr << "Cannot get incident for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << " computed in step " << join_step << std::endl;
 				*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
 				exit(2);
 			}
@@ -157,7 +159,7 @@ struct MyClusterData: public TopTree::ClusterData {
 		#endif
 		#ifdef ASSERTS
 			if (v != endpoint_a && v != endpoint_b) {
-				std::cerr << "Cannot set incident for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
+				std::cerr << "Cannot set incident for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << " computed in step " << join_step << std::endl;
 				*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
 				exit(2);
 			}
@@ -180,7 +182,7 @@ struct MyClusterData: public TopTree::ClusterData {
 		#endif
 		#ifdef ASSERTS
 			if (v != endpoint_a && v != endpoint_b) {
-				std::cerr << "Cannot get nonpath size for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
+				std::cerr << "Cannot get nonpath size for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << " computed in step " << join_step << std::endl;
 				*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
 				exit(2);
 			}
@@ -204,7 +206,7 @@ struct MyClusterData: public TopTree::ClusterData {
 		#endif
 		#ifdef ASSERTS
 			if (v != endpoint_a && v != endpoint_b) {
-				std::cerr << "Cannot set nonpath size for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
+				std::cerr << "Cannot set nonpath size for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << " computed in step " << join_step << std::endl;
 				*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
 				exit(2);
 			}
@@ -225,7 +227,7 @@ struct MyClusterData: public TopTree::ClusterData {
 		#endif
 		#ifdef ASSERTS
 			if (v != endpoint_a && v != endpoint_b) {
-				std::cerr << "Cannot get nonpath incident for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
+				std::cerr << "Cannot get nonpath incident for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << " computed in step " << join_step << std::endl;
 				*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
 				exit(2);
 			}
@@ -249,7 +251,7 @@ struct MyClusterData: public TopTree::ClusterData {
 		#endif
 		#ifdef ASSERTS
 			if (v != endpoint_a && v != endpoint_b) {
-				std::cerr << "Cannot set nonpath incident for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << std::endl;
+				std::cerr << "Cannot set nonpath incident for vertex " << v << ", endpoints of this clusterData are " << endpoint_a << " and " << endpoint_b << " computed in step " << join_step << std::endl;
 				*(int*)0 = 0; // HACK: produce segfault to see "better" stacktrace output in valgrind
 				exit(2);
 			}
@@ -282,7 +284,8 @@ friend void TopTree::CopyClusterData(std::shared_ptr<ICluster> from, std::shared
 public:
 	static DoubleConnectivity *dc;
 
-	DoubleConnectivity(std::shared_ptr<TopTree::ITopTree> top_tree) {
+	DoubleConnectivity(std::shared_ptr<TopTree::ITopTree> top_tree, bool set_quick_expose = false) {
+		quick_expose = set_quick_expose;
 		TT = top_tree;
 		base_tree = std::make_shared<TopTree::BaseTree>();
 		TT->InitFromBaseTree(base_tree); // empty for now
@@ -298,13 +301,19 @@ public:
 			std::cerr << std::endl << "[Connected test] " << v << "(" << vv << ") and " << w << "(" << ww << ")" << std::endl;
 		#endif
 
+		quick_expose_running = true;
 		auto cluster = TT->Expose(vv, ww);
-		if (cluster == NULL) return false; // not even connected, cannot be double connected
-		auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
-		#ifdef DEBUG
-			std::cerr << "data cover is " << data->cover << std::endl;
-		#endif
-		return (data->cover >= 0);
+		bool result = false;
+		if (cluster != NULL) {
+			auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
+			#ifdef DEBUG
+				std::cerr << "data cover is " << data->cover << std::endl;
+			#endif
+			result = (data->cover >= 0);
+		}
+		TT->Restore();
+		quick_expose_running = false;
+		return result;
 	} // COMPLETE
 
 	std::shared_ptr<MyEdgeData> Insert(int v, int w) {
@@ -334,6 +343,7 @@ public:
 		nontree_edges.push_back(edge);
 		register_at_vertices(edge);
 		edge->nontree_edges_iterator = std::prev(nontree_edges.end());
+		edge->nontree_edges_inserted = true;
 		// call cover
 		cover(edge, 0);
 
@@ -352,9 +362,11 @@ public:
 		// 1. Expose v-w
 		auto cluster = TT->Expose(vv, ww);
 		if (cluster == NULL) {
-			// This should never happen, but just for debug and to be sure
-			std::cerr << "[Delete] Vertices " << vv << " and " << ww << " not even connected, cannot delete" << std::endl;
-			unregister_at_vertices(edge);
+			// This should never happen, but to be sure
+			#ifdef DISPLAY_ERRORS
+				std::cerr << "[Delete] Vertices " << vv << " and " << ww << " not even connected, cannot delete" << std::endl;
+			#endif
+			//unregister_at_vertices(edge);
 			return;
 		}
 		auto data = std::dynamic_pointer_cast<MyClusterData>(cluster->data);
@@ -371,7 +383,9 @@ public:
 			// 2.3 Update cluster and data because they changed
 			cluster = TT->Expose(vv, ww);
 			if (cluster == NULL) {
-				std::cerr << "[Delete] Vertices " << vv << " and " << ww << " - cannot get cluster after swap" << std::endl;
+				#ifdef DISPLAY_ERRORS
+					std::cerr << "[Delete] ERROR: Vertices " << vv << " and " << ww << " - cannot get cluster after swap" << std::endl;
+				#endif
 				unregister_at_vertices(edge);
 				return;
 			}
@@ -388,6 +402,8 @@ public:
 private:
 	std::shared_ptr<TopTree::ITopTree> TT;
 	std::shared_ptr<TopTree::BaseTree> base_tree;
+	bool quick_expose = false;
+	bool quick_expose_running = false;
 
 	std::vector<bool> vertex_added;
 	std::vector<uint> vertex_mapping; // from local indexes to the top trees structure indexes
@@ -476,9 +492,11 @@ private:
 
 		int vv = edge->from;
 		int ww = edge->to;
-		auto cluster = TT->Expose(vv, ww);
+		auto cluster = TT->Expose(vv, ww); // quick expose not wanted, because internal cover is already in O(log^2 N)
 		if (cluster == NULL) {
-			std::cerr << "Cover for edge " << *edge << " - cluster is NULL" << std::endl;
+			#ifdef DISPLAY_ERRORS
+				std::cerr << "Cover for edge " << *edge << " - cluster is NULL" << std::endl;
+			#endif
 		}
 
 		internal_cover(cluster, i, edge);
@@ -493,7 +511,7 @@ private:
 
 	void register_at_vertices(std::shared_ptr<MyEdgeData> edge) {
 		#ifdef DEBUG
-			std::cerr << "* Registering edge " << *edge << " at vertices" << std::endl;
+			std::cerr << "* Registering edge (" << edge << ") " << *edge << " at vertices" << std::endl;
 		#endif
 
 		uint index = edge->level+1;
@@ -528,7 +546,9 @@ private:
 	// INTERNAL:
 	void internal_cover(std::shared_ptr<TopTree::ICluster> cluster, int i, std::shared_ptr<MyEdgeData> edge) {
 		if (cluster == NULL) {
-			std::cerr << "ERROR: No cluster for internal cover" << std::endl;
+			#ifdef DISPLAY_ERRORS
+				std::cerr << "ERROR: No cluster for internal cover" << std::endl;
+			#endif
 			return;
 		}
 
@@ -553,6 +573,8 @@ private:
 			data->cover_edge_set = edge;
 		}
 
+		if (quick_expose && quick_expose_running) return; // not compute slow operations during quick expose
+
 		auto l = cluster->getLeftBoundary();
 		auto r = cluster->getRightBoundary();
 		for (int j = -1; j <= i; j++) {
@@ -572,7 +594,9 @@ private:
 
 	void internal_uncover(std::shared_ptr<TopTree::ICluster> cluster, int i) {
 		if (cluster == NULL) {
-			std::cerr << "ERROR: No cluster for internal uncover" << std::endl;
+			#ifdef DISPLAY_ERRORS
+				std::cerr << "ERROR: No cluster for internal uncover" << std::endl;
+			#endif
 			return;
 		}
 
@@ -598,6 +622,8 @@ private:
 			data->endpoint_a = l;
 			data->endpoint_b = r;
 		}
+
+		if (quick_expose && quick_expose_running) return; // not compute slow operations during quick expose
 
 		for (int j = -1; j <= i; j++) {
 			for (int k = -1; k <= max_l; k++) {
@@ -655,7 +681,9 @@ private:
 		#endif
 		auto clusterC = TT->Expose(vv, ww);
 		if (clusterC == NULL) {
-			std::cerr << "Recover " << i << " of path " << vv << "-" << ww << " - cluster is NULL" << std::endl;
+			#ifdef DISPLAY_ERRORS
+				std::cerr << "ERROR: Recover " << i << " of path " << vv << "-" << ww << " - cluster is NULL" << std::endl;
+			#endif
 			return;
 		}
 		auto dataC = std::dynamic_pointer_cast<MyClusterData>(clusterC->data);
@@ -671,11 +699,14 @@ private:
 					std::cerr << "Recover step for " << clusterC->getLeftBoundary() << "-" << clusterC->getRightBoundary() << " with incident " << dataC->get_incident(u, -1, i) << " + " << get_incident(u, i) << std::endl;
 				#endif
 				std::shared_ptr<MyEdgeData> edge = find(u, clusterC, i);
-				if (edge == last_edge) break;
+				if (edge == last_edge || edge == NULL) break;
 				last_edge = edge;
+				//std::cerr << "Found edge: " << *edge << std::endl;
 				auto clusterD = TT->Expose(edge->from, edge->to);
 				if (clusterD == NULL) {
-					std::cerr << "Recover " << i << " of path " << vv << "-" << ww << " - clusterD is NULL" << std::endl;
+					#ifdef DISPLAY_ERRORS
+						std::cerr << "Recover " << i << " of path " << vv << "-" << ww << " - clusterD is NULL" << std::endl;
+					#endif
 					return;
 				}
 				auto dataD = std::dynamic_pointer_cast<MyClusterData>(clusterD->data);
@@ -688,7 +719,7 @@ private:
 					register_at_vertices(edge);
 					internal_cover(clusterD, i+1, edge);
 				}
-				clusterC = TT->Expose(vv,ww);
+				clusterC = TT->Expose(vv, ww);
 				if (clusterC == NULL) {
 					std::cerr << "Recover " << i << " of path " << vv << "-" << ww << " - clusterC is NULL" << std::endl;
 					return;
@@ -709,7 +740,9 @@ private:
 		} else {
 			auto childs = TT->SplitRoot(cluster);
 			if (childs.first == NULL || childs.second == NULL) {
-				std::cerr << "ERROR: Cannot split cluster " << cluster->getLeftBoundary() << "-" << cluster->getRightBoundary() << " into childs" << std::endl;
+				#ifdef DISPLAY_ERRORS
+					std::cerr << "ERROR: Cannot split cluster " << cluster->getLeftBoundary() << "-" << cluster->getRightBoundary() << " into childs" << std::endl;
+				#endif
 			}
 
 			clean(childs.first, childs.second, cluster);
@@ -745,7 +778,10 @@ private:
 		#endif
 		auto edgeCluster = TT->Expose(vv, ww);
 		if (edgeCluster == NULL) {
-			std::cerr << "[Swap] Swap of " << vv << "-" << ww << " - cluster is NULL" << std::endl;
+			#ifdef DISPLAY_ERRORS
+				std::cerr << "[Swap] ERROR: Swap of " << vv << "-" << ww << " - cluster is NULL" << std::endl;
+			#endif
+			return;
 		}
 		auto data = std::dynamic_pointer_cast<MyClusterData>(edgeCluster->data);
 
@@ -775,13 +811,17 @@ private:
 		// 2.1 Remove v-w from tree
 		TT->Cut(vv, ww);
 		// 2.2 Remove coverEdge from nontree_edges
-		nontree_edges.erase(coverEdge->nontree_edges_iterator);
+		if (coverEdge->nontree_edges_inserted) {
+			nontree_edges.erase(coverEdge->nontree_edges_iterator);
+			coverEdge->nontree_edges_inserted = false;
+		}
 		unregister_at_vertices(coverEdge);
 		// 2.3 Add x-y into tree
 		TT->Link(coverEdge->from, coverEdge->to, coverEdge);
 		// 2.5 Push v-w edge into nontree_edges
 		nontree_edges.push_back(treeEdge);
 		treeEdge->nontree_edges_iterator = std::prev(nontree_edges.end());
+		treeEdge->nontree_edges_inserted = true;
 		register_at_vertices(treeEdge);
 
 		// 3.1 InitTreeEdge(x,y)
@@ -871,6 +911,8 @@ void TopTree::Join(std::shared_ptr<TopTree::ICluster> leftChild, std::shared_ptr
 
 	///////////////////////////////////////////////////
 	// Time consuming computations in O(log^2 N) below:
+
+	if (dc->quick_expose && dc->quick_expose_running) return; // skip slow computations below
 
 	int common = leftChild->getLeftBoundary();
 	if (common != rightChild->getLeftBoundary() && common != rightChild->getRightBoundary()) common = leftChild->getRightBoundary();

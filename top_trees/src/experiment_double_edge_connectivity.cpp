@@ -7,7 +7,7 @@
 #include "TopTree.hpp"
 #include "TopologyTopTree.hpp"
 
-#define VERBOSE
+//#define VERBOSE
 
 #define OPS_COUNT 3
 
@@ -59,7 +59,7 @@ std::tuple<double, double, double> run(DoubleConnectivity *worker, uint N, uint 
 	for (auto op: operations) {
 		switch (op.op) {
 		case INSERT: {
-			if (edges.size() > N * 13/10 || op.vertex_a == op.vertex_b) {
+			if (edges.size() > M * 13/10 || op.vertex_a == op.vertex_b) {
 				op_skipped++;
 				continue;
 			}
@@ -71,7 +71,7 @@ std::tuple<double, double, double> run(DoubleConnectivity *worker, uint N, uint 
 		break;}
 		case DELETE: {
 			// Get edge
-			if (edges.size() < N * 7/10) {
+			if (edges.size() < M * 7/10) {
 				op_skipped++;
 				continue;
 			}
