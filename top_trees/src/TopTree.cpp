@@ -8,7 +8,7 @@
 
 //#define DEBUG
 //#define DEBUG_GRAPHVIZ
-//#define DEBUG_GRAPHVIZ_FROM 0 // from what graph output to the stdout
+#define DEBUG_GRAPHVIZ_FROM 0 // from what graph output to the stdout
 
 //#define WARNINGS
 
@@ -639,6 +639,8 @@ std::shared_ptr<TopCluster> TopTree::Internal::hard_expose(std::shared_ptr<BaseT
 		v->rakerized = true;
 	}
 	for (auto v: hard_expose_transformed_clusters) v->do_join();
+
+	Nw->do_join();
 
 	return Nw;
 }

@@ -1110,7 +1110,8 @@ std::list<std::shared_ptr<SimpleCluster>> TopologyTopTree::Internal::expose_get_
 					auto new_simple_cluster = SimpleCluster::construct(first, second);
 					new_simple_cluster->boundary_left = last_cluster->boundary_left;
 					new_simple_cluster->boundary_right = last_cluster->boundary_right;
-					new_simple_cluster->data = last_cluster->data;
+					//new_simple_cluster->data = last_cluster->data;
+					CopyClusterData(last_cluster, new_simple_cluster);
 					new_simple_cluster->edge = last_cluster->edge;
 					expose_simple_clusters.push_back(new_simple_cluster); // to allow splitting it in Restore operation
 					list.push_back(new_simple_cluster);
@@ -1146,7 +1147,8 @@ std::list<std::shared_ptr<SimpleCluster>> TopologyTopTree::Internal::expose_get_
 					sibling_cluster = SimpleCluster::construct(sibling->first, sibling->second);
 					sibling_cluster->boundary_left = sibling->boundary_left;
 					sibling_cluster->boundary_right = sibling->boundary_right;
-					sibling_cluster->data = sibling->data;
+					//sibling_cluster->data = sibling->data;
+					CopyClusterData(sibling, sibling_cluster);
 					sibling_cluster->edge = sibling->edge;
 				}
 
@@ -1345,14 +1347,26 @@ std::shared_ptr<ICluster> TopologyTopTree::Expose(int v_index, int w_index) {
 void TopologyTopTree::Restore() {
 	if (internal->expose_simple_clusters.empty()) return; // no need to restore anything
 
-	// Split temporary clusters
+	#ifdef DEBUG
+		std::cerr << "Restore STARTED " << std::endl;
+	#endif
+
+	// 1. Split temporary clusters
 	for (auto c: internal->expose_simple_clusters) {
 		c->do_split();
 		c->unlink(true);
 	}
 	internal->expose_simple_clusters.clear();
 
-	// Join original clusters
+	#ifdef DEBUG
+		std::cerr << "Restore - simple clusters all splitted " << std::endl;
+	#endif
+
+
+	// 2. Join original clusters
+	// 2.1 Firstly ensure that they are already splitted
+	for (auto c: internal->splitted_clusters) c->do_split();
+	// 2.2 Join them back
 	for (auto c: internal->splitted_clusters) {
 		while (c != NULL && c->is_splitted) {
 			c->do_join();
@@ -1360,6 +1374,14 @@ void TopologyTopTree::Restore() {
 		}
 	}
 	internal->splitted_clusters.clear();
+
+	#ifdef DEBUG_GRAPHVIZ
+		for (auto root_cluster: internal->root_clusters) internal->print_graphviz(root_cluster, "After RESTORE", true);
+	#endif
+
+	#ifdef DEBUG
+		std::cerr << "Restore ENDED " << std::endl;
+	#endif
 }
 
 std::pair<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>> TopologyTopTree::SplitRoot(std::shared_ptr<ICluster> root) {

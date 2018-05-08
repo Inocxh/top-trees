@@ -12,13 +12,18 @@ namespace TopTree {
 void SimpleCluster::do_split() {
 	if (was_splitted) return;
 
-	// std::cerr << "Splitting simple cluster (" << shared_from_this() << ")" << *boundary_left->data << "-" << *boundary_right->data <<
-	// 	"with childs " << first << " and " << second << std::endl;
+	#ifdef DEBUG
+		std::cerr << "Splitting simple cluster " << *boundary_left << "-" << *boundary_right <<
+		" with childs " << first << " and " << second << std::endl;
+
+		auto ff = std::dynamic_pointer_cast<TopologyCluster>(first);
+		if (ff != NULL) std::cerr << ff->is_splitted << std::endl;
+	#endif
 
 	if (parent != NULL) parent->do_split();
 
 	if (first != NULL && second != NULL) Split(first, second, shared_from_this());
-	else if (first != NULL) first->data = data; // just copy data
+	else if (first != NULL) CopyClusterData(shared_from_this(), first); // just copy data
 	else if (edge != NULL && !edge->subvertice_edge) Destroy(shared_from_this(), edge->data);
 	else {
 		std::cerr << "Not know what to do with this simple cluster, cannot Split, copy nor Destroy" << std::endl;
@@ -102,10 +107,12 @@ std::ostream& TopologyCluster::ToString(std::ostream& o) const {
 std::ostream& operator<<(std::ostream& o, const TopologyCluster& c) { return c.ToString(o); }
 
 void TopologyCluster::set_first_child(std::shared_ptr<TopologyCluster> child) {
+	do_split(); // ensure splitted
 	first = child;
 	if (child != NULL) child->parent = shared_from_this();
 }
 void TopologyCluster::set_second_child(std::shared_ptr<TopologyCluster> child) {
+	do_split(); // ensure splitted
 	second = child;
 	if (child != NULL) child->parent = shared_from_this();
 }
@@ -115,7 +122,7 @@ void TopologyCluster::do_join() {
 	if (is_deleted) return;
 
 	#ifdef DEBUG
-		std::cerr << "Joining " << *shared_from_this() << std::endl;
+		std::cerr << "Joining " << *shared_from_this() << " (" << shared_from_this() << ")" << std::endl;
 	#endif
 
 	is_top_cluster = false; // assume that is not a top cluster (until we notice it bellow)
@@ -138,7 +145,6 @@ void TopologyCluster::do_join() {
 	// 3. Join itself:
 	if (second == NULL) {
 		// Just copy cluster below us, no Join needed
-		data = first->data;
 		boundary_left = first->boundary_left;
 		boundary_right = first->boundary_right;
 		is_top_cluster = first->is_top_cluster;
@@ -146,6 +152,8 @@ void TopologyCluster::do_join() {
 		// Ensure that there is no edge cluster (possibly if this cluster lost one of its childs)
 		edge = NULL;
 		edge_cluster = NULL;
+		//data = first->data;
+		CopyClusterData(first, shared_from_this());
 	} else {
 		if (edge == NULL) {
 			std::cerr << "ERROR: Cluster '" << this << "' with both children but without edge between!" << std::endl;
@@ -188,10 +196,10 @@ void TopologyCluster::do_join() {
 				combined_edge_cluster->boundary_right = (common_vertex == edge_cluster->boundary_left || common_vertex == edge_cluster->boundary_left->superior_vertex ? edge_cluster->boundary_right : edge_cluster->boundary_left);
 			}
 			if (!edge->subvertice_edge) {
-				if (first->data == combined_edge_cluster->data || edge_cluster->data == combined_edge_cluster->data) combined_edge_cluster->data = InitClusterData();
+				//if (first->data == combined_edge_cluster->data || edge_cluster->data == combined_edge_cluster->data) combined_edge_cluster->data = InitClusterData();
 				Join(first, edge_cluster, combined_edge_cluster);
 			}
-			else combined_edge_cluster->data = first->data;
+			else CopyClusterData(first, combined_edge_cluster); // combined_edge_cluster->data = first->data;
 			#ifdef DEBUG
 				std::cerr << "... combined edge have endpoints " << *combined_edge_cluster->boundary_left << "," << *combined_edge_cluster->boundary_right << std::endl;
 			#endif
@@ -201,6 +209,7 @@ void TopologyCluster::do_join() {
 		if (second->is_top_cluster) {
 			#ifdef DEBUG
 				std::cerr << "... joining " << *second << " (" << *second->boundary_left << "-" << *second->boundary_right << ") with combined edge " << *combined_edge_cluster->boundary_left << "-" << *combined_edge_cluster->boundary_right << std::endl;
+				std::cerr << second->is_splitted << std::endl;
 			#endif
 			if (second->is_rake_branch) {
 				boundary_left = combined_edge_cluster->boundary_left;
@@ -222,19 +231,21 @@ void TopologyCluster::do_join() {
 						<< *combined_edge_cluster->boundary_left << "-" << *combined_edge_cluster->boundary_right << " into "
 						<< *boundary_left << "-" << *boundary_right << std::endl;
 				#endif
-				if (second->data == data || combined_edge_cluster->data == data) data = InitClusterData();
+				//if (second->data == data || combined_edge_cluster->data == data) data = InitClusterData();
+				//std::cerr << second << " + " << combined_edge_cluster << " -> " << shared_from_this() << std::endl;
 				Join(second, combined_edge_cluster, shared_from_this());
 			}
-			else data = second->data;
+			else CopyClusterData(second, shared_from_this()); // data = second->data;
 
 			#ifdef DEBUG
 				std::cerr << "... cluster have endpoints " << *boundary_left << "," << *boundary_right << std::endl;
 			#endif
 		} else {
 			// Copy from combined egde cluster into this cluster
-			data = combined_edge_cluster->data;
 			boundary_left = combined_edge_cluster->boundary_left;
 			boundary_right = combined_edge_cluster->boundary_right;
+			//data = combined_edge_cluster->data;
+			CopyClusterData(combined_edge_cluster, shared_from_this());
 		}
 		//}
 	}
@@ -264,6 +275,7 @@ void TopologyCluster::remove_all_outer_edges() {
 }
 
 void TopologyCluster::calculate_outer_edges(bool check_neighbours) {
+	do_split(); // ensure splitted
 	outer_edges.clear();
 	if (first == NULL && second == NULL) {
 		#ifdef DEBUG
@@ -348,10 +360,10 @@ void TopologyCluster::calculate_outer_edges(bool check_neighbours) {
 }
 
 void TopologyCluster::do_split(std::vector<std::shared_ptr<TopologyCluster>>* splitted_clusters) {
+	if (is_splitted) return;
 	#ifdef DEBUG
 		std::cerr << "Splitting " << *shared_from_this() << std::endl;
 	#endif
-	if (is_splitted) return;
 
 	// 1. Log that this cluster will be splitted
 	if (splitted_clusters != NULL) splitted_clusters->push_back(shared_from_this());
@@ -367,7 +379,8 @@ void TopologyCluster::do_split(std::vector<std::shared_ptr<TopologyCluster>>* sp
 	// 3. Series of Splits itself
 	if (second == NULL) {
 		// Just copy data down
-		first->data = data;
+		//first->data = data;
+		CopyClusterData(shared_from_this(), first);
 	} else {
 		if (edge == NULL) {
 			std::cerr << "ERROR: Cluster '" << this << "' with both children but without edge between!" << std::endl;
@@ -380,24 +393,28 @@ void TopologyCluster::do_split(std::vector<std::shared_ptr<TopologyCluster>>* sp
 				Split(first, second, shared_from_this());
 			} else if (first->is_top_cluster) {
 				// Just copy data down
-				first->data = data;
+				//first->data = data;
+				CopyClusterData(shared_from_this(), first);
 			} else if (second->is_top_cluster) {
 				// Just copy data down
-				second->data = data;
+				//second->data = data;
+				CopyClusterData(shared_from_this(), second);
 			}
 		} else {
 			// 1. Split with the second
 			if (second->is_top_cluster) {
 				Split(second, combined_edge_cluster, shared_from_this());
 			} else {
-				combined_edge_cluster->data = data;
+				//combined_edge_cluster->data = data;
+				CopyClusterData(shared_from_this(), combined_edge_cluster);
 			}
 
 			// 2. Split with the first
 			if (first->is_top_cluster) {
 				Split(first, edge_cluster, combined_edge_cluster);
 			} else {
-				edge_cluster->data = combined_edge_cluster->data;
+				//edge_cluster->data = combined_edge_cluster->data;
+				CopyClusterData(combined_edge_cluster, edge_cluster);
 			}
 
 			// 3. Destroy edge cluster

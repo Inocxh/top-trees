@@ -278,6 +278,7 @@ friend void TopTree::Join(std::shared_ptr<TopTree::ICluster> leftChild, std::sha
 friend void TopTree::Split(std::shared_ptr<ICluster> leftChild, std::shared_ptr<ICluster> rightChild, std::shared_ptr<ICluster> parent);
 friend void TopTree::Create(std::shared_ptr<ICluster> cluster, std::shared_ptr<EdgeData> edge);
 friend void TopTree::Destroy(std::shared_ptr<ICluster> cluster, std::shared_ptr<EdgeData> edge);
+friend void TopTree::CopyClusterData(std::shared_ptr<ICluster> from, std::shared_ptr<ICluster> to);
 public:
 	static DoubleConnectivity *dc;
 
@@ -1031,4 +1032,48 @@ void TopTree::Destroy(std::shared_ptr<ICluster> cluster, std::shared_ptr<EdgeDat
 
 std::shared_ptr<TopTree::ClusterData> TopTree::InitClusterData() {
 	return std::make_shared<MyClusterData>();
+}
+
+void TopTree::CopyClusterData(std::shared_ptr<ICluster> from, std::shared_ptr<ICluster> to) {
+	#ifdef DEBUG
+		//std::cerr << "COPY from cluster " << from->getLeftBoundary()  << "-" << from->getRightBoundary()
+		//<< " to " << to->getLeftBoundary()  << "-" << to->getRightBoundary() << std::endl;
+		std::cerr << "COPY from cluster " << from << " to " << to << std::endl;
+	#endif
+
+	auto fromData = std::dynamic_pointer_cast<MyClusterData>(from->data);
+	auto toData = std::dynamic_pointer_cast<MyClusterData>(to->data);
+
+	toData->join_step = fromData->join_step;
+
+	toData->cover = fromData->cover;
+	toData->cover_limit = fromData->cover_limit;
+	toData->cover_set = fromData->cover_set;
+
+	toData->edge = fromData->edge;
+	toData->cover_edge = fromData->cover_edge;
+	toData->cover_edge_set = fromData->cover_edge_set;
+
+	toData->endpoint_a = fromData->endpoint_a;
+	toData->endpoint_b = fromData->endpoint_b;
+
+	auto dc = DoubleConnectivity::dc;
+
+	if (dc->quick_expose && dc->quick_expose_running) return; // skip slow computations below
+
+	auto a = toData->endpoint_a;
+	auto b = toData->endpoint_b;
+
+	for (int i = 0; i <= dc->max_l; i++) {
+		for (int j = 0; j <= dc->max_l; j++) {
+			toData->set_size(a, i, j, fromData->get_size(a, i, j));
+			toData->set_size(b, i, j, fromData->get_size(b, i, j));
+			toData->set_incident(a, i, j, fromData->get_incident(a, i, j));
+			toData->set_incident(b, i, j, fromData->get_incident(b, i, j));
+		}
+		toData->set_nonpath_size(a, i, fromData->get_nonpath_size(a, i));
+		toData->set_nonpath_size(b, i, fromData->get_nonpath_size(b, i));
+		toData->set_nonpath_incident(a, i, fromData->get_nonpath_incident(a, i));
+		toData->set_nonpath_incident(b, i, fromData->get_nonpath_incident(b, i));
+	}
 }

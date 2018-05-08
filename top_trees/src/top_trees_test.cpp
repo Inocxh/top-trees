@@ -77,6 +77,16 @@ void TopTree::Destroy(std::shared_ptr<ICluster> cluster, std::shared_ptr<EdgeDat
 	// Nothing
 }
 
+void TopTree::CopyClusterData(std::shared_ptr<ICluster> from, std::shared_ptr<ICluster> to) {
+	auto fromData = std::dynamic_pointer_cast<MyClusterData>(from->data);
+	auto toData = std::dynamic_pointer_cast<MyClusterData>(to->data);
+
+	toData->weight = fromData->weight;
+	toData->total_weight = fromData->total_weight;
+	toData->label = fromData->label;
+	toData->total_label = fromData->total_label;
+}
+
 std::shared_ptr<TopTree::ClusterData> TopTree::InitClusterData() {
 	return std::make_shared<MyClusterData>();
 }

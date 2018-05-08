@@ -35,16 +35,23 @@ std::vector<std::pair<int, int>> initial_edges; // pair(edge to, edge weight)
 std::vector<struct operation> operations;
 
 
-std::pair<double, double> run(DoubleConnectivity *worker, uint N, uint M) {
+std::tuple<double, double, double> run(DoubleConnectivity *worker, uint N, uint M) {
 	// Vector for indexing edges
 	std::vector<std::shared_ptr<MyEdgeData>> edges;
 
 	// Init graph
 	clock_t begin = clock();
 	std::vector<int> vertex_index;
-	for (auto e: initial_edges) edges.push_back(worker->Insert(e.first, e.second));
+	for (auto e: initial_edges) {
+		auto edge = worker->Insert(e.first, e.second);
+		if (edge != NULL) edges.push_back(edge);
+	}
 	clock_t end = clock();
 	double init_time = double(end - begin) / CLOCKS_PER_SEC;
+
+	#ifdef VERBOSE
+		std::cerr << "PART 1 - all operations" << std::endl;
+	#endif
 
 	// Start measure time and perform all operations
 	begin = clock();
@@ -59,7 +66,8 @@ std::pair<double, double> run(DoubleConnectivity *worker, uint N, uint M) {
 			#ifdef VERBOSE
 				std::cerr << "Adding edge " << op.vertex_a << " and " << op.vertex_b << std::endl;
 			#endif
-			edges.push_back(worker->Insert(op.vertex_a, op.vertex_b));
+			auto edge = worker->Insert(op.vertex_a, op.vertex_b);
+			if (edge != NULL) edges.push_back(edge);
 		break;}
 		case DELETE: {
 			// Get edge
@@ -85,13 +93,32 @@ std::pair<double, double> run(DoubleConnectivity *worker, uint N, uint M) {
 		}
 	}
 	end = clock();
+	double execution_time = double(end - begin) / CLOCKS_PER_SEC;
+	int op_count = operations.size() - op_skipped;
+
+	#ifdef VERBOSE
+		std::cerr << "PART 2 - only queries" << std::endl;
+	#endif
+
+	begin = clock();
+	// Measure only queries
+	int query_count = 0;
+	for (auto op: operations) {
+		if (op.op != QUERY) continue;
+
+		query_count++;
+		auto result = worker->Double_edge_connected(op.vertex_a, op.vertex_b);
+		#ifdef VERBOSE
+			std::cerr << "Query of " << op.vertex_a << " and " << op.vertex_b << ": " << result << std::endl;
+		#endif
+	}
+	end = clock();
+	double query_execution_time = double(end - begin) / CLOCKS_PER_SEC;
 
 	// Cleaning
 	//delete(worker);
 
-	int op_count = operations.size() - op_skipped;
-	double execution_time = double(end - begin) / CLOCKS_PER_SEC;
-	return std::make_pair(init_time / M, execution_time / op_count);
+	return std::make_tuple(init_time / M, execution_time / op_count, query_execution_time / query_count);
 }
 
 
@@ -112,12 +139,18 @@ int main(int argc, char const *argv[]) {
 	for (int i = 0; i < K; i++) operations.push_back(getRandomOp(N));
 
 	// Run both implementations
-	//auto time_top_tree = run(new DoubleConnectivity(std::make_shared<TopTree::TopTree>()), N, M);
-	auto time_top_tree = std::make_pair(0, 0);
-	auto time_topology_top_tree = run(new DoubleConnectivity(std::make_shared<TopTree::TopologyTopTree>()), N, M);
-	//auto time_topology_top_tree = std::make_pair(0, 0);
+	auto time_top_tree = std::tuple<double,double,double>(0, 0, 0);
+	time_top_tree = run(new DoubleConnectivity(std::make_shared<TopTree::TopTree>()), N, M);
 
-	std::cout << time_top_tree.first << " " << time_top_tree.second << " " << time_topology_top_tree.first << " " << time_topology_top_tree.second << std::endl;
+	auto time_topology_top_tree = std::tuple<double,double,double>(0, 0, 0);
+	time_topology_top_tree = run(new DoubleConnectivity(std::make_shared<TopTree::TopologyTopTree>()), N, M);
+
+	auto time_topology_top_tree_quick = std::tuple<double,double,double>(0, 0, 0);
+	time_topology_top_tree_quick = run(new DoubleConnectivity(std::make_shared<TopTree::TopologyTopTree>(), true), N, M);
+
+	std::cout << std::get<0>(time_top_tree) << " " << std::get<1>(time_top_tree) << " " << std::get<2>(time_top_tree) << " "
+		<< std::get<0>(time_topology_top_tree) << " " << std::get<1>(time_topology_top_tree) << " " << std::get<2>(time_topology_top_tree) << " "
+		<< std::get<0>(time_topology_top_tree_quick) << " " << std::get<1>(time_topology_top_tree_quick) << " " << std::get<2>(time_topology_top_tree_quick) << std::endl;
 
 
 	/* Manual testing:

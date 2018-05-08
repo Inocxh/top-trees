@@ -16,6 +16,7 @@ class SimpleCluster;
 namespace TopTree {
 class TopologyCluster : public ICluster, public std::enable_shared_from_this<TopologyCluster> {
 friend class TopologyTopTree;
+friend class SimpleCluster;
 public:
 	static int global_index;
 

@@ -17,6 +17,8 @@ extern void Split(std::shared_ptr<ICluster> leftChild, std::shared_ptr<ICluster>
 extern void Create(std::shared_ptr<ICluster> cluster, std::shared_ptr<EdgeData> edge);
 extern void Destroy(std::shared_ptr<ICluster> cluster, std::shared_ptr<EdgeData> edge);
 
+extern void CopyClusterData(std::shared_ptr<ICluster> from, std::shared_ptr<ICluster> to);
+
 extern std::shared_ptr<ClusterData> InitClusterData();
 // END OF USER DEFINED FUNCTIONS
 }
