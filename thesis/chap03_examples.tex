@@ -116,7 +116,7 @@ principles, most of this section is a simplified citation from the
 $N$ edges could be solved in $\O(\log^4 N)$ per operation -- addition or
 deletion of an edge and test if given vertices are 2-edge connected.
 
-\subsubsection{Basic principle}
+\subsection{Basic principle}
 
 We will maintain a spanning forest $F$ of graph $G$ and we will say, that tree
 edge $e$ is {\I covered} by nontree edge $v,w$ if $e \in v\dots w$ (if there is
@@ -131,24 +131,92 @@ if and only if they are 2-edge connected in $F\cup C$.
 
 During updates, when we will delete an edge from $F$ we will need to find an
 replacement in $C$. And for every deleted edge from $C$ we may need to add
-several replacement edges to add into $C$. By carefully choosing replacement
+several replacement edges into $C$. By carefully choosing replacement
 edges we will be able to amortize the time to meet $\O(\log^4 N)$ per operation.
 
-\subsubsection{Details}
+\subsection{Brief overview of details}
 
-Algorithm associate with every nontree edge a level (number $< \log N$), each
-edge starts with level 0 and level may be increased. And for each $i$ we will
-define a graph $G_i$ as graph induces by only edges of level at least $i$
-together with the $F$.
+We do not discuss all the details here, they are described in \cite{PolylogarithmicAlgorithmsForConnectivity}. We only briefly overview some basic
+principles to make the big picture. For details see the mentioned article.
 
-For each tree edge $e \in F$ we will maintain a cover level as maximum level of
-nontree edge covering it (thus maximum level for which $e$ is in 2-edge
-connected component).
+Algorithm associates with every tree edge a nontree edge that covers it. When we
+add $u,v$ edge and $u$ and $v$ are already connected in the $F$ we should add
+$u,v$ edge as cover edge for all tree edges on the $u\dots v$ path. It would be
+slow to directly update all the affected edges so we will distribute this
+information with lazy updates through the top tree clusters -- each cluster has
+its own cover information which it distributes to its path children when the
+cluster is splitted.
+
+When deleting an uncovered tree edge it is quite easy, we just \Cut{} it from
+the $F$, otherwise we need to find some replacement edges for edges that stops
+to be covered. To accomplish easy finding of replacement edges the algorithm
+associates with every nontree edge a level (number $< \log N$), edge starts with
+level 0 and level may be only increased.
+
+For each $i$ we will define a graph $G_i$ as graph induced by only edges of
+level at least $i$ together with the $F$. For each tree edge $e \in F$ we will
+maintain a cover level as maximum level of nontree edge covering it (thus
+maximum level $i$ for which $e$ is in 2-edge connected component of $G_i$). When
+some vertices are 2-edge connected on level $i$ they 2-edge connected on all
+levels $\le i$.
+
+When updating the cover information after deleting some edge we use these levels
+as guide for finding new cover edges. Major part of the time complexity of the
+whole algorithm is the time needed for updating data structures with nontree
+egdes incident to some vertex on some level. These data structures are used for
+finding replacement edges. This part is deeply described in the \cite{PolylogarithmicAlgorithmsForConnectivity}.
+
+\subsection{Operations}
+User could cooperate with this algorithm be three simple operations:
+
+\begin{itemize}
+\item {\bf Inserting an $u,v$ edge} -- When given vertices are not connected in
+the $F$ just connect them by \Join, otherwise add a nontree edge and do cover on
+the path cluster for path $u\dots v$.
+
+\item {\bf Deleting an $u,v$ edge} -- When the $u,v$ edge is tree edge and it is
+a bridge (not covered by any other edge) just \Cut{} it. If it is covered tree
+edge swap it with its cover nontree edge and delete it like other nontree edges.
+Nontree edge is deleted firstly by {\it uncovering} $u\dots v$ path (removing all
+cover informations that it may generate on the $u\dots v$ path) and then by
+{\it recovering} this path (because by {\it uncovering} we may delete too much
+cover information).
+
+\item {\bf Query} if $u$ and $v$ are 2-edge connected -- This is an easy
+operation when we need just \Expose{} $u\dots v$ path and read the cover
+information from it.
+\end{itemize}
+
+\subsection{Speed up query by disabling expensive updates}
+
+This idea came from the original article \cite{PolylogarithmicAlgorithmsForConnectivity}
+where they analyzed time complexity and postpones some enhancements.
+
+Covering and uncovering on graph with $N$ edges takes $\O(\log^2 N)$ and
+therefore the \Link, \Cut{} and \Expose operations takes $\O(\log^3 N)$. Recover
+operations takes $\O(\log^3 N)$ for increasing edge level by one and because
+edge level is increased at most $\O(\log N)$ times, we spent at most
+$\O(\log^4 N)$ time for each edge between its insertion and deletion.
+
+The query in this original model takes $\O(\log^3 N)$, but it could be speed up
+if some conditions are met. During query we don't need any updated incident
+informations, we need only cover informations and these informations could be
+joined in $\O(1)$ time.
+
+If the top trees implementation could preserve the original shape of the
+clusters and restore to this original form we may turn off expensive updates
+in the \Join{} operation during the query. This condition is met for the second
+implementation using topology trees. But we cannot disable the updates in the
+first implementation, because the shape of the top tree is different before and
+after the \Expose{} and we would lost some incident informations.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Vertex 2-connectivity}
 
-In time $\O(\log^5 N)$ by Holm, Lichtenberg and Thorup 2001 in \cite{PolylogarithmicAlgorithmsForConnectivity}
+Vertex 2-connectivity problem is only a more complicated version of edge
+2-connectivity problem discussed in the previous subsection.
 
-\todo{Do some study.}
+Solution using top trees was introduced by Holm, Lichtenberg and Thorup 2001 in
+\cite{PolylogarithmicAlgorithmsForConnectivity} and this solution works in time
+$\O(\log^5 N)$ per operation. For more details see mentioned article.

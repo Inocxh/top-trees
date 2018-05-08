@@ -51,14 +51,12 @@ only the time used by Top trees operations.
 This problem was described in section \ref{sec:maximum_edge_weight} and it
 operates directly on the underlying tree.
 
-For given size $N$ of the tree and number of operations we randomly generated
-initial tree with $N$ edges and $N+1$ vertices and then list of operations
-(every operation with the same chance).
+For given size $N$ of the tree and number of operations the initial tree with
+$N$ edges and $N+1$ vertices was generated. Number of edges during execution was
+maintained between $N$ and $\frac{7}{10}N$ to maintain the input size.
 
-Number of edges during execution was maintained between $N$ and $\frac{7}{10}N$
-to maintain the input size.
-
-Possible operations are:
+After that the list of operations was generated (every operation with the same
+chance). Types of operations are:
 
 \begin{itemize}
 \item Add edge -- Choose random two vertices and execute \Link{} operation
@@ -75,23 +73,102 @@ returned root cluster.
 \end{itemize}
 
 Every operation executes $\O(1)$ top trees operations and it should take time
-$\O(\log N)$ (where $N$ is maximal number of edges).
+$\O(\log N)$ (where $N$ is a number of edges).
 
-When initial edges and list of operations were created both implementations were
-tested. Firstly each implementation was initialized from the initial edges and
-time of this initialization was measured. Secondly all the operations were
-executed and running time of all operations was measured.
+Both implementations were tested on the same input data. For each implementation
+the initial edges and list of operations were generated from the same random
+seed. Then the implementation was initialized from the initial edges and time of
+this initialization was measured. And finally all the operations were executed
+and running time of all operations was measured.
 
 Results from this experiment follows in the section
 \ref{sec:results_maximum_edge_weight}.
 
+Source code of the library for maximum edge weight is located in the header file
+\texttt{include/examples/maximum\_edge\_weight.hpp} and source code of the
+experiment itself is in the \texttt{src/experiment\_edge\_weight.cpp} file.
+
+
+\vfill\eject %% PRINTHACK
 
 \section{Edge 2-connectivity experiment}
 \label{sec:experiment_edge_2_connectivity}
 
-This problem was described in section \ref{sec:edge_2_connectivity} and it uses
-top trees as helper data structure for more complex operations. The problem
-should operate in time complexity $\O(\log^4 N)$ where $N$ is a number of edges
-in the underlying graph.
+This problem was described in the section \ref{sec:edge_2_connectivity} and it
+uses top trees as helper data structure for more complex operations.
 
-\todo{Describe edge 2-connectivity experiment}
+Cover informations with incident edges are stored in top clusters and as a
+supplement to the top trees structure it holds informations about all nontree
+edges and some global counters.
+
+\subsection{Stored data}
+
+Information stored in each top cluster:
+\begin{itemize}
+\item Cover level of the cluster (maximal level on which is the cluster path
+covered), cover edge of this level.
+
+\item Cover informations to be distributed into children on splitting (lazy
+propagation of {\it cover} and {\it uncover} operations).
+
+\item Arrays with incident information for both endpoints of this cluster, size
+of the arrays are $\O(\log^2 N)$.
+\end{itemize}
+
+Outside of the top clusters there are structures associated to the each edge
+(because edge may change from tree to nontree and vice versa we need to associate
+this structure with each edge) which holds information about level of the edge
+and if it is coverage by other edges (like the cover information in top
+clusters). Each edge have $\O(1)$ informations associated with it.
+
+And finally there are global incident counters for each vertex, they takes
+$\O(\log^2 N)$ space.
+
+Because there are a lot of other data structures outside of the top trees
+structure we cannot use the top trees structure initialization from underlying
+base graph, but we must initialize the structure by inserting all the edges one
+by one. During experiments the initialization time was measured independently.
+
+\subsection{Generating initial graph and choosing number of edges}
+
+Important decision during generating graph was number of edges. For graph on $N$
+vertices we could have up to $\O(N^2)$ edges, but such graph wouldn't be much
+interesting for the question of edge 2-connectivity.
+
+We want to have graphs which are not fully 2-connected, but whose have large
+2-connected components. During testing graph with sizes $cN^2$, $N\sqrt{N}$,
+$N\log N$ and $cN$ were tested (where $N$ is number of vertices and $c$ some
+small constant) and size $N\log N$ was chosen as an optimal size with the best
+ratio of positive and negative queries (each other size was more shifted to some
+side).
+
+During experiment the number of edges of the underlying graph was kept between
+$\frac{7}{10}N\log N$ and $\frac{13}{10}N\log N$.
+
+\subsection{Test scenarios}
+
+Possible operations were described in the section \ref{sec:edge_2_connectivity}.
+For measuring time two scenarios were introduced. In the first one 70 \% of
+operations were queries, 15 \% of them insertions and last 15 \% were deletions.
+This experiment aims model average structure usage with all used operations.
+
+Second scenario does only queries to properly measure difference between normal
+variant of the second implementation and with variant of the second
+implementation with disabled expensive updates during queries.
+
+Results from this experiment follows in the section \ref{sec:results_edge_2_connectivity}.
+
+Source code of the library for maximum edge weight is located in the header file
+\texttt{include/examples/double\_edge\_connectivity.hpp} and source code of the
+experiment itself is in the \texttt{src/experiment\_double\_edge\_connectivity.cpp} file.
+
+\bigskip
+
+The problem of edge 2-connectivity and its solution is much larger problem than
+the problem in the first experiment. I tried to implement it in the best way
+but my target was the comparison of the two top tress implementations, not
+building universal solution for edge 2-connectivity.
+
+The experiment still has some undefined behavior in some edge cases (for some
+random seeds), but it has non effect on comparison -- when some failure occurred
+another random seed was chosen.
