@@ -19,7 +19,21 @@ code.
 \bigskip
 
 Second product of this thesis are results of experiments discussed in the last
-chapter. They showed \todo{complete after finishing of the experiments}
+chapter. They showed that in most cases the implementation which uses self
+adjusting trees is better due to larger multiplicative constant of the
+implementation with topology trees.
+
+Only when \Join{} or \Split{} operations are time consuming and some updates
+could be turned of during \Expose{} operation the second implementation could
+be considered as interesting.
+
+The experiment with edge 2-connectivity showed, that when \Expose{} operations
+are significant but not only part of all operations, the implementation with
+topology trees is still slower. But when we want to ensure quick \Expose{}
+operations or number of \Expose{} operations is asymptotically larger than
+number of other operations, we may consider the second implementation with
+topology trees and with expensive updates turned off during \Expose{}. In this
+circumstances it could works much quicker for \Expose{} operation.
 
 These results may help users of provided implementations to choose the right
 implementation to fit their needs. Also other researchers in the field of Top

@@ -29,8 +29,8 @@ size:
 
 \begin{itemize}
 \item Choose graph size (number of vertices and edges)
-\item For each chosen graph size choose 10 random seeds to generate input data
-and sequence of operations
+\item For each chosen graph size choose random seeds to generate input data and
+sequence of operations
 \item For every implementation and every seed run test and measure elapsed time
 \item Compute average elapsed time and standard deviation for each input size
 \end{itemize}
@@ -52,11 +52,8 @@ This problem was described in section \ref{sec:maximum_edge_weight} and it
 operates directly on the underlying tree.
 
 For given size $N$ of the tree and number of operations the initial tree with
-$N$ edges and $N+1$ vertices was generated. Number of edges during execution was
-maintained between $N$ and $\frac{7}{10}N$ to maintain the input size.
-
-After that the list of operations was generated (every operation with the same
-chance). Types of operations are:
+$N$ edges and $N+1$ vertices was generated. After that the list of operations
+was generated (every operation with the same chance). Types of operations are:
 
 \begin{itemize}
 \item Add edge -- Choose random two vertices and execute \Link{} operation
@@ -73,7 +70,9 @@ returned root cluster.
 \end{itemize}
 
 Every operation executes $\O(1)$ top trees operations and it should take time
-$\O(\log N)$ (where $N$ is a number of edges).
+$\O(\log N)$, where $N$ is a number of edges. Number of edges during execution
+was maintained between $N$ and $\frac{7}{10}N$ to maintain the same asymptotic
+complexity.
 
 Both implementations were tested on the same input data. For each implementation
 the initial edges and list of operations were generated from the same random
@@ -138,8 +137,8 @@ interesting for the question of edge 2-connectivity.
 We want to have graphs which are not fully 2-connected, but whose have large
 2-connected components. During testing graph with sizes $cN^2$, $N\sqrt{N}$,
 $N\log N$ and $cN$ were tested (where $N$ is number of vertices and $c$ some
-small constant) and size $N\log N$ was chosen as an optimal size with the best
-ratio of positive and negative queries (each other size was more shifted to some
+small constant) and size $3N$ was chosen as an optimal size with the best
+ratio of positive and negative queries (each larger number of edges  other size was more shifted to some
 side).
 
 During experiment the number of edges of the underlying graph was kept between
