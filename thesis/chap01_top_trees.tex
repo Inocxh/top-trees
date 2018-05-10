@@ -19,13 +19,13 @@ underlying forest) could be directly accessed by the user.
 User defines format of the data stored in these clusters and four basic
 {\I user functions} \Create, \Destroy, \Join{} and \Split{} used to
 manipulate with clusters data. Above that user could define fifth function
-\Choose{} which is needed for some use cases but it is not needed for basic
+\Choose{} which is needed for non-local search but it is not needed for basic
 usage.
 
 Then user controls the Top Trees structure by using {\I operations} $\Cut(u,v)$,
 $\Link(u,v)$ and $\Expose(u,v)$. Last of them
 makes cluster representing the path between vertices $u$ and $v$ a root cluster
-(because root clusters are the only clusters of the top tree, whose could be
+(because root clusters are the only clusters of the top tree, which could be
 accessed by the user). The Top Trees structure dynamically updates stored data
 in clusters by using user defined functions.
 
@@ -99,8 +99,8 @@ If boundary vertices of the cluster $C_1$ were $(u,v)$ and boundary vertices
 of the cluster $C_2$ were $(v,w)$, the cluster $C=compress(C_1,C_2)$ would have
 boundary vertices $(u,w)$ (and we will call it {\I compress cluster
 of vertex $v$} and the operation {\I compressing around vertex $v$}).
-This cluster also in some way represents the vertex $v$ and we will use it as
-{\I handle} of this vertex.
+This cluster also in some way represents the vertex $v$ and we will use this
+cluster as {\I handle} of the $v$.
 
 \begin{figure}[H]
 \centering
@@ -117,8 +117,8 @@ these trees (Base clusters) represent edges of the underlying trees and each
 inner vertex represents contraction of two child clusters into one.
 
 Compress and rake clusters have each of them two children, base clusters are
-childless. Each cluster represent subtree of the underlying forest. By
-combination of clusters we could represent each underlying tree as one {\I root
+childless. Each cluster represent subtree of the underlying forest. By sequence
+of clusters contractions we could represent each underlying tree as one {\I root
 cluster}. This whole binary tree of cluster contractions leading to the one root
 cluster is called {\I top tree}.
 
@@ -158,7 +158,7 @@ cluster model they would be raked onto clusters from path and the path would be
 compression of these rake clusters.
 
 In this extended model the clusters originating from the separating branches are
-firstly combined in so called {\I rake trees} -- there are maximally two rake
+firstly combined in {\I rake trees} -- there are maximally two rake
 trees around each path vertex, one of them is raked from branches on one side of
 the path and the second one is raked from branches on the other side of the
 path. And these rake trees are connected as left and right foster child of the
@@ -173,7 +173,7 @@ to compress clusters}
 \end{figure}
 
 During computation (\Join{} and \Split{} operations) there is need to use
-virtual rake clusters, but it is only $\O(1)$ time complexity per one compress
+virtual rake clusters, but it takes only $\O(1)$ time per one compress
 cluster. We will discuss it later in the first implementation for which this
 extended model is used.
 
@@ -190,8 +190,8 @@ extended model is used.
 
 \section{User defined functions}
 
-There are four basic function to manipulate the clusters data which have to
-be implemented by users of the Top Trees structure. Then user uses public Top
+There are four basic functions to manipulate the clusters data which have to
+be implemented by user of the Top Trees structure. Then user uses public Top
 Trees structure operations and these user functions are used internally when
 constructing, destroying or reorganizing clusters.
 
@@ -221,7 +221,7 @@ rake) cluster. In the general view it should populate parent cluster with the
 data aggregated from contracted child clusters or perform other join-related
 operations according to logic of given problem.
 
-It gets a references to both of the contracted clusters and to the newly created
+It gets references to both of the contracted clusters and to the newly created
 parent cluster with information about their boundary vertices. From boundary
 vertices of the parent and both children can be clearly determined if it is
 compress or rake cluster (and which one of the children in rake cluster is raked
@@ -231,13 +231,15 @@ the logic of given problem.
 \subsection{\sc Split}
 
 Opposite of the \Join{} function. It is called just before removing connection
-among parent cluster and its children. This function gets reference to the
+among parent cluster and its children. This function gets references to the
 parent cluster and both of its children with information about their boundary
 vertices. It should distribute data from the parent into children -- notice that
 no data could be stored in the parent cluster after the Split operation (because
-the parent cluster is deleted after this operation).
+the parent cluster will be deleted after this operation).
 
-The \Join{} and \Split{} operations are frequently called during reorganization of the
+\bigskip
+
+The \Join{} and \Split{} functions are frequently called during reorganization of the
 Top trees structure -- common pattern is to split everything around changed path
 in the top-down manner, reorganize the structure and then join everything in the
 bottom-up manner.
@@ -254,8 +256,6 @@ reference to the cluster and its children and returns reference to one of them.
 It is used internally by the \Search{} operation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\penalty-5000 % PRINTHACK
 
 \section{Top Trees operations}
 
@@ -276,7 +276,7 @@ implementation details).
 
 We cannot restore the correct shape right after finishing the operation because
 user may need to interact with the Top Trees structure in this corrupted state.
-Therefore we have to record that the structure is in corrupted form and we have
+Therefore we have to record that the structure is in corrupted state and we have
 to do check and eventually restoration at beginning of each operation. See the
 following {\I Restore} operation for more details.
 
@@ -291,7 +291,7 @@ vertices. Every cluster represents some path and for given vertex we want to
 choose cluster which has this vertex in its path. Also we want that the chosen
 cluster could be easily transformed around this vertex. This means that we want
 cluster that has chosen vertex as its boundary vertex or common vertex
-(if compress clusters).
+(for compress clusters).
 
 To accomplish this mapping we define {\I handle} for each vertex of the
 underlying forest in this way:
@@ -317,7 +317,7 @@ clusters.
 
 \subsection{\sc Expose}
 
-Expose is one of the most basic operation. Calling $\Expose(u,v)$ will result in
+Expose is one of the most basic operations. Calling $\Expose(u,v)$ will result in
 exposing the $u\dots v$ path (if exists) in the root cluster, which the user
 could modify.
 
@@ -338,9 +338,10 @@ call the \Restore{} operation at beginning of all other operations.
 To allow the user to modify user functions (\Split, \Join, \dots) for each
 operation we will make the \Restore{} callable by the user independently.
 
-In the second implementation we will use this functionality to turn off
-expensive updates during the \Expose{} operation, \Restore{} the structure back to the
-correct form and before next operation turn the expensive updates back on.
+In one of the experiments we will use this functionality to turn off expensive
+updates during the \Expose{} operation for implementation with topology trees.
+After finishing \Expose{} we will \Restore{} the structure back to the correct
+form and before next operation we will turn the expensive updates back on.
 
 \subsection{\sc Cut}
 
@@ -353,7 +354,7 @@ they remove the $(u,v)$ edge and return roots of two new top trees.
 
 \subsection{\sc Link}
 
-The Link operation is an opposite to the \Cut{} operation. Calling $\Link(u,v)$ on
+The \Link{} operation is an opposite to the \Cut{} operation. Calling $\Link(u,v)$ on
 two disconnected vertices joins them by the new edge $(u,v)$. Precondition for
 this operation is that $u$ and $v$ are disconnected.
 

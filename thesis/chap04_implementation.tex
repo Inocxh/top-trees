@@ -59,10 +59,12 @@ When using \texttt{DEBUG} options (see below) classes for edges and vertices
 must implement \texttt{std::ostream\& ToString(std::ostream\&)} method, it is
 used for debug printing. How to enable debug printing will be showed later.
 
-As second step user needs to define structure for data cluster data. This
-structure must inherit from generic structure \texttt{TopTree::ClusterData}.
-For initialization of this structure user has to provide function
-\texttt{TopTree::InitClusterdata} like in the following example.
+As second step user needs to define structure for cluster data. This structure
+must inherit from generic structure \texttt{TopTree::ClusterData}. For
+initialization of this structure user has to provide function
+\texttt{TopTree::InitClusterdata} and function \texttt{TopTree::CopyClusterData}
+to do a deep copy of of given data to the another cluster. Example of all
+definitions follows.
 
 \begin{figure}[H]
 \begin{verbatim}
@@ -74,6 +76,17 @@ public:
 std::shared_ptr<TopTree::ClusterData> TopTree::InitClusterData() {
     return std::make_shared<MyData>();
 }
+
+void TopTree::CopyClusterData(
+    std::shared_ptr<ICluster> from,
+    std::shared_ptr<ICluster> to
+) {
+    auto fromData = std::dynamic_pointer_cast<MyData>(from->data);
+    auto toData = std::dynamic_pointer_cast<MyData>(to->data);
+
+    toData->max_weight = fromData->max_weight;
+}
+
 \end{verbatim}
 \caption{Example of struct for holding cluster data}
 \end{figure}
@@ -81,8 +94,8 @@ std::shared_ptr<TopTree::ClusterData> TopTree::InitClusterData() {
 \subsection{User functions}
 
 Necessary for operating with Top Trees are definitions of user functions. User
-has to define methods in the \texttt{TopTrees} namespace, without these
-definitions program cannot be even compiled.
+must define user functions in the \texttt{TopTrees} namespace, without these
+functions the program cannot be even compiled.
 
 Both \Join{} and \Split{} user functions takes shared pointers to three clusters
 (generic interface \texttt{TopTree::ICluster}), two for child clusters and one
@@ -149,7 +162,7 @@ some underlying tree. For this underlying tree there exists
 and \texttt{AddLeaf} functions (last one is only shortcut for \texttt{AddVertex}
 and \texttt{AddEdge} in one step).
 
-After that user could call \texttt{InitFromBaseTree}.
+To initialize from some underlying tree user could call \texttt{InitFromBaseTree}.
 
 \begin{figure}[H]
 \begin{verbatim}
@@ -185,10 +198,11 @@ cutted edge. When vertices are not connected by an edge (when not connected at
 all or when connected by some longer path) it will return \texttt{NULL}.
 
 \item \texttt{Link(v, w, edge\_data)} -- Link given vertices with a new edge
-with given data. When vertices are already in the same tree it will
-return \texttt{NULL} (otherwise it will return pointer on the top tree).
+with given data. When vertices are already in the same tree it will return
+\texttt{NULL} (otherwise it will return pointer on root cluster of resulting top
+tree).
 
-\item \texttt{Expose(v, w)} -- Expose given $v$-$w$ path and return pointer to
+\item \texttt{Expose(v, w)} -- Expose given $v\dots w$ path and return pointer to
 the cluster covering this path. When vertices are not connected it will return
 \texttt{NULL}.
 
@@ -202,8 +216,8 @@ updates during \Expose).
 
 \section{Debug and Graphviz output}
 
-Both implementations have debug output which can be used to show their
-steps of operating and optionally to output their current state in Graphviz
+Both implementations have debug output which can be used to trace their
+processing steps and optionally to output their current state in Graphviz
 format. Debug messages goes on their error output (stderr) and Graphviz on
 their standard output (stdout).
 

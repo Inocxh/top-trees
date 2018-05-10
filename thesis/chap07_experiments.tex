@@ -6,7 +6,7 @@ and for objective results multiple tests were needed.
 
 I choose two different problems mentioned in the \cref{chap:Problems}.
 First of them is a problem of maximum edge weight between given vertices with
-interval update (described in section \ref{sec:maximum_edge_weight}), which uses
+interval updates (described in section \ref{sec:maximum_edge_weight}), which uses
 Top trees directly and aims to work in time $\O(\log N)$ per operation. Second
 problem is an edge 2-connectivity (described in section \ref{sec:edge_2_connectivity}),
 which uses Top trees ``under the hood'' and aims to work in time $\O(\log^4 N)$
@@ -25,14 +25,14 @@ operation types, \dots)
 
 Common scenario for all experiments was introduced. Each experiment was done
 for both implementations with the same input data and with increasing input
-size:
+size. Common scenario:
 
 \begin{itemize}
-\item Choose graph size (number of vertices and edges)
-\item For each chosen graph size choose random seeds to generate input data and
-sequence of operations
-\item For every implementation and every seed run test and measure elapsed time
-\item Compute average elapsed time and standard deviation for each input size
+\item Choose graph size (number of vertices and edges).
+\item For each chosen graph size choose multiple random seeds to generate
+initial edges and sequence of operations.
+\item For each implementation and every generated input run the test and measure elapsed time.
+\item Compute average elapsed time and standard deviation for each input size.
 \end{itemize}
 
 Python wrapper was used to generate random seeds and to execute testing utilities.
@@ -53,7 +53,8 @@ operates directly on the underlying tree.
 
 For given size $N$ of the tree and number of operations the initial tree with
 $N$ edges and $N+1$ vertices was generated. After that the list of operations
-was generated (every operation with the same chance). Types of operations are:
+was generated (every operation with the same chance) from following operations
+list:
 
 \begin{itemize}
 \item Add edge -- Choose random two vertices and execute \Link{} operation
@@ -80,13 +81,12 @@ seed. Then the implementation was initialized from the initial edges and time of
 this initialization was measured. And finally all the operations were executed
 and running time of all operations was measured.
 
-Results from this experiment follows in the section
-\ref{sec:results_maximum_edge_weight}.
-
 Source code of the library for maximum edge weight is located in the header file
 \texttt{include/examples/maximum\_edge\_weight.hpp} and source code of the
 experiment itself is in the \texttt{src/experiment\_edge\_weight.cpp} file.
 
+Results from this experiment follows in the section
+\ref{sec:results_maximum_edge_weight}.
 
 \vfill\eject %% PRINTHACK
 
@@ -111,14 +111,14 @@ covered), cover edge of this level.
 propagation of {\it cover} and {\it uncover} operations).
 
 \item Arrays with incident information for both endpoints of this cluster, size
-of the arrays are $\O(\log^2 N)$.
+of these arrays is $\O(\log^2 N)$.
 \end{itemize}
 
 Outside of the top clusters there are structures associated to the each edge
 (because edge may change from tree to nontree and vice versa we need to associate
 this structure with each edge) which holds information about level of the edge
-and if it is coverage by other edges (like the cover information in top
-clusters). Each edge have $\O(1)$ informations associated with it.
+and if it is covered by other edges (like the cover information in top
+clusters). Each edge have $\O(1)$ information associated with it.
 
 And finally there are global incident counters for each vertex, they takes
 $\O(\log^2 N)$ space.
@@ -135,39 +135,40 @@ vertices we could have up to $\O(N^2)$ edges, but such graph wouldn't be much
 interesting for the question of edge 2-connectivity.
 
 We want to have graphs which are not fully 2-connected, but whose have large
-2-connected components. During testing graph with sizes $cN^2$, $N\sqrt{N}$,
+2-connected components. During testing graphs with sizes $cN^2$, $N\sqrt{N}$,
 $N\log N$ and $cN$ were tested (where $N$ is number of vertices and $c$ some
 small constant) and size $3N$ was chosen as an optimal size with the best
-ratio of positive and negative queries (each larger number of edges  other size was more shifted to some
-side).
+ratio of positive and negative queries (graphs with larger number of edges
+has more unbalanced ratio of positive and negative queries).
 
-During experiment the number of edges of the underlying graph was kept between
-$\frac{7}{10}N\log N$ and $\frac{13}{10}N\log N$.
+Initial edges of the graph was generated uniformly randomly as pairs of
+vertices. During experiment the number of edges of the underlying graph was kept
+between $\frac{7}{10}N\log N$ and $\frac{13}{10}N\log N$.
 
 \subsection{Test scenarios}
 
 Possible operations were described in the section \ref{sec:edge_2_connectivity}.
-For measuring time two scenarios were introduced. In the first one 70 \% of
-operations were queries, 15 \% of them insertions and last 15 \% were deletions.
-This experiment aims model average structure usage with all used operations.
+For measuring time two scenarios were introduced. In the first one $70\ \%$ of
+operations were queries, $15\ \%$ of them insertions and last $15\ \%$ were deletions.
+This experiment aims to simulate some average structure usage with all operations.
 
 Second scenario does only queries to properly measure difference between normal
-variant of the second implementation and with variant of the second
-implementation with disabled expensive updates during queries.
-
-Results from this experiment follows in the section \ref{sec:results_edge_2_connectivity}.
+variant of the second implementation and variant of the second implementation
+with disabled expensive updates during queries.
 
 Source code of the library for maximum edge weight is located in the header file
 \texttt{include/examples/double\_edge\_connectivity.hpp} and source code of the
 experiment itself is in the \texttt{src/experiment\_double\_edge\_connectivity.cpp} file.
 
+Results from this experiment follows in the section \ref{sec:results_edge_2_connectivity}.
+
 \bigskip
 
 The problem of edge 2-connectivity and its solution is much larger problem than
 the problem in the first experiment. I tried to implement it in the best way
-but my target was the comparison of the two top tress implementations, not
+but my aim was the comparison of the two top trees implementations, not
 building universal solution for edge 2-connectivity.
 
 The experiment still has some undefined behavior in some edge cases (for some
-random seeds), but it has non effect on comparison -- when some failure occurred
+random seeds), but it had no effect on comparison -- when some failure occurred
 another random seed was chosen.

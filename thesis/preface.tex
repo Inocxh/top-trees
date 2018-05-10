@@ -1,16 +1,16 @@
 \chapter*{Introduction}
 \addcontentsline{toc}{chapter}{Introduction}
 
-Main target of this thesis is to provide two different {\I Top Trees}
+Main aim of this thesis is to provide two different {\I Top Trees}
 implementations and to compare them in different situations. Both implementation
 were written from scratch in \Cpp{} to provide comparable results.
 
 {\I Top Trees} are not so well known data structure which could be used to
 maintain information of some dynamically updated collection of trees. User of
 this data structure defines four basic operations, which are used internally
-when Top Trees structure is changing, and the structure updates internally
-stored information when there occurs some cutting or joining on underlying
-trees.
+when Top Trees structure is changing. When there occurs some cutting or joining
+on underlying trees the structure updates internally stored information using
+these user functions.
 
 This data structure could be used for example to dynamically maintain diameter,
 center or median (minimizing weighted distance from all other vertices) of given
@@ -20,11 +20,11 @@ Because it is essential to understand how the Top Trees structure works, some
 basic principles of the Top Trees structure are introduced in the
 \Cref{chap:TopTrees} and some basic principles of Topology trees used in one of
 the implementations are introduced in the \Cref{chap:TopologyTrees}. Some
-examples of problems, whose could Top Trees handle quickly, are listed in
+examples of problems, which could Top Trees handle quickly, are listed in
 \Cref{chap:Problems} of this thesis.
 
 Basic usage of both implementations and some technical details are the contents
-of the \Cref{chap:Implementation}, \Cref{chap:ImplementationSelfAdjusting} and
+of the \Cref{chap:Implementation}. \Cref{chap:ImplementationSelfAdjusting} and
 \Cref{chap:ImplementationTopology} describes details of both implementations.
 
 First implementation of the Top Trees structure is based on article {\I
@@ -41,7 +41,7 @@ $\O(\log N)$ in worst-case but with much larger multiplicative constant. This
 implementation is described in \Cref{chap:ImplementationTopology} of this thesis.
 
 To compare both implementations it was necessary to perform some experiments on
-different problems on different trees with different sizes. Experiments were
+different problems on different graphs with different sizes. Experiments were
 performed on problem of {\I maximum edge weight in tree with interval updates}
 (described in section \ref{sec:maximum_edge_weight}) and on problem of {\I edge
 2-connectivity} (described in section \ref{sec:edge_2_connectivity}. Details of

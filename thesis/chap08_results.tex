@@ -2,7 +2,8 @@
 \label{chap:Results}
 
 Measured data for all experiment together with specification of computers used
-for measure them is attached to this thesis. There we will discuss the results.
+for measure them is part of the attachment of this thesis. Here we will discuss
+the results.
 
 \section{Maximum edge weight experiment results}
 \label{sec:results_maximum_edge_weight}
@@ -51,6 +52,8 @@ experiment}
 
 \vfill\eject %% PRINTHACK
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \section{Edge 2-connectivity experiment results}
 \label{sec:results_edge_2_connectivity}
 
@@ -62,10 +65,12 @@ of all operations and execution time on only query operations were measured.
 
 \subsubsection{Running time of all operations}
 
-Firstly analyze the running time of normal operations. As you can see on the
-following chart, all implementations have the same asymptotic complexity (they
-should operate in $\O(\log^4 N)$). The implementation which uses self adjusting
-trees has the lowest multiplicative constant as have been expected.
+Firstly we analyze the running time of normal operations. As you can see on the
+following chart, there are some anomalies depending on size of the graph, but
+mean curve of the measured times shows that all implementations have the same
+asymptotic complexity (they should operate in $\O(\log^4 N)$). The
+implementation which uses self adjusting trees has the lowest multiplicative
+constant as have been expected.
 
 \begin{figure}[H]
 \centering
@@ -80,21 +85,21 @@ larger than the same multiplicative constant in the first experiment.
 
 Mark multiplicative constant from the experiment
 \ref{sec:results_maximum_edge_weight} as $C$. Expected value for the
-multiplicative constant in this experiment would be $C^3$ (because operations in
-this experiment have asymptotic time complexity of $\O(\log^3 N)$ or $\O(\log^4
-N)$), but measured multiplicative constant for this experiment is lower. The
-difference against the expectation is probably caused by processor caches --
-updates in the edge 2-connectivity experiment operates on arrays in the clusters
-in sequential order and this cause less cache misses.
+multiplicative constant in this experiment would be approximately $C^3$ (because
+operations in this experiment have asymptotic time complexity of $\O(\log^3 N)$
+or $\O(\log^4 N)$), but measured multiplicative constant for this experiment is
+lower. The difference against the expectation might be caused by processor
+caches -- updates in the edge 2-connectivity experiment operates on arrays in
+the clusters in sequential order which causes less cache misses.
 
 Another interesting observation is that turning of expensive updates during
-queries have lowers the running time only about 30 \% although the ratio of
-queries was 70 \% in all the experiments -- so the most time is spent in the
-insertions and deletions of edges.
+queries have lowered the running time only about $30\ \%$ although the ratio of
+queries was $70\ \%$ in all the experiments -- so the majority of time is spent
+on the insertions and deletions of edges.
 
 \subsubsection{Running time of only queries}
 
-In some uses there might be crucial to quickly answer on queries and other
+In some uses it might be crucial to quickly answer on queries and other
 updates may be slower. The second experiment executed only queries and measured
 their running time.
 
@@ -114,7 +119,7 @@ time complexity of any other implementation.
 \subsubsection{Running time of construction}
 
 Construction in this problem cannot be done in one step from some underlying
-tree, but it has to be done by sequentially inserting all the edges from the
+tree, but it must be done by sequentially inserting all the edges from the
 underlying graph. Thus time of construction of graph with $M$ edges is time of
 sequential insertion of $M$ edges into the empty structure.
 

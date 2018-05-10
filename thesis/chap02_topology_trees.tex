@@ -18,7 +18,7 @@ these recursive clusters, one for each tree in the original forest.
 
 Cluster in topology tree is a set of at most two nodes (vertices of the
 original tree or other topology tree clusters) with edge between them (but
-without edges to neighbours) and with at most three neighbours, better
+without edges to neighbors) and with at most three neighbors, better
 definition will conclude below. Nodes not connected by edge cannot be in common
 cluster, thus clusters represents some contracted subtrees of the original tree.
 
@@ -55,13 +55,14 @@ division of this graph into clusters that:
 \item Each vertex of the original graph is contained in exactly one cluster.
 \end{itemize}
 
-The {\I Topology clusterization} of a tree (with maximal degree 3) is clusterization
+The {\I Topology clusterization} of a tree (with maximal degree 3) is a clusterization
 of order 2 whose clusters (called {\I topology clusters}) must meet these conditions:
 \begin{enumerate}
-\item {\bf Neighbours limit}: Every topology cluster has degree (number of
-outgoing edges to neighbours) at most 3.
-\item {\bf Simple crossroads}: Clusters with three neighbours must have order 1 (only one vertex).
-\item {\bf Minimality}: There is no cluster that could be merged with its neighbour
+\item {\bf Neighbors limit}: Every topology cluster has degree (number of
+outgoing edges to neighbors) at most 3.
+\item {\bf Simple crossroads}: Clusters with three neighbors must have order 1
+(they consist of only one vertex).
+\item {\bf Minimality}: There is no cluster that could be merged with its neighbor
 without violation these rules.
 \end{enumerate}
 
@@ -87,7 +88,7 @@ figures \ref{fig:topology_tree_construction} and \ref{fig:topology_tree_example}
 Each inner cluster has at most two children on the level below (the clusters
 from which is it contracted) and at most one parent (topology clusters without
 parent are roots of topology trees). Among these tree edges each topology
-cluster is connected with its neighbours on the same level -- each topology
+cluster is connected with its neighbors on the same level -- each topology
 cluster has at most three outgoing edges.
 
 \subsection{Height of a topology tree}
@@ -127,14 +128,14 @@ topology trees are joined into one and after {\I cut} (removing edge) one
 topology tree is splitted into two topology trees.
 
 This change has to be propagated on all levels of a topology tree and
-corresponding topology clusters (and their neighbours) have to be updated. The
+corresponding topology clusters (and their neighbors) have to be updated. The
 main idea is that this operation should do constant work on each level which
 leads to the time $\O(\log N)$ for each operation.
 
 Update process was originally described by Frederickson in
 \cite{DSforDynamicallyMaintainingRootedTrees} but my implementation is based on
 process described in Martin Mareš's master thesis \cite{DGA} (in Czech). The
-process is the same but in the second work was described more clearly.
+process is the same but it was described more clearly in the second source.
 
 \subsection{Update process}
 
@@ -145,11 +146,11 @@ goes from the lowest level up and repairs broken constraints.
 Update process work in phases (one phase for level in topology tree) and uses
 three lists listed below:
 \begin{itemize}
-\item {\bf Delete list} -- clusters to be deleted, initially is empty.
-\item {\bf Change list} -- clusters whose are changed and needs recomputation, initially
+\item {\bf Delete list} -- clusters to be deleted, initially it is empty.
+\item {\bf Change list} -- clusters which are changed and needs recomputation, initially
 it contains basic clusters at endpoints of the added/removed edge.
-\item {\bf Abandon list} -- clusters whose are (for some reason) without parent and
-needs some, initially is empty.
+\item {\bf Abandon list} -- clusters which are (for some reason) without parent and
+needs some, initially it is empty.
 \end{itemize}
 
 In each phase update process processes all clusters from all three lists and
@@ -159,13 +160,13 @@ no clusters to process it ends.
 Firstly for all clusters from delete list: We delete this cluster (and
 disconnect all outer edges) and if it is the only child of its parent we add
 parent to the delete list for the next phase, otherwise we add the second child
-into current change list, because we need to recompute its neighbours (and
+into current change list, because we need to recompute its neighbors (and
 that transitively ensures that parent would get into new change list).
 
 Next for all clusters in change list: If they have sibling (the second child of
 their parent) and they are connected with him by edge then everything is correct
--- we only update their neighbours (based on its children neighbours) and add
-the parent into next change list (we need to update parent's neighbours too).
+-- we only update their neighbors (based on its children neighbors) and add
+the parent into next change list (we need to update parent's neighbors too).
 
 If cluster from change list has sibling but they are not connected by edge (for
 example the initial state after cut operation) their parent is no longer a
@@ -176,33 +177,33 @@ And finally for all other clusters (rest of change list and abandon list) we do
 this process:
 \begin{itemize}
 
-\item {\I When cluster has no neighbours we found a new root cluster}
+\item {\I When cluster has no neighbors we found a new root cluster}
 $\rightarrow$ we just save it into list of root clusters.
 
-\item {\I When cluster has three neighbours and one of the neighbours is {\sl single
-cluster} (cluster with only one neighbour)} $\rightarrow$ we join them together
-under one parent, resulting cluster would have two neighbours. Depending on both
-clusters parent there are several options:
+\item {\I When cluster has three neighbors and one of the neighbors is {\sl single
+cluster} (cluster with only one neighbor)} $\rightarrow$ we join them together
+under one parent, resulting cluster would have two neighbors. Depending on parents
+of both clusters there are several options:
 	\begin{itemize}
-	\item If one of the clusters has parent we reuse it and add this parent
+	\item If one of the clusters has parent, we reuse it and we add this parent
 	into next changed list.
-	\item If both clusters have parent we choose one, reuse it (adding it
-	into next change list) and add second one into next delete list.
+	\item If both clusters have parent, we choose one, reuse it (adding it
+	into next change list) and we add second one into next delete list.
 	\item If both clusters were without parent we have to create a new one
 	and add this new parent into next abandon list.
 	\end{itemize}
 
-\item {\I When cluster has three neighbours but no neighbour is single cluster}
-$\rightarrow$ we cannot join cluster with any of its neighbours, therefore we
+\item {\I When cluster has three neighbors but no neighbor is single cluster}
+$\rightarrow$ we cannot join cluster with any of its neighbors, therefore we
 only ensure there is parent of this cluster (if parent exists we add it into
 next change list, otherwise we create it and add it into next abandon list).
 
-\item {\I If cluster has degree (number of neighbours) at most 2 and it has
-neighbour without sibling such that degree of cluster plus degree of this
-neighbour is at most 4} $\rightarrow$ We join them together. The resulting parent cluster
+\item {\I If cluster has degree (number of neighbors) at most 2 and it has
+neighbor without sibling such that degree of cluster plus degree of this
+neighbor is at most 4} $\rightarrow$ We join them together. The resulting parent cluster
 will have degree 2 (because we encapsulate the common edge, which we count
 twice, into parent cluster). Ensuring the parent cluster is similar as in the
-second case. If there is no such neighbour we only ensure that parent of this cluster exists
+second case. If there is no such neighbor we only ensure that parent of this cluster exists
 (similar as in the third case).
 
 \end{itemize}
@@ -229,11 +230,11 @@ multiple vertices with maximal degree 3 by these simple steps:
 original vertex.
 \item Connect subvertices by edges (called {\I subvertice edges}) into one chain (first
 and last vertex will have one edge used, inner will have two edges used)
-\item Disconnect neighbours from the original vertex and connect them to these
-subvertices (there are exactly the right number of free neighbour slots).
+\item Disconnect neighbors from the original vertex and connect them to these
+subvertices (there are exactly the right number of free neighbor slots).
 \end{itemize}
 
-But the \Cut{} and \Link{} operations in the Top trees works with the original
+Because the \Cut{} and \Link{} operations in the Top trees works with the original
 vertices, we have to build some mapping on internal Topology trees cuts and link
 operations.
 
@@ -252,16 +253,18 @@ do several repair steps:
 
 \begin{itemize}
 \item {\I If this is inner subvertex of the subvertice chain:} We remove it
-from the chain, we need two internal cuts on edges to both neighbours and one
-internal link to directly reconnect neighbours.
+from the chain, we need two internal cuts on edges to both neighbors and one
+internal link to directly reconnect neighbors.
+
 \item {\I If this is outer vertex of the subvertices chain and there is at least
 one inner vertex of the chain (when degree of the original vertex was
-at least 5):} We ``steal'' one outer edge from the neighbour (which is
+at least 5):} We ``steal'' one outer edge from the neighbor (which is
 an inner vertex of the subvertice chain) by one internal cut and one internal
 link and then we continue as in the first case by removing this inner vertex.
+
 \item {\I If this is outer vertex of the subvertice chain and there is no inner
 vertex:} We have to join subvertices into the original vertex. We cut each edge
-to neighbour and link it back to the original vertex, finally we cut the edge
+to neighbor and link it back to the original vertex. Finally we cut the edge
 between both subvertices and delete these subvertices.
 
 Because degree of the original vertex is 3 after this operation we do exactly
@@ -283,17 +286,18 @@ call internal link operation.
 When linking vertex with degree 3 or more we need to split it into subvertices
 (or add a new subvertex to the existing subvertices chain).
 
-When degree of the vertex was exactly 3 it is not splitted and we have to split
-it -- as in the procedure above we create two subvertices, we link them by one
-edge and then for all existing neighbours we cut them from the original vertex
-and link them to one of the subvertices. One subvertex ends with degree only
-2 and this subvertex we use as an endpoint for the main link operation.
+When degree of the vertex was exactly 3, it is not splitted yet and we have to
+split it -- as in the procedure above we create two subvertices, we link them by
+one edge and then for all existing neighbors we cut them from the original
+vertex and link them to one of the subvertices. One subvertex ends with degree
+only 2 and we use this subvertex as an endpoint for the main link operation.
 
-Otherwise when vertex is already splitted into subvertices we have to create
-a new subvertex and insert it into the subvertices chain. Easiest is to do cut
+Otherwise when vertex is already splitted into subvertices we have to create a
+new subvertex and insert it into the subvertices chain. Easiest is to do cut
 between the first and the second subvertex in the chain and then two links --
-between the first and the new and between the new subvertex and the second subvertex.
-Then we use the new subvertex as an endpoint for the main link operation
+between the first and the new subvertex and between the new subvertex and the
+second subvertex. Then we use the new subvertex as an endpoint for the main link
+operation
 
 In each case we have to do only constant number of inner cuts and links. All
 these inner operations works in the $\O(\log N)$ time so the time complexity of
