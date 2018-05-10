@@ -47,16 +47,17 @@ public:
 	#endif
 
 	bool in_same_tree(std::shared_ptr<BaseTree::Internal::Vertex> v, std::shared_ptr<BaseTree::Internal::Vertex> w) {
-		// 0. If one of them has no cluster -> it is independent vertex, they are not connected
-		if (v->topology_cluster == NULL || w->topology_cluster == NULL) return false;
-
-		// 1. Test if they aren't in the same tree (if they are already linked) - O(log N)
+		// 1. Get topology clusters
 		auto v_root = v->topology_cluster;
 		if (!v->subvertices.empty()) v_root = v->subvertices.front()->topology_cluster;
-		while (v_root->parent != NULL) v_root = v_root->parent;
-
 		auto w_root = w->topology_cluster;
 		if (!w->subvertices.empty()) w_root = w->subvertices.front()->topology_cluster;
+
+		// 2. If one of them has no cluster -> it is independent vertex, they are not connected
+		if (v_root == NULL || w_root == NULL) return false;
+
+		// 3. Test if they aren't in the same tree (if they are already linked) - O(log N)
+		while (v_root->parent != NULL) v_root = v_root->parent;
 		while (w_root->parent != NULL) w_root = w_root->parent;
 
 		return (v_root == w_root);
