@@ -4,7 +4,7 @@
 
 #include "examples/double_edge_connectivity.hpp"
 
-#include "TopTree.hpp"
+#include "STTopTree.hpp"
 #include "TopologyTopTree.hpp"
 
 //#define VERBOSE
@@ -140,7 +140,7 @@ int main(int argc, char const *argv[]) {
 
 	// Run both implementations
 	auto time_top_tree = std::tuple<double,double,double>(0, 0, 0);
-	time_top_tree = run(new DoubleConnectivity(std::make_shared<TopTree::TopTree>()), N, M);
+	time_top_tree = run(new DoubleConnectivity(std::make_shared<TopTree::STTopTree>()), N, M);
 
 	auto time_topology_top_tree = std::tuple<double,double,double>(0, 0, 0);
 	time_topology_top_tree = run(new DoubleConnectivity(std::make_shared<TopTree::TopologyTopTree>()), N, M);
@@ -155,7 +155,7 @@ int main(int argc, char const *argv[]) {
 
 	/* Manual testing:
 
-	auto dc = new DoubleConnectivity(std::make_shared<TopTree::TopTree>());
+	auto dc = new DoubleConnectivity(std::make_shared<TopTree::STTopTree>());
 	//auto dc = new DoubleConnectivity(std::make_shared<TopTree::TopologyTopTree>());
 
 	auto a = dc->Insert(0,1);

@@ -2,7 +2,7 @@
 #include <list>
 
 #include "BaseTree.hpp"
-#include "TopCluster.hpp"
+#include "STCluster.hpp"
 #include "TopologyCluster.hpp"
 
 #ifndef BASE_TREE_INTERNAL_HPP
@@ -54,15 +54,15 @@ public:
 	// - if leaf: handle is the top most non-rake (base or compress) node having this vertex as one of its endpoints
 
 	// Points to some BaseCluster that has this vertex as one of its endpoints:
-	std::list<std::shared_ptr<TopCluster>> base_handles;
-	// Points to the last TopCluster that was found as handle. When this TopCluster is no longer a
+	std::list<std::shared_ptr<STCluster>> base_handles;
+	// Points to the last STCluster that was found as handle. When this STCluster is no longer a
 	// handle, base_handle is used to recompute it
-	std::shared_ptr<TopCluster> last_handle = NULL;
+	std::shared_ptr<STCluster> last_handle = NULL;
 
 	// Used for building TopTree:
 	bool used = false;
-	std::shared_ptr<TopCluster> rake_tree_left = NULL;
-	std::shared_ptr<TopCluster> rake_tree_right = NULL;
+	std::shared_ptr<STCluster> rake_tree_left = NULL;
+	std::shared_ptr<STCluster> rake_tree_right = NULL;
 
 	// Used in TopologyTopTree
 	std::shared_ptr<Vertex> superior_vertex = NULL;

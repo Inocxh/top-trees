@@ -4,7 +4,7 @@
 
 #include "examples/maximum_edge_weight.hpp"
 
-#include "TopTree.hpp"
+#include "STTopTree.hpp"
 #include "TopologyTopTree.hpp"
 
 #define MAX_WEIGHT 10000
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
 	//std::cerr << "Generating of operations ended" << std::endl;
 
 	// Run both implementations
-	auto time_top_tree = run(new MaximumEdgeWeight(new TopTree::TopTree()), N);
+	auto time_top_tree = run(new MaximumEdgeWeight(new TopTree::STTopTree()), N);
 	//auto time_top_tree = std::make_pair(0, 0);
 	auto time_topology_top_tree = run(new MaximumEdgeWeight(new TopTree::TopologyTopTree()), N);
 	//auto time_topology_top_tree = std::make_pair(0, 0);

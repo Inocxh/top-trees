@@ -30,8 +30,8 @@ std::ostream& operator<<(std::ostream& o, const EdgeData& e);
 
 class BaseTree {
 friend class ICluster;
-friend class TopTree;
-friend class TopCluster;
+friend class STTopTree;
+friend class STCluster;
 friend class BaseCluster;
 friend class CompressCluster;
 friend class RakeCluster;

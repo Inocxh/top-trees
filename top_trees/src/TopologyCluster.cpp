@@ -1,6 +1,5 @@
 #include "UserFunctions.hpp"
 #include "TopologyCluster.hpp"
-#include "TopCluster.hpp"
 
 //#define DEBUG
 

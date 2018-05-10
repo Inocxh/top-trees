@@ -1,19 +1,18 @@
 #include <memory>
 #include <vector>
 
-#ifndef TOP_TREE_HPP
-#define TOP_TREE_HPP
+#ifndef ST_TOP_TREE_HPP
+#define ST_TOP_TREE_HPP
 
 #include "TopTreeInterface.hpp"
-#include "TopCluster.hpp"
 
 namespace TopTree {
 
-class TopTree: public ITopTree {
+class STTopTree: public ITopTree {
 public:
-	TopTree();
-	TopTree(std::shared_ptr<BaseTree> baseTree); // Construct from underlying tree
-	~TopTree();
+	STTopTree();
+	STTopTree(std::shared_ptr<BaseTree> baseTree); // Construct from underlying tree
+	~STTopTree();
 
 	void InitFromBaseTree(std::shared_ptr<BaseTree> baseTree);
 
@@ -23,9 +22,6 @@ public:
 	std::shared_ptr<ICluster> Link(int v, int w, std::shared_ptr<EdgeData> edge_data);
 	void Restore();
 	std::pair<std::shared_ptr<ICluster>, std::shared_ptr<ICluster>> SplitRoot(std::shared_ptr<ICluster> root);
-
-	// Return roots of the top trees
-	// std::vector<std::shared_ptr<TopCluster>> GetTopTrees();
 private:
 	class Internal;
 	std::unique_ptr<Internal> internal;
@@ -33,4 +29,4 @@ private:
 
 }
 
-#endif // TOP_TREE_HPP
+#endif // ST_TOP_TREE_HPP

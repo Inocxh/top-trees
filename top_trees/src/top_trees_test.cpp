@@ -2,7 +2,7 @@
 #include <memory>
 #include <string>
 
-#include "TopTree.hpp"
+#include "STTopTree.hpp"
 #include "TopologyTopTree.hpp"
 
 //#define DEBUG
@@ -147,7 +147,7 @@ int main(int argc, char const *argv[]) {
 	////////////////
 
 	auto TT = std::make_shared<TopTree::TopologyTopTree>(baseTree);
-	//auto TT = std::make_shared<TopTree::TopTree>(baseTree);
+	//auto TT = std::make_shared<TopTree::STTopTree>(baseTree);
 	std::cerr << "Top Tree builded" << std::endl;
 
 	auto result = TT->Cut(c, w);
@@ -167,7 +167,7 @@ int main(int argc, char const *argv[]) {
 	TT->Restore();
 
 	/*
-	auto T = std::make_shared<TopTree::TopTree>(baseTree);
+	auto T = std::make_shared<TopTree::STTopTree>(baseTree);
 
 	for (auto root : T->GetTopTrees()) T->PrintGraphviz(root, "Initial Top Tree");
 	auto node = T->Expose(s, e);

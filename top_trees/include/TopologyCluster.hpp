@@ -11,7 +11,6 @@ class SimpleCluster;
 
 #include "ClusterInterface.hpp"
 #include "BaseTreeInternal.hpp"
-#include "TopCluster.hpp"
 
 namespace TopTree {
 class TopologyCluster : public ICluster, public std::enable_shared_from_this<TopologyCluster> {

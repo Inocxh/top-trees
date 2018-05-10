@@ -2,7 +2,7 @@ TESTER=top_trees_test
 BINARIES=${TESTER} experiment_edge_weight experiment_double_edge_connectivity
 
 TARGETS=${addprefix bin/,${BINARIES}}
-CLASSES=BaseTree TopTree TopCluster TopologyCluster TopologyTopTree
+CLASSES=BaseTree STTopTree STCluster TopologyCluster TopologyTopTree
 OTHER=
 DIRECTORIES=bin obj
 
