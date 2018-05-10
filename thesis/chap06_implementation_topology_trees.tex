@@ -161,7 +161,7 @@ topology trees intact. We only need to split some topology clusters and then
 take their inner top clusters and join them into a new structure.
 
 This procedure was basically described by Alstrup et al. in \cite{TopTrees} but
-without any details. Here I describe it will all necessary details.
+without any details. Here we describe it will all necessary details.
 
 We split all topology clusters in the paths from both exposed vertices to the
 root of corresponding topology tree, which gave us $\O(\log N)$ top clusters
@@ -179,7 +179,7 @@ tree, which distributes information from the modified root cluster into splitted
 clusters in the original topology tree. Finally we join all splitted clusters
 in the topology tree and the operation is finished.
 
-\subsection{Splitting}
+\subsection{Splitting during expose}
 
 Firstly we start will recursive splitting from both given vertices -- better
 said from base topology clusters that contains these vertices. We need to split
@@ -187,11 +187,13 @@ all clusters that contain them but not as {\I external vertices} and to save
 these splitted vertices into {\I chains} whose we will join in the next step.
 
 We have to make clear that {\I boundary vertices} (or endpoints) that we defined
-for top trees may be different that {\I external vertices}. More precisely
+for top trees may be different than {\I external vertices}. More precisely
 external vertices are subset of boundary vertices. We defined that each top
 cluster has two boundary vertices because we defined top clusters as generalized
 edges. But external vertices are only those boundary vertices that are connected
-to others clusters.
+to others clusters. Computation of external vertices may be computed in $\O(1)$
+from children's external vertices because number of outgoing edges for both
+children is limited.
 
 With definition of external vertices the splitting part is straightforward --
 for each cluster (starting from given vertex's base cluster) we check that given
@@ -267,25 +269,25 @@ join them. In~\cite{TopTrees} Alstrup, Holm, Lichtenberg and Thorup suggested
 some joining based on joining point clusters with arbitrary neighbours and then
 compressing all remaining clusters on path.
 
-After several tries I decided to do different approach. All clusters in chains
+After several tries we decided to do different approach. All clusters in chains
 acts like generalized edges so we can build a tree from them and then run
-a DFS (deep first search) on this tree.
+a DFS (depth first search) on this tree.
 
 Our DFS will return computed top cluster for given subtree and will have three
 parameters: a current vertex, target vertex and parent cluster (cluster which
 was used to move to the current vertex). Target vertex will guide joining of
-clusters so that if subtree under current vertex contains target, the returned
-cluster will have target as its endpoint.
+clusters so that if subtree under current vertex contains target vertex, the
+returned cluster will have target vertex as its endpoint.
 
 When joining clusters during $\Expose(u,v)$ we call DFS with parameters
 $chainJoin(u,v,NULL)$.
 
 For each vertex $chainJoin(v,target,parent)$ will do:
 \begin{itemize}
-\item If there is no outgoing clusters (except the $parent$) return only the
+\item If there is no outgoing cluster (except the $parent$) return only the
 $parent$.
-\item For all outgoing clusters $C$ (with endpoints $(v,x)$) recursive call
-$$childCluster = chainJoin(x,target,C)$$
+\item For all outgoing clusters $C$ (except the $parent$) with endpoints $(v,x)$
+recursive call $$childCluster = chainJoin(x,target,C)$$
 \item Rake join all child clusters $cluster$ so that if there was a child
 cluster with $target$ endpoint all clusters will be raked onto this cluster
 (otherwise rake arbitrarily).
@@ -329,7 +331,7 @@ before.
 
 In some use cases there are a lot of informations in the clusters used for
 structural changes in the underlying clusters -- for example in the 2-edge
-connectivity that we will use as one of our experiments. In that cases it may be
+connectivity that we will use as one of our experiments. In these cases it may be
 good to turn off some expensive updates during \Join/\Split{} and to turn them
 on after the top tree is returned into its original shape.
 

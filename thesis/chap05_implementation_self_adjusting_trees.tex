@@ -22,9 +22,9 @@ connect rake trees as foster children.
 from any of these vertices to construct another top tree.
 \end{enumerate}
 
-In my implementation I choose equivalent construction but in more recursive
-manner. I started the same way by choosing the root $r$ as vertex with degree
-one, but I don't divide the tree into paths.
+In the implementation we choose equivalent construction but in more recursive
+manner. We started the same way by choosing the root $r$ as vertex with degree
+one, but we don't divide the tree into paths.
 
 Starting from the second vertex we choose one neighbour as continuation of the
 path and recursively called the same function on all other neighbours. Recursion
@@ -147,8 +147,8 @@ Splicing is used after splaying and its task is to move cluster, which is leaf
 of some rake tree, to the compress tree above it.
 
 Tarjan and Werneck in the \cite{SelfAdjustingTT} only described the main idea in
-the general case, but implementation details had to be worked out. I decided
-to do {\I left splice} (replacing left child of the compress cluster) which was
+the general case, but implementation details had to be worked out. In this work
+we decided to do {\I left splice} (replacing left child of the compress cluster) which was
 original choose of Tarjan and Werneck, but the procedure would work the same
 way if we choose to replace the right child.
 

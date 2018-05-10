@@ -97,7 +97,7 @@ N)$.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Diameter and center of the trees}
+%\section{Diameter and center of the trees}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -106,15 +106,15 @@ N)$.
 
 This is an example of more complex problem, where is the Top tree structure used
 as only part of the whole algorithm. It was introduced by Holm, Lichtenberg and
-Thorup in 2001 in \cite{PolylogarithmicAlgorithmsForConnectivity}, where is an
+Thorup in 2001 in \cite{PolylogarithmicAlgorithmsForConnectivity}, where is a
 complete elaboration of the problem. There I will only recall some basic
 principles, most of this section is a simplified citation from the
 \cite{PolylogarithmicAlgorithmsForConnectivity}.
 
 \noindent
 {\bf Theorem:} Problem of 2-edge connectivity on dynamically updated graph with
-$N$ edges could be solved in $\O(\log^4 N)$ per operation -- addition or
-deletion of an edge and test if given vertices are 2-edge connected.
+$N$ edges could be solved in amortized time $\O(\log^4 N)$ per one operation --
+addition or deletion of an edge and test if given vertices are 2-edge connected.
 
 \subsection{Basic principle}
 
@@ -156,9 +156,9 @@ level 0 and level may be only increased.
 For each $i$ we will define a graph $G_i$ as graph induced by only edges of
 level at least $i$ together with the $F$. For each tree edge $e \in F$ we will
 maintain a cover level as maximum level of nontree edge covering it (thus
-maximum level $i$ for which $e$ is in 2-edge connected component of $G_i$). When
-some vertices are 2-edge connected on level $i$ they 2-edge connected on all
-levels $\le i$.
+maximum level $i$ for which $e$ is in a 2-edge connected component of $G_i$).
+When some vertices are 2-edge connected on level $i$ they 2-edge connected on
+all levels $\le i$.
 
 When updating the cover information after deleting some edge we use these levels
 as guide for finding new cover edges. Major part of the time complexity of the

@@ -22,7 +22,7 @@ interchangeable.
 
 Firstly user needs to include \texttt{TopTreesInterface.hpp} and define classes
 for holding data in vertices and edges. These classes must inherit from generic
-classes for edge and vertex data defined in the \texttt{TopTrees} namespace.
+classes for edge and vertex data defined in the \texttt{TopTree} namespace.
 
 Then user has to choose one implementation and init the Top Tree. After that
 user could use \Cut, \Link{} and \Expose{} methods to manipulate with the structure.
@@ -136,8 +136,8 @@ functions.
 
 To use one of the implementations just initialize it:
 \begin{verbatim}
-// For self-adjusting trees implementation:
-auto TT = new TopTree::TopTree();
+// For Sleator-Tarjan self-adjusting trees implementation:
+auto TT = new TopTree::STTopTree();
 
 // For topology trees implementation:
 auto TT = new TopTree::TopologyTopTree();
@@ -165,7 +165,7 @@ auto d = baseTree->AddLeaf(b, std::make_shared<MyEdgeData>(7),
 auto e = baseTree->AddLeaf(b, std::make_shared<MyEdgeData>(4),
                            std::make_shared<MyVertexData>("e"));
 
-auto TT = new TopTree::TopTree();
+auto TT = new TopTree::STTopTree();
 TT->InitFromBaseTree(baseTree);
 \end{verbatim}
 \caption{Example of initialization from underlying base tree}
@@ -185,11 +185,11 @@ cutted edge. When vertices are not connected by an edge (when not connected at
 all or when connected by some longer path) it will return \texttt{NULL}.
 
 \item \texttt{Link(v, w, edge\_data)} -- Link given vertices with a new edge
-with given vertex data. When vertices are already in the same tree it will
+with given data. When vertices are already in the same tree it will
 return \texttt{NULL} (otherwise it will return pointer on the top tree).
 
 \item \texttt{Expose(v, w)} -- Expose given $v$-$w$ path and return pointer to
-the cluster covering this path. When vertices not connected it will return
+the cluster covering this path. When vertices are not connected it will return
 \texttt{NULL}.
 
 \item \texttt{Restore()} -- Restore the structure into valid form (useful only
@@ -234,6 +234,9 @@ There is also Makefile rule so inside the project directory you can call only
 
 \subsection{Enabling debug and Graphviz output}
 
-User only needs to uncomment \texttt{\#define DEBUG} and
-\texttt{\#define DEBUG\_GRAPHVIZ} lines at the top of \texttt{.cpp} files and
-compile the program again.
+User only needs to uncomment lines at the top of \texttt{.cpp} files and
+compile the program again. Possible options:
+\texttt{\#define DEBUG} for debug output on stderr,
+\texttt{\#define DEBUG\_GRAPHVIZ} for graphviz output on stdout and
+\texttt{\#define WARNINGS} for warnings about incorrect usage like linking
+vertex to itself on stderr.
