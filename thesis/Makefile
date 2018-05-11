@@ -1,5 +1,5 @@
 name=top_trees
-all: $(name).pdf
+all: $(name).pdf abstract_czech.pdf abstract_english.pdf
 
 .PHONY: FORCE
 
@@ -10,4 +10,4 @@ clean:
 	latexmk -C
 	rm -f *.acn *.bbl *.ist *.lod
 	rm -f $(name)-*.pdf $(name)-*.asy
-	rm -f $(name).xmpdata $(name).pre pdfa.xmpi
+	rm -f *.xmpdata $(name).pre *.xmpi
