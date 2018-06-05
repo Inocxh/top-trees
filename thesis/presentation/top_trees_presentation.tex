@@ -73,7 +73,7 @@ Data structure (Alstrup, Holm, Lichtenberg and Thorup in 1997):
 \begin{itemize}
 	\item Build over dynamically updated underlying forest
 	\item Top Trees = trees of {\bf clusters} (generalized edges)
-	\item Quick path operations -- $\O(\log N)$
+	\pause\item Quick path operations -- $\O(\log N)$
 	\pause\item Multiple drivers (implementations)
 \end{itemize}
 
@@ -165,8 +165,8 @@ splicing} (change partitioning of the tree into paths)
 \end{frame}
 
 
-\subsection{Topology trees}
-\begin{frame}{Topology trees}
+\subsection{Top Trees based on Topology trees}
+\begin{frame}{Top Trees based on Topology trees}
 
 \begin{itemize}
 \item {\it Maintaining Information in Fully-Dynamic Trees with Top Trees} by
@@ -174,7 +174,8 @@ Alstrup, Holm, Lichtenberg and Thorup in 2003
 \bigskip\pause
 \item Based on topology trees -- ternarization of vertices
 \item {\bf Worst-case} time per operation: $\O(\log N)$
-\item Expected larger multiplicative constant than the Self-Adjusting Top Trees implementation
+\pause\item Expose by splitting and building auxiliary top tree
+\pause\item Expected larger multiplicative constant than the Self-Adjusting Top Trees implementation
 \bigskip\pause
 \item {\bf Different partitioning into clusters} -- Top clusters must be mapped onto topology clusters
 \end{itemize}
@@ -198,7 +199,10 @@ Alstrup, Holm, Lichtenberg and Thorup in 2003
 \subsection{Maximum edge weight on path}
 \begin{frame}{Maximum edge weight on path}
 
-Updates on {\bf forest} -- operations:
+Operates on dynamically updated {\bf forest}
+
+\bigskip\pause
+Operations:
 \begin{itemize}
 	\item Link, cut
 	\item Add weight to all edges on given path
@@ -222,7 +226,11 @@ Deterministic Fully-dynamic Algorithms for Connectivity, Minimum Spanning Tree,
 
 \bigskip
 
-Updates on {\bf generic graph} -- operations:
+Operates on dynamically updated {\bf generic graph}
+
+\bigskip\pause
+
+Operations:
 \begin{itemize}
 	\item Link, cut
 	\item Query if given vertices are edge 2-connected
@@ -246,7 +254,7 @@ query in $\O(\log N)$ instead of $\O(\log^3 N)$
 \begin{itemize}
 \item Same sequence of operations for both implementations
 \item Measured {\bf initialization time} and {\bf time per one operation}
-\item Several runs for each input size -- computed mean and standard deviation
+\item Several runs for each input size -- mean and standard deviation
 \end{itemize}
 \end{frame}
 
