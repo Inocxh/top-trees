@@ -1,4 +1,0 @@
-Needed packages (Debian):
-asymptote
-icc-profiles # fixes pdfx error "! No color profile found to use for RGB screen colors.."
-texlive-fonts-extra

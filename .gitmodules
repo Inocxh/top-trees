@@ -1,3 +1,6 @@
 [submodule "top_trees/top-trees"]
 	path = top_trees/top-trees
 	url = git@github.com:MagnusSiegumfeldt/top-trees.git
+[submodule "top-trees"]
+	path = top-trees
+	url = https://github.com/MagnusSiegumfeldt/top-trees
