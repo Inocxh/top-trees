@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <iostream>
+#include <chrono>
 #include <ctime>
 
 #include "examples/maximum_edge_weight.hpp"
@@ -35,7 +36,8 @@ std::pair<double, double> run(MaximumEdgeWeight *worker, int N) {
 	std::vector<std::pair<int, int>> edges;
 	
 	// Init tree
-	clock_t begin = clock();
+	auto begin = std::chrono::system_clock::now();
+	//clock_t begin = clock();
 	std::vector<int> vertex_index;
 	vertex_index.push_back(worker->add_vertex(std::to_string(0)));
 	for (uint i = 1; i < vertices.size(); i++) {
@@ -46,11 +48,12 @@ std::pair<double, double> run(MaximumEdgeWeight *worker, int N) {
 		worker->add_edge(vertex_index[i], vertex_index[vertices[i].first], vertices[i].second);
 		edges.push_back(std::pair<int,int>(i, vertices[i].first));
 	}
-	clock_t end = clock();
-	double init_time = double(end - begin) / CLOCKS_PER_SEC;
+	auto end = std::chrono::system_clock::now();
+	//clock_t end = clock();
+	auto init_time = end - begin;
 
 	// Start measure time and perform all operations
-	begin = clock();
+	begin = std::chrono::system_clock::now();
 	int op_skipped = 0;
 	for (auto op: operations) {
 		switch (op.op) {
@@ -99,14 +102,16 @@ std::pair<double, double> run(MaximumEdgeWeight *worker, int N) {
 		break;}
 		}
 	}
-	end = clock();
+	end = std::chrono::system_clock::now();
 
 	// Cleaning
 	delete(worker);
 
 	int op_count = operations.size() - op_skipped;
-	double execution_time = double(end - begin) / CLOCKS_PER_SEC;
-	return std::make_pair(init_time / N, execution_time / op_count);
+	auto execution_time = end - begin;
+	return std::make_pair(
+		((long double) std::chrono::duration_cast<std::chrono::microseconds>(init_time).count()) / N,
+		((long double) std::chrono::duration_cast<std::chrono::microseconds>(execution_time).count()) / op_count);
 	//return std::make_pair(init_time, execution_time);
 }
 
@@ -116,7 +121,8 @@ std::pair<double, double> run_splay(int N) {
 	std::vector<std::vector<std::pair<int,int>>> adjacency_list;
 
 	//Init tree
-	clock_t begin = clock();
+	auto begin = std::chrono::system_clock::now();
+	//clock_t begin = clock();
 	adjacency_list.push_back(std::vector<std::pair<int,int>>(1));
 	for (uint i = 1; i < vertices.size(); i++) {	
 		adjacency_list.push_back(std::vector<std::pair<int,int>>());
@@ -138,10 +144,11 @@ std::pair<double, double> run_splay(int N) {
 		if (e != nullptr) edge_ptrs.push_back(e);
 		edges.push_back(std::pair<int,int>(i,vertices[i].first));
 	}
-	clock_t end = clock();
-	double init_time = double(end-begin) / CLOCKS_PER_SEC;
+	auto end = std::chrono::system_clock::now();
+	//clock_t end = clock();
+	auto init_time =end-begin;
 	//Perform operations
-	begin = clock();
+	begin = std::chrono::system_clock::now();
 	int op_skipped = 0;
 	int i = 0;
 	for (auto op : operations) {
@@ -215,12 +222,13 @@ std::pair<double, double> run_splay(int N) {
 	}
 
 
-	end = clock();
+	end = std::chrono::system_clock::now();
 	int op_count = operations.size() - op_skipped;
-	double execution_time = double(end-begin) / CLOCKS_PER_SEC;
-
+	auto execution_time = end-begin;
 	delete tree;
-	return std::pair<double,double>(init_time / N,execution_time / op_count);
+	return std::make_pair(
+		((long double) std::chrono::duration_cast<std::chrono::microseconds>(init_time).count()) / N,
+		((long double) std::chrono::duration_cast<std::chrono::microseconds>(execution_time).count()) / op_count);
 	//return std::pair<double,double>(init_time,execution_time );
 }
 

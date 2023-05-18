@@ -40,7 +40,7 @@ def execute(params):
 
 		# Construct and run command
 		command = [program, rnumber, str(N), str(M), str(test_operations), str(warmup), str(workload), str(only_splay)]
-		print(command)
+		#print(command)
 		cmd = subprocess.run(command, stdout=subprocess.PIPE, check=True)
 
 		# Get results
@@ -93,6 +93,6 @@ while True:
 
 	size = int(size*size_step)
 	end_time = time.time()
-	print("This iteration: {}s (limit: {}s)".format(end_time-start_time, time_stop_limit))
+	#print("This iteration: {}s (limit: {}s)".format(end_time-start_time, time_stop_limit))
 	if end_time - start_time > time_stop_limit:
 		break

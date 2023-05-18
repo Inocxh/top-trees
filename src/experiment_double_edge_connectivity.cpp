@@ -1,6 +1,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <chrono>
 
 #include "examples/double_edge_connectivity.hpp"
 
@@ -45,21 +46,21 @@ std::tuple<double, double> run(DoubleConnectivity *worker, uint N, uint M) {
 	std::vector<std::shared_ptr<MyEdgeData>> edges;
 
 	// Init graph
-	clock_t begin = clock();
+	auto begin = std::chrono::system_clock::now();
 	std::vector<int> vertex_index;
 	for (auto e: initial_edges) {
 		auto edge = worker->Insert(e.first, e.second);
 		if (edge != NULL) edges.push_back(edge);
 	}
-	clock_t end = clock();
-	double init_time = double(end - begin) / CLOCKS_PER_SEC;
+	auto end = std::chrono::system_clock::now();
+	auto init_time = end-begin;
 
 	#ifdef VERBOSE
 		std::cerr << "PART 1 - all operations" << std::endl;
 	#endif
 
 	// Start measure time and perform all operations
-	begin = clock();
+	begin = std::chrono::system_clock::now();
 	int op_skipped = 0;
 	for (auto op: operations) {
 		switch (op.op) {
@@ -97,14 +98,16 @@ std::tuple<double, double> run(DoubleConnectivity *worker, uint N, uint M) {
 		break;}
 		}
 	}
-	end = clock();
-	double execution_time = double(end - begin) / CLOCKS_PER_SEC;
+	end = std::chrono::system_clock::now();
+	auto execution_time = end-begin;
 	int op_count = operations.size() - op_skipped;
 
 	// Cleaning
 	//delete(worker);
 
-	return std::make_tuple(init_time / M, execution_time / op_count);
+	return std::make_pair(
+		((long double) std::chrono::duration_cast<std::chrono::microseconds>(init_time).count()) / N,
+		((long double) std::chrono::duration_cast<std::chrono::microseconds>(execution_time).count()) / op_count);
 }
 
 std::tuple<double, double> run_splay(uint N, uint M) {
@@ -112,7 +115,7 @@ std::tuple<double, double> run_splay(uint N, uint M) {
 	std::vector<std::shared_ptr<EdgeData>> edges;
 
 	// Init graph
-	clock_t begin = clock();
+	auto begin = std::chrono::system_clock::now();
 
 	TwoEdgeConnectivity tree = TwoEdgeConnectivity(N);
 	std::vector<int> vertex_index;
@@ -123,11 +126,11 @@ std::tuple<double, double> run_splay(uint N, uint M) {
 			edges.push_back(edge);
 		}
 	}
-	clock_t end = clock();
-	double init_time = double(end - begin) / CLOCKS_PER_SEC;
+	auto end = std::chrono::system_clock::now();
+	auto init_time = end-begin;
 
 	// Start measure time and perform all operations
-	begin = clock();
+	begin = std::chrono::system_clock::now();
 	int i = 0;
 	int op_skipped = 0;
 	for (auto op: operations) {
@@ -162,11 +165,13 @@ std::tuple<double, double> run_splay(uint N, uint M) {
 		break;}
 		}
 	}
-	end = clock();
-	double execution_time = double(end - begin) / CLOCKS_PER_SEC;
+	end = std::chrono::system_clock::now();
+	auto execution_time = end-begin;
 	int op_count = operations.size() - op_skipped;
 
-	return std::make_tuple(init_time / M, execution_time / op_count);
+	return std::make_pair(
+		((long double) std::chrono::duration_cast<std::chrono::microseconds>(init_time).count()) / N,
+		((long double) std::chrono::duration_cast<std::chrono::microseconds>(execution_time).count()) / op_count);
 }
 
 

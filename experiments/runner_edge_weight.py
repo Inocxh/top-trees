@@ -89,6 +89,6 @@ while True:
 
 	size = int(size*size_step)
 	end_time = time.time()
-	print("This iteration: {}s (limit: {}s)".format(end_time-start_time, time_stop_limit))
+	#print("This iteration: {}s (limit: {}s)".format(end_time-start_time, time_stop_limit))
 	if end_time - start_time > time_stop_limit:
 		break
