@@ -180,6 +180,7 @@ int main(int argc, char const *argv[]) {
 	int K = atoi(argv[4]);
 	int W = atoi(argv[5]);
 	double R = atof(argv[6]);
+	int enable_setnicka = atoi(argv[7]);
 
 	// Generate tree and list of operations
 	// a) original graph = each vertex is connected to one with lower number
@@ -187,18 +188,20 @@ int main(int argc, char const *argv[]) {
 	// b) operations (type and two vertices)
 	for (int i = 0; i < K; i++) operations.push_back(getRandomOp(N, R));
 
-	// Run both implementations
-	// for (int i = 0; i < W; i++) {
-	// 	run(new DoubleConnectivity(std::make_shared<TopTree::STTopTree>()), N, M);
-	// }
+	//Run both implementations
 	auto time_top_tree = std::tuple<double,double>(0, 0);
-	//time_top_tree = run(new DoubleConnectivity(std::make_shared<TopTree::STTopTree>()), N, M);
-
-	// for (int i = 0; i < W; i++) {
-	// 	run(new DoubleConnectivity(std::make_shared<TopTree::TopologyTopTree>()), N, M);
-	// }
 	auto time_topology_top_tree = std::tuple<double,double>(0, 0);
-	//time_topology_top_tree = run(new DoubleConnectivity(std::make_shared<TopTree::TopologyTopTree>()), N, M);
+	if (enable_setnicka) {
+		for (int i = 0; i < W; i++) {
+			run(new DoubleConnectivity(std::make_shared<TopTree::STTopTree>()), N, M);
+		}
+		time_top_tree = run(new DoubleConnectivity(std::make_shared<TopTree::STTopTree>()), N, M);
+
+		for (int i = 0; i < W; i++) {
+			run(new DoubleConnectivity(std::make_shared<TopTree::TopologyTopTree>()), N, M);
+		}
+		time_topology_top_tree = run(new DoubleConnectivity(std::make_shared<TopTree::TopologyTopTree>()), N, M);
+	}
 
 
 	for (int i = 0; i < W; i++) {

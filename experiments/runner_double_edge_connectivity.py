@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import sys
 import random
 import subprocess
 import time
@@ -10,7 +11,8 @@ from multiprocessing import Pool
 tests 				 = 4 	 
 measurements 		 = 3
 warmup 				 = 1
-workload 			 = 0.5
+workload 			 = float(sys.argv[1])
+only_splay 			 = int(sys.argv[2]);
 test_operations      = 500   # Operations for one test
 size_start           = 100   # Start size of graph (number of vertices)
 size_step            = 1.25  # Enlarge each step
@@ -23,7 +25,7 @@ def getM(N):
 random.seed(0xDEADBEEF)
 
 program = "bin/experiment_double_edge_connectivity"
-logfile_path  = "experiment_double_edge_connectivity.log" # will create .log output file
+#logfile_path  = f"experiment_double_edge_connectivity_{workload}.log" # will create .log output file
 
 ##################
 
@@ -37,7 +39,7 @@ def execute(params):
 	for i in range(measurements): 
 
 		# Construct and run command
-		command = [program, rnumber, str(N), str(M), str(test_operations), str(warmup), str(workload)]
+		command = [program, rnumber, str(N), str(M), str(test_operations), str(warmup), str(workload), str(only_splay)]
 		print(command)
 		cmd = subprocess.run(command, stdout=subprocess.PIPE, check=True)
 
@@ -76,21 +78,21 @@ def execute(params):
 		result["time_topology_construction"], result["time_topology_op"],
 		result["time_splay_construction"], result["time_splay_op"],
 	)
-	logfile.write(logline+"\n")
-	logfile.flush()
+	#logfile.write(logline+"\n")
+	#logfile.flush()
 	print(logline)
 	return result
 
 size = size_start
-with open(logfile_path, "w") as logfile:
-	while True:
-		start_time = time.time()
+#with open(logfile_path, "w") as logfile:
+while True:
+	start_time = time.time()
 
-		for i in range(tests):
-			execute((size, '%030x' % random.randrange(16**30)))
+	for i in range(tests):
+		execute((size, '%030x' % random.randrange(16**30)))
 
-		size = int(size*size_step)
-		end_time = time.time()
-		print("This iteration: {}s (limit: {}s)".format(end_time-start_time, time_stop_limit))
-		if end_time - start_time > time_stop_limit:
-			break
+	size = int(size*size_step)
+	end_time = time.time()
+	print("This iteration: {}s (limit: {}s)".format(end_time-start_time, time_stop_limit))
+	if end_time - start_time > time_stop_limit:
+		break
