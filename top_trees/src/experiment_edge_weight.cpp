@@ -7,6 +7,13 @@
 #include "STTopTree.hpp"
 #include "TopologyTopTree.hpp"
 
+#define TopTree SplayTopTree
+#include "../top-trees/include/add_weight_cluster.hpp"
+#undef TopTree
+
+using SplayMaxPath = MaxPathTopTree;
+using SplayMaxEdge = Edge<AddWeightCluster,int,None>;
+
 #define MAX_WEIGHT 10000
 #define OPS_COUNT 4
 
@@ -26,17 +33,19 @@ std::vector<struct operation> operations;
 std::pair<double, double> run(MaximumEdgeWeight *worker, int N) {
 	// Vector for indexing edges
 	std::vector<std::pair<int, int>> edges;
-
+	
 	// Init tree
 	clock_t begin = clock();
 	std::vector<int> vertex_index;
 	vertex_index.push_back(worker->add_vertex(std::to_string(0)));
 	for (uint i = 1; i < vertices.size(); i++) {
 		vertex_index.push_back(worker->add_vertex(std::to_string(i)));
+	}
+	worker->initialize();
+	for (uint i = 1; i < vertices.size(); i++) {
 		worker->add_edge(vertex_index[i], vertex_index[vertices[i].first], vertices[i].second);
 		edges.push_back(std::pair<int,int>(i, vertices[i].first));
 	}
-	worker->initialize();
 	clock_t end = clock();
 	double init_time = double(end - begin) / CLOCKS_PER_SEC;
 
@@ -55,8 +64,11 @@ std::pair<double, double> run(MaximumEdgeWeight *worker, int N) {
 		break;}
 		case REMOVE_EDGE: {
 			// Get edge
-			if (edges.size() < N * 7/10) {
-				op_skipped++;
+			// if (edges.size() < N * 7/10) {
+			// 	op_skipped++;
+			// 	continue;
+			// }
+			if (edges.size() == 0) {
 				continue;
 			}
 			int index = op.param % edges.size();
@@ -95,15 +107,132 @@ std::pair<double, double> run(MaximumEdgeWeight *worker, int N) {
 	int op_count = operations.size() - op_skipped;
 	double execution_time = double(end - begin) / CLOCKS_PER_SEC;
 	return std::make_pair(init_time / N, execution_time / op_count);
+	//return std::make_pair(init_time, execution_time);
+}
+
+std::pair<double, double> run_splay(int N) {
+	std::vector<std::pair<int,int>> edges;
+	std::vector<SplayMaxEdge*> edge_ptrs;
+	std::vector<std::vector<std::pair<int,int>>> adjacency_list;
+
+	//Init tree
+	clock_t begin = clock();
+	adjacency_list.push_back(std::vector<std::pair<int,int>>(1));
+	for (uint i = 1; i < vertices.size(); i++) {	
+		adjacency_list.push_back(std::vector<std::pair<int,int>>());
+		adjacency_list[vertices[i].first].push_back(std::make_pair(i, vertices[i].second));
+	}
+	
+	SplayMaxPath* tree = new SplayMaxPath(N);
+	// for (uint i = 1; i < adjacency_list.size(); i++) {
+	// 	for (uint j = 0; j < adjacency_list[i].size(); j++) {
+	// 		SplayMaxEdge* e = tree->link_ptr(i,adjacency_list[i][j].first,adjacency_list[i][j].second);
+	// 		if (e != nullptr) edge_ptrs.push_back(e);
+	// 		edges.push_back(std::pair<int,int>(i,vertices[i].first));
+	// 	}
+	// }
+	for (uint i = 1; i < vertices.size(); i++) {
+		//std::cerr << "Linking: (" << i << "," << vertices[i].first << ")" << std::endl;
+		//std::cerr << "" << i << "--" << vertices[i].first <<std::endl;
+		SplayMaxEdge* e = tree->link_ptr(i,vertices[i].first,vertices[i].second);
+		if (e != nullptr) edge_ptrs.push_back(e);
+		edges.push_back(std::pair<int,int>(i,vertices[i].first));
+	}
+	clock_t end = clock();
+	double init_time = double(end-begin) / CLOCKS_PER_SEC;
+	//Perform operations
+	begin = clock();
+	int op_skipped = 0;
+	int i = 0;
+	for (auto op : operations) {
+		switch (op.op) {
+		case ADD_EDGE: {
+			//std::cerr << "Adding edge: (" << op.vertex_a << "," << op.vertex_b << ")" << std::endl;
+			if (op.vertex_a == op.vertex_b) {
+				//std::cerr << "skipped!";
+				op_skipped++;
+				continue;
+			}
+			int weight = op.param % MAX_WEIGHT;
+			SplayMaxEdge* result = tree->link_ptr(op.vertex_a,op.vertex_b,weight);
+			if (result != nullptr)  {
+				//std::cerr << op.vertex_a << "--" << op.vertex_b;
+				//std::cerr << std::endl;
+				edge_ptrs.push_back(result);
+			}
+		break;}
+		case REMOVE_EDGE: {
+			// if (edge_ptrs.size() < (N * 7) / 10) {
+			// 	op_skipped++;
+			// 	continue;
+			// }
+			if (edge_ptrs.size() == 0) {
+				continue;
+			}
+			uint edge_index = op.param % edge_ptrs.size();
+			//std::cerr << "removing edge: " << edge_ptrs[edge_index]->get_endpoint(0)->get_id() << ", " << edge_ptrs[edge_index]->get_endpoint(1)->get_id() << std::endl;
+			//std::cerr << "top_tree.cut(" << edge_ptrs[edge_index]->get_endpoint(0)->get_id() << ", " << edge_ptrs[edge_index]->get_endpoint(1)->get_id() << ");" << std::endl;
+			auto lol = tree->cut_ptr(edge_ptrs[edge_index]);
+			edge_ptrs[edge_index] = edge_ptrs.back();
+			edge_ptrs.pop_back(); 
+		break;}
+		case ADD_WEIGHT: {
+			//std::cerr << "adding weight " << op.vertex_a << " " <<  op.vertex_b << std::endl;
+			// std::cerr << "top_tree.expose(" << op.vertex_a << ");" << std::endl;
+			// std::cerr << "top_tree.expose(" << op.vertex_b << ");" << std::endl;
+			// std::cerr << "top_tree.deexpose(" << op.vertex_a << ");" << std::endl;
+			// std::cerr << "top_tree.deexpose(" << op.vertex_b << ");" << std::endl;
+			if (op.vertex_a == op.vertex_b) {
+				op_skipped++;
+				continue;
+			}
+			int weight = op.param % MAX_WEIGHT;
+			auto c1 = tree->expose(op.vertex_a);
+			auto c2 = tree->expose(op.vertex_b);
+			if (c1==c2 && c1 && c2) {
+				c1->add_weight(weight);
+			}
+			tree->deexpose(op.vertex_a);
+			tree->deexpose(op.vertex_b);
+		break;}
+		case GET_WEIGHT: {
+			//std::cerr << "getting weight " << op.vertex_a << " " <<  op.vertex_b << std::endl;
+			// std::cerr << "top_tree.expose(" << op.vertex_a << ");" << std::endl;
+			// std::cerr << "top_tree.expose(" << op.vertex_b << ");" << std::endl;
+			// std::cerr << "top_tree.deexpose(" << op.vertex_a << ");" << std::endl;
+			// std::cerr << "top_tree.deexpose(" << op.vertex_b << ");" << std::endl;
+			if (op.vertex_a == op.vertex_b) {
+				op_skipped++;
+				continue;
+			}
+			auto c1 = tree->expose(op.vertex_a);
+			auto c2 = tree->expose(op.vertex_b);
+			tree->deexpose(op.vertex_a);
+			tree->deexpose(op.vertex_b);
+		break;}
+		}
+		i++;
+	}
+
+
+	end = clock();
+	int op_count = operations.size() - op_skipped;
+	double execution_time = double(end-begin) / CLOCKS_PER_SEC;
+
+	delete tree;
+	return std::pair<double,double>(init_time / N,execution_time / op_count);
+	//return std::pair<double,double>(init_time,execution_time );
 }
 
 int main(int argc, char *argv[]) {
 	// Init random generator
 	auto seed = strtoull(argv[1], NULL, 16);
 	srand(seed);
-	// Get size of tree and number of operations
+	// Get size of tree, number of operations and number of warmups
 	int N = atoi(argv[2]);
 	int K = atoi(argv[3]);
+	int W = atoi(argv[4]);
+	double R = atof(argv[5]);
 
 	// Generate tree and list of operations
 	// a) original graph = each vertex is connected to one with lower number
@@ -111,22 +240,48 @@ int main(int argc, char *argv[]) {
 	for (int i = 1; i < N; i++) vertices.push_back(std::pair<int,int>(rand() % i, rand() % MAX_WEIGHT));
 	// b) operations (type and two vertices)
 	for (int i = 0; i < K; i++) {
-		struct operation op{
-			static_cast<opType>(rand() % OPS_COUNT),
+		opType op;
+		if (rand() % 3 == 0) {
+			if (rand() % 2 == 0) {
+				op = ADD_WEIGHT;
+			} else {
+				op = GET_WEIGHT;
+			}
+		} else {
+			if ((double) (rand() / (double) RAND_MAX) < R) {
+				op = ADD_EDGE;
+			} else {
+				op = REMOVE_EDGE;
+			}			
+		}
+		struct operation ope{
+			op,
 			rand() % N,
 			rand() % N,
 			rand()
 		};
-		operations.push_back(op);
+		operations.push_back(ope);
 	};
 
 	//std::cerr << "Generating of operations ended" << std::endl;
 
-	// Run both implementations
+	// Run implementations
+	for (int i = 0; i < W; i++) {
+		run(new MaximumEdgeWeight(new TopTree::STTopTree()), N);
+	}
 	auto time_top_tree = run(new MaximumEdgeWeight(new TopTree::STTopTree()), N);
 	//auto time_top_tree = std::make_pair(0, 0);
+
+	for (int i = 0; i < W; i++) {
+		run(new MaximumEdgeWeight(new TopTree::TopologyTopTree()), N);
+	}
 	auto time_topology_top_tree = run(new MaximumEdgeWeight(new TopTree::TopologyTopTree()), N);
 	//auto time_topology_top_tree = std::make_pair(0, 0);
 
-	std::cout << time_top_tree.first << " " << time_top_tree.second << " " << time_topology_top_tree.first << " " << time_topology_top_tree.second << std::endl;
+	for (int i = 0; i < W; i++) {
+		run_splay(N);
+	}
+	auto time_splay_top_tree = run_splay(N);
+
+	std::cout << time_top_tree.first << " " << time_top_tree.second << " " << time_topology_top_tree.first << " " << time_topology_top_tree.second <<  " " << time_splay_top_tree.first << " " <<  time_splay_top_tree.second << std::endl;
 }

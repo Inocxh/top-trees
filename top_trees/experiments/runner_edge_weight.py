@@ -3,19 +3,24 @@
 import random
 import subprocess
 import time
+from statistics import median
 from multiprocessing import Pool
 
-tries                = 10    # Tries for one size
-parallel_processes   = 2     # Set max number of processes running at the same time using multiprocessing
-test_operations      = 10000 # Operations for one test
-size_start           = 100   # Start size of graph
+
+tests                = 8    # Tries for one size
+measurements		 = 3	# measurements per seed
+warmup 				 = 5 	# number of warmup rounds before a measurement is taken
+workload 			 = 0.80 # Ratio of insert / destroy operations
+
+test_operations      = 1000   # Operations for one test
+size_start           = 450    # Start size of graph
 size_step            = 1.25  # Enlarge each step
 time_stop_limit      = 3600  # When last step takes longer than X seconds don't start next one
 
 random.seed(0xDEADBEEF)
 
 program = "bin/experiment_edge_weight"
-logfile_path  = "experiment_edge_weight.log" # will create .log output file
+logfile_path  = f"experiment_edge_weight_{workload}.log" # will create .log output file
 
 ##################
 
@@ -23,48 +28,64 @@ results = []
 
 def execute(params):
 	(size, rnumber) = params
-	# Construct and run command
-	command = [program, rnumber, str(size), str(test_operations)]
-	cmd = subprocess.run(command, stdout=subprocess.PIPE, check=True)
 
-	# Get results
-	output = cmd.stdout.decode('utf-8').split()
-	result = {
-		"size": size,
-		"random": rnumber,
-		"operations": test_operations,
-		"time_top_construction": float(output[0]),
-		"time_top_op": float(output[1]),
-		"time_topology_construction": float(output[2]),
-		"time_topology_op": float(output[3])
-	}
+	measurement_results = [None for i in range(measurements)]
+	for i in range(measurements):
+		# Construct and run command
+		command = [program, rnumber, str(size), str(test_operations), str(warmup), str(workload)]
+		cmd = subprocess.run(command, stdout=subprocess.PIPE, check=True)
+
+		# Get results
+		output = cmd.stdout.decode('utf-8').split()
+		measurement_results[i] = {
+			"size": size,
+			"random": rnumber,
+			"operations": test_operations,
+			"time_top_construction": float(output[0]),
+			"time_top_op": float(output[1]),
+			"time_topology_construction": float(output[2]),
+			"time_topology_op": float(output[3]),
+			"time_splay_construction": float(output[4]),
+			"time_splay_op": float(output[5])
+		}
+	print(command)
+
+	result = {}; 
+	result["size"] = size
+	result["random"] = rnumber
+	result["operations"] = test_operations
+	result["time_top_construction"] = median([measurement_results[i]["time_top_construction"] for i in range(measurements)])
+	result["time_top_op"] = median([measurement_results[i]["time_top_op"] for i in range(measurements)])
+	result["time_topology_construction"] = median([measurement_results[i]["time_topology_construction"] for i in range(measurements)])
+	result["time_topology_op"] = median([measurement_results[i]["time_topology_op"] for i in range(measurements)])
+	result["time_splay_construction"] = median([measurement_results[i]["time_splay_construction"] for i in range(measurements)])
+	result["time_splay_op"] = median([measurement_results[i]["time_splay_op"] for i in range(measurements)])
+
 
 	# Log into file and to the stdout
-	logline = "{} {} {} {} {} {} {}".format(
+	logline = "{} {} {} {} {} {} {} {} {}".format(
 		result["random"], result["size"], result["operations"],
 		result["time_top_construction"], result["time_top_op"],
-		result["time_topology_construction"], result["time_topology_op"]
+		result["time_topology_construction"], result["time_topology_op"],
+		result["time_splay_construction"], result["time_splay_op"]
 	)
-	logfile.write(logline+"\n")
-	logfile.flush()
+	if logging:
+		logfile.write(logline+"\n")
+		logfile.flush()
+		
 	print(logline)
 	return result
 
+logging = True
 size = size_start
 with open(logfile_path, "w") as logfile:
 	while True:
 		start_time = time.time()
 
-		# kamenozrout rules
-		if size > 1500000:
-			parallel_processes = min(5, parallel_processes)
-		if size > 3000000:
-			parallel_processes = min(2, parallel_processes)
-		if size > 6000000:
-			parallel_processes = 1
 
-		with Pool(processes=parallel_processes) as pool:
-			results.append(pool.map(execute, [(size, '%030x' % random.randrange(16**30)) for i in range(tries)]))
+
+		for i in range(tests):
+			execute((size, '%030x' % random.randrange(16**30),))
 
 		size = int(size*size_step)
 		end_time = time.time()

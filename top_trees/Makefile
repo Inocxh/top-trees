@@ -2,17 +2,17 @@ TESTER=top_trees_test
 BINARIES=${TESTER} experiment_edge_weight experiment_double_edge_connectivity
 
 TARGETS=${addprefix bin/,${BINARIES}}
-CLASSES=BaseTree STTopTree STCluster TopologyCluster TopologyTopTree
+CLASSES=BaseTree STTopTree STCluster TopologyCluster TopologyTopTree cover_level find_first_label find_size two_edge_cluster two_edge_connected
 OTHER=
 DIRECTORIES=bin obj
 
 OBJS=$(addprefix obj/,${OTHER} $(addsuffix .o,${CLASSES}))
 DEPS=$(wildcard obj/*.d)
 
-INC=-Isrc -Iinclude
+INC=-Isrc -Iinclude -Itop-trees/include -Itop-trees/include/top_tree
 
-CFLAGS=-Wall -g -std=c++14 -c
-LDFLAGS=-Wall
+CFLAGS=-Wall -std=c++17 -c -O3
+LDFLAGS=-Wall 
 CC=g++
 
 all: directories ${TARGETS}
@@ -24,8 +24,10 @@ test: bin/${TESTER}
 # Dependencies:
 -include $(DEPS)
 
-obj/%.o: src/%.cpp
+obj/%.o: %.cpp 
 	${CC} ${CFLAGS} ${INC} -MMD -o $@ $<
+
+vpath %.cpp src/ top-trees/src/
 
 bin/%: obj/%.o ${OBJS}
 	${CC} ${LDFLAGS} ${INC} -o $@ $^
