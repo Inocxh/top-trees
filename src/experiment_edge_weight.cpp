@@ -179,7 +179,7 @@ std::pair<double, double> run_splay(int N) {
 			uint edge_index = op.param % edge_ptrs.size();
 			//std::cerr << "removing edge: " << edge_ptrs[edge_index]->get_endpoint(0)->get_id() << ", " << edge_ptrs[edge_index]->get_endpoint(1)->get_id() << std::endl;
 			//std::cerr << "top_tree.cut(" << edge_ptrs[edge_index]->get_endpoint(0)->get_id() << ", " << edge_ptrs[edge_index]->get_endpoint(1)->get_id() << ");" << std::endl;
-			auto lol = tree->cut_ptr(edge_ptrs[edge_index]);
+			tree->cut_ptr(edge_ptrs[edge_index]);
 			edge_ptrs[edge_index] = edge_ptrs.back();
 			edge_ptrs.pop_back(); 
 		break;}
